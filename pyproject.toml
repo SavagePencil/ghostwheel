@@ -20,6 +20,11 @@ ghostwheel = "graph.__main__:main"
 [tool.setuptools]
 packages = ["graph", "graph.grammars"]
 
+[tool.setuptools.package-data]
+# The engine carries its own kernel seed: an installed engine can seed
+# a new knowledge base without any checkout of this repo.
+graph = ["metaontology.yaml"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

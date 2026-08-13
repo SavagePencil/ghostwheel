@@ -218,3 +218,28 @@ def test_canonize_stamps_the_version_after_stitch_before_write():
     # verify-all before apply-any: the stamp lands after the stitch and
     # before anything is written to the database.
     assert stitch < stamp < write
+
+
+def test_corpus_grammar_hook_loads_registrations(tmp_path, capsys):
+    # A knowledge base supplies its grammars via a grammars.py at its
+    # root — the hook imports it and @register fills the registry. A
+    # broken module refuses by name without killing the CLI.
+    from graph import grammars
+    from graph.__main__ import load_corpus_grammars
+    (tmp_path / "grammars.py").write_text(
+        "from graph.grammars import register\n"
+        "@register('leaf_charts')\n"
+        "def leaf_charts(rows):\n"
+        "    return [], []\n", encoding="utf-8")
+    load_corpus_grammars(tmp_path)
+    assert grammars.get_optional("leaf_charts") is not None
+    del grammars._REGISTRY["leaf_charts"]
+
+    broken = tmp_path / "broken"
+    broken.mkdir()
+    (broken / "grammars.py").write_text("raise ValueError('boom')\n",
+                                        encoding="utf-8")
+    load_corpus_grammars(broken)
+    err = capsys.readouterr().err
+    assert "Attempted to load the corpus grammar module" in err
+    assert "boom" in err

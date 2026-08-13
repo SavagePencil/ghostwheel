@@ -1207,6 +1207,27 @@ def cmd_terms(base_dir):
     return 0
 
 
+def load_corpus_grammars(base_dir):
+    """Corpus grammar loading: if the opened knowledge base carries a
+    grammars.py at its root, import it — its @register decorators fill
+    the registry with the corpus's own parsing rules. The engine ships
+    no grammars; this hook is how a consuming corpus supplies its own
+    without owning the engine package."""
+    hook = Path(base_dir) / "grammars.py"
+    if not hook.exists():
+        return
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("corpus_grammars", hook)
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        print(f"Attempted to load the corpus grammar module "
+              f"({hook}). Failed due to: {exc}. Extraction that needs a "
+              "declared parser will refuse until it loads.",
+              file=sys.stderr)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="ghostwheel",
@@ -1364,6 +1385,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     base_dir = find_base_dir()
+    load_corpus_grammars(base_dir)
     if args.command == "validate":
         status, _ = cmd_validate(base_dir)
         return status
