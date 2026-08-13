@@ -243,3 +243,32 @@ def test_corpus_grammar_hook_loads_registrations(tmp_path, capsys):
     err = capsys.readouterr().err
     assert "Attempted to load the corpus grammar module" in err
     assert "boom" in err
+
+
+def test_find_base_dir_resolves_a_kb_from_cwd_env_and_refusal(tmp_path,
+                                                              monkeypatch):
+    # An installed engine lives apart from any knowledge base: it must
+    # find the opened base from the environment or by walking up from
+    # the working directory — and refuse by name from nowhere.
+    from graph.__main__ import find_base_dir
+    kb = tmp_path / "kb"
+    (kb / "graph" / "export").mkdir(parents=True)
+    nested = kb / "docs" / "deep"
+    nested.mkdir(parents=True)
+    monkeypatch.chdir(nested)
+    monkeypatch.delenv("GHOSTWHEEL_BASE", raising=False)
+    assert find_base_dir() == kb.resolve()
+
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    monkeypatch.setenv("GHOSTWHEEL_BASE", str(kb))
+    assert find_base_dir() == kb.resolve()
+
+    monkeypatch.setenv("GHOSTWHEEL_BASE", str(elsewhere))
+    with pytest.raises(SystemExit, match="not a knowledge base root"):
+        find_base_dir()
+
+    monkeypatch.delenv("GHOSTWHEEL_BASE")
+    with pytest.raises(SystemExit, match="no ancestor carries"):
+        find_base_dir()

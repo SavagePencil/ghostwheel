@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -10,8 +11,43 @@ from . import validate as validate_mod
 
 
 def find_base_dir():
-    """Repo root = parent of the directory holding this package."""
-    return Path(__file__).resolve().parent.parent
+    """Resolve the opened knowledge base's root.
+
+    Precedence: the GHOSTWHEEL_BASE environment variable; else walk up
+    from the current directory to the first ancestor that looks like a
+    knowledge base (it carries graph/export/ or graph/ontology.yaml);
+    else, for a source checkout where the package sits inside the KB
+    repo itself, the package's grandparent when IT looks like one.
+    Anything else refuses by name — the engine is installed apart from
+    any one knowledge base, so it must be told (or shown) which base it
+    is opening."""
+    env = os.environ.get("GHOSTWHEEL_BASE")
+    if env:
+        base = Path(env).expanduser().resolve()
+        if _looks_like_kb(base):
+            return base
+        raise SystemExit(
+            f"Attempted to open the knowledge base named by "
+            f"GHOSTWHEEL_BASE ({base}). Failed due to: no graph/export/ "
+            "or graph/ontology.yaml there — that directory is not a "
+            "knowledge base root.")
+    for candidate in [Path.cwd().resolve(),
+                      *Path.cwd().resolve().parents]:
+        if _looks_like_kb(candidate):
+            return candidate
+    checkout = Path(__file__).resolve().parent.parent
+    if _looks_like_kb(checkout):
+        return checkout
+    raise SystemExit(
+        f"Attempted to find a knowledge base from {Path.cwd()}. Failed "
+        "due to: no ancestor carries graph/export/ or "
+        "graph/ontology.yaml. Run from inside a knowledge base, or set "
+        "GHOSTWHEEL_BASE to its root.")
+
+
+def _looks_like_kb(path):
+    return (path / "graph" / "export").is_dir() \
+        or (path / "graph" / "ontology.yaml").is_file()
 
 
 def cmd_validate(base_dir, write_files=True):
