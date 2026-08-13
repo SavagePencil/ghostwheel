@@ -6,7 +6,7 @@ description: Drive a full graph-native intake end to end — recon, plan gate, s
 # Agentic intake
 
 The end-to-end workflow over the intake pipeline (design:
-@../../../design/agentic-etl.md). The human appears exactly
+the engine's agentic-etl design record (design/ in the engine repo; graph/engine_docs/design/ inside an installed engine package)). The human appears exactly
 twice — the **plan gate** and the **diff gate** — and everything between
 is agent + machine loops. Boundary doctrine applies throughout:
 @../../../design/ontology-doctrine.md.
@@ -57,7 +57,7 @@ each artifact-local claim judged against canon — same-as / extends /
 new / contradicts — every mapping a recorded Opinion with confidence,
 low confidence batching to the owner's question sheet. (Held as
 discipline — the lens system that will enforce it physically is
-designed and built (graph/lens.py, design/lenses.md); the seal
+designed and built (the engine's lens module and its lenses design record (design/ in the engine repo; graph/engine_docs/design/ inside an installed engine package)); the seal
 becomes physical when the declarations take graph residence at the
 owner's gate.)
 

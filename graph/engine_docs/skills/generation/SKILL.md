@@ -8,7 +8,7 @@ description: Generate artifacts of any medium — documents, images, tables, exa
 Every generated artifact is a projection of the graph into a medium.
 The graph supplies the facts; the owner may supply steering; the medium
 supplies the form. The full design this skill implements is
-design/agentic-approach.md (v3: Virtues, Tenets, Method); this file is the
+the engine's agentic-approach design record (design/ in the engine repo; graph/engine_docs/design/ inside an installed engine package) (v3: Virtues, Tenets, Method); this file is the
 working procedure.
 
 ## The invariants (medium-independent)
