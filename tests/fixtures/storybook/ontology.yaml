@@ -1,0 +1,31 @@
+# The storybook corpus — the kernel's membership test made executable: a
+# corpus with no built-in vocabulary of the engine's own. If the engine
+# needs a word this file doesn't teach it, the engine is leaking.
+version: 1
+concepts:
+  Story Concept: { instance_of: Concept }
+facets:
+  Tale Structure:
+    instance_of: '[Segment Scheme]'
+    ordered: true
+    values: [Book, Page]
+  Book: { instance_of: Tale Structure }
+  Page: { instance_of: Tale Structure, recursive: true }
+nodes:
+  Character:
+    source: data/characters.csv
+    key: Character
+    concept: Story Concept
+    catalog:
+      temperament: { type: text, doc: "how they meet the world" }
+    properties:
+      temperament: { column: Temperament }
+    relationships:
+      - { type: LIVES_IN, to: Place, column: Home }
+  Place:
+    implicit: true
+    concept: Story Concept
+  Artifact:
+    values: [docs/tale.md]
+    fingerprint: true
+    concept: [Provenance, Book]

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.python-version
+
+# IDEs
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Graph engine
+# Note: graph/export/ is NOT ignored — the committed backup is reviewed in diffs.
+.venv/
+.env
+graph/reports/
+
+# LLM tooling — settings stay local, but skills are project artifacts
+.claude/*
+!.claude/skills/
+
+# Proposal rounds: archives are the durable trail; current/ is working state
+graph/proposals/current/
+
+# The trace checker stays local-only (owner ruling): its banned list is
+# itself a dictionary of the source domain, so it runs as a pre-push
+# habit, never as committed content.
+/tools/no_trace.py
+/tests/test_no_trace.py

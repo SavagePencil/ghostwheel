@@ -1,0 +1,19 @@
+# OPTIONAL scriptable Neo4j backend for automation/CI.
+#
+# The default local setup is a Neo4j Desktop 2 managed DBMS (which includes
+# the Bloom/Explore visual tools — they do NOT work against this container).
+# Use this only when a scriptable, disposable instance is needed.
+# Same interface: point .env at bolt://localhost:7687 with the password below.
+services:
+  neo4j:
+    image: neo4j:5-community
+    ports:
+      - "7474:7474"   # Browser / HTTP
+      - "7687:7687"   # Bolt
+    environment:
+      NEO4J_AUTH: neo4j/ghostwheel-local-dev
+    volumes:
+      - neo4j-data:/data
+
+volumes:
+  neo4j-data:

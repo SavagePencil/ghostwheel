@@ -1,0 +1,441 @@
+"""The proposal lifecycle: pinned base, delta identity, approval freeze.
+
+Closes the review-then-apply gap (the review-then-apply gate, the R1 down-payment): what the
+human approved is frozen by content hash, and apply replays only that.
+
+- CUT: when scratch is created the round starts — base.json pins the
+  content identity of the source-derived base (a hash of the
+  deterministic serialization) plus the git ref for humans.
+- PROPOSE: `delta` writes the machine-readable changeset (delta.json,
+  canonical form); its sha256 IS the proposal's id. If the base has
+  moved since the cut (sources edited mid-round), delta WARNS and keeps
+  drafting — apply is where drift becomes a refusal.
+- APPROVE: `approve` records {delta_hash, base_hash, by, at} — run by
+  the submitter or an agent on their behalf; the record names the
+  human. (Future escalation routing for protected classes of change is
+  an open Question citizen.)
+- APPLY: `canonize --apply` refuses without an approval record, refuses
+  if the base moved (re-load and re-review — the whole shebang
+  re-baselines), refuses if scratch has drifted from the approved
+  changeset (divergence NAMED item by item), and otherwise applies
+  exactly the pinned artifact.
+- ARCHIVE: on success the round's artifacts move to
+  graph/proposals/<id12>/ — git-tracked, the durable audit trail.
+
+Pure logic (canonical serialization, hashing, divergence naming) is
+driver-free and unit-tested; file I/O helpers take explicit paths.
+"""
+
+import hashlib
+import json
+from pathlib import Path
+
+from .delta import Delta
+from .extract import make_edge
+
+PROPOSALS = "proposals"
+CURRENT = "current"
+BASE_FILE = "base.json"
+DELTA_FILE = "delta.json"
+APPROVAL_FILE = "approval.json"
+APPLIED_FILE = "applied.json"
+INVERSE_FILE = "inverse.json"
+STITCH_FILE = "stitch.json"
+
+
+# -- canonical delta document ---------------------------------------------
+
+
+def _edge_doc(edge):
+    return {"type": edge.type,
+            "from_label": edge.from_label, "from_name": edge.from_name,
+            "to_label": edge.to_label, "to_name": edge.to_name,
+            "props": dict(edge.props)}
+
+
+def _edge_from_doc(doc):
+    return make_edge(doc["type"], doc["from_label"], doc["from_name"],
+                     doc["to_label"], doc["to_name"], doc.get("props"))
+
+
+def serialize_delta(delta):
+    """Delta -> canonical JSON text. Deterministic (diff() sorts every
+    class), so the same changeset always hashes to the same id."""
+    doc = {
+        "nodes_added": [[l, n, p] for l, n, p in delta.nodes_added],
+        "nodes_removed": [[l, n, p] for l, n, p in delta.nodes_removed],
+        "nodes_changed": [[l, n, {k: list(v) for k, v in c.items()}]
+                          for l, n, c in delta.nodes_changed],
+        "edges_added": [_edge_doc(e) for e in delta.edges_added],
+        "edges_removed": [_edge_doc(e) for e in delta.edges_removed],
+        "edges_changed": [[_edge_doc(e), {k: list(v) for k, v in c.items()}]
+                          for e, c in delta.edges_changed],
+    }
+    if delta.stitch:
+        # The stitch mechanism: present only when the round declares one, so every
+        # pre-stitch round's archived document still hashes to the id
+        # its event-log entry recorded
+        doc["stitch"] = [_edge_doc(e) for e in delta.stitch]
+    return json.dumps(doc, ensure_ascii=False, sort_keys=True, indent=1)
+
+
+def parse_delta(text):
+    doc = json.loads(text)
+    delta = Delta()
+    delta.nodes_added = [(l, n, p) for l, n, p in doc["nodes_added"]]
+    delta.nodes_removed = [(l, n, p) for l, n, p in doc["nodes_removed"]]
+    delta.nodes_changed = [(l, n, {k: tuple(v) for k, v in c.items()})
+                           for l, n, c in doc["nodes_changed"]]
+    delta.edges_added = [_edge_from_doc(d) for d in doc["edges_added"]]
+    delta.edges_removed = [_edge_from_doc(d) for d in doc["edges_removed"]]
+    delta.edges_changed = [(_edge_from_doc(d), {k: tuple(v)
+                                                for k, v in c.items()})
+                           for d, c in doc["edges_changed"]]
+    delta.stitch = [_edge_from_doc(d) for d in doc.get("stitch", [])]
+    return delta
+
+
+def content_hash(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def base_identity(graph):
+    """The base's content identity: hash over the deterministic
+    serialization (the same bytes `export` writes)."""
+    from . import export as export_mod
+    digest = hashlib.sha256()
+    for filename, content in sorted(export_mod.serialize(graph).items()):
+        digest.update(filename.encode("utf-8"))
+        digest.update(content.encode("utf-8"))
+    return digest.hexdigest()
+
+
+def invert_delta(delta):
+    """The delta's inverse — the undo record made executable (the reversible event log).
+    Every class inverts mechanically because removals and changes carry
+    full before-images (the before-image capture): adds become removals, removals restore
+    from their before-images, changes flip before/after."""
+    inverse = Delta()
+    inverse.nodes_removed = [(label, name, dict(props))
+                             for label, name, props in delta.nodes_added]
+    inverse.nodes_added = [(label, name, dict(props))
+                           for label, name, props in delta.nodes_removed]
+    inverse.nodes_changed = [
+        (label, name, {prop: (after, before)
+                       for prop, (before, after) in changes.items()})
+        for label, name, changes in delta.nodes_changed]
+    # stitched edges are additions once landed — the undo removes them
+    inverse.edges_removed = list(delta.edges_added) + list(delta.stitch)
+    inverse.edges_added = list(delta.edges_removed)
+    inverse.edges_changed = []
+    for edge, changes in delta.edges_changed:
+        before_props = dict(edge.props)
+        for prop, (before, _) in changes.items():
+            if before is None:
+                before_props.pop(prop, None)
+            else:
+                before_props[prop] = before
+        before_edge = make_edge(edge.type, edge.from_label, edge.from_name,
+                                edge.to_label, edge.to_name, before_props)
+        inverse.edges_changed.append(
+            (before_edge, {prop: (after, before)
+                           for prop, (before, after) in changes.items()}))
+    return inverse
+
+
+def apply_delta(graph, delta):
+    """Apply a delta to a GraphData IN PLACE — the pure applier the
+    event-log replay check and the walk-back ride on (the graph-native
+    driver applier is this, spoken in Cypher). Preconditions verify
+    against before-images; problems collate; NOTHING is applied unless
+    everything can be (verify-all before apply-any)."""
+    problems = []
+    edges = list(graph.edges)
+    for label, name, props in delta.nodes_added:
+        if (label, name) in graph.nodes:
+            problems.append(f"cannot add ({label}) '{name}' — it already "
+                            "exists; the base moved under the log entry")
+    for label, name, before in delta.nodes_removed:
+        current = graph.nodes.get((label, name))
+        if current is None:
+            problems.append(f"cannot remove ({label}) '{name}' — it is "
+                            "not present")
+        elif dict(current) != dict(before):
+            problems.append(f"cannot remove ({label}) '{name}' — its "
+                            "properties changed since the before-image")
+    for label, name, changes in delta.nodes_changed:
+        current = graph.nodes.get((label, name))
+        if current is None:
+            problems.append(f"cannot edit ({label}) '{name}' — it is "
+                            "not present")
+            continue
+        for prop, (before, _) in changes.items():
+            if current.get(prop) != before:
+                problems.append(
+                    f"cannot edit ({label}) '{name}'.{prop} — it reads "
+                    f"{current.get(prop)!r}, the log says {before!r}")
+    for edge in delta.edges_removed:
+        if edge not in edges:
+            problems.append(f"cannot remove ({edge.from_name})-"
+                            f"[:{edge.type}]->({edge.to_name}) — no such "
+                            "connection with those properties")
+    def pre_state(edge, changes):
+        props = dict(edge.props)
+        for prop, (pre, _) in changes.items():
+            if pre is None:
+                props.pop(prop, None)
+            else:
+                props[prop] = pre
+        return make_edge(edge.type, edge.from_label, edge.from_name,
+                         edge.to_label, edge.to_name, props)
+
+    for target_edge, changes in delta.edges_changed:
+        if pre_state(target_edge, changes) not in edges:
+            problems.append(f"cannot re-edit ({target_edge.from_name})-"
+                            f"[:{target_edge.type}]->"
+                            f"({target_edge.to_name}) — its current "
+                            "properties do not match the log")
+    if problems:
+        return problems
+
+    for label, name, props in delta.nodes_added:
+        graph.ensure_node(label, name, **dict(props))
+    for label, name, _ in delta.nodes_removed:
+        del graph.nodes[(label, name)]
+    for label, name, changes in delta.nodes_changed:
+        node = graph.nodes[(label, name)]
+        for prop, (_, after) in changes.items():
+            if after is None:
+                node.pop(prop, None)
+            else:
+                node[prop] = after
+    for edge in delta.edges_removed:
+        edges.remove(edge)
+    edges.extend(delta.edges_added)
+    for target_edge, changes in delta.edges_changed:
+        edges[edges.index(pre_state(target_edge, changes))] = target_edge
+    graph.edges = edges
+    return []
+
+
+def file_era_executed(delta):
+    """The subset of a delta the FILE-ERA apply actually executes:
+    removals (nodes and edges) are manual approver acts canonize never
+    writes, so pre-flip they are logged-but-pending. The replay check
+    compares the executed subset; the archived delta and inverse stay
+    complete. Post-flip the graph-native applier executes everything and
+    this distinction retires."""
+    executed = Delta()
+    executed.nodes_added = list(delta.nodes_added)
+    executed.nodes_changed = list(delta.nodes_changed)
+    executed.edges_added = list(delta.edges_added)
+    executed.edges_changed = list(delta.edges_changed)
+    return executed
+
+
+def ground_identity(graph):
+    """The GROUND truth's content identity: the serialization with the
+    machine-recomputed layers excluded (derived edge types; machine
+    labels). The event log replays ground facts identically; derived
+    layers are deterministic functions recomputed from them."""
+    from .canonize import RECEIPT_PROPS
+    from .extract import GraphData
+    from .ontology import UNAUTHORABLE_EDGE_TYPES, UNAUTHORABLE_LABELS
+    ground = GraphData()
+    for (label, name), props in graph.nodes.items():
+        if label not in UNAUTHORABLE_LABELS:
+            ground.ensure_node(label, name,
+                               **{k: v for k, v in props.items()
+                                  if k not in RECEIPT_PROPS})
+    ground.edges = [
+        make_edge(edge.type, edge.from_label, edge.from_name,
+                  edge.to_label, edge.to_name,
+                  {k: v for k, v in edge.props if k not in RECEIPT_PROPS})
+        for edge in graph.edges
+        if edge.type not in UNAUTHORABLE_EDGE_TYPES
+        and edge.from_label not in UNAUTHORABLE_LABELS
+        and edge.to_label not in UNAUTHORABLE_LABELS
+        and not edge.type.startswith("ASSIGNS_")]
+    return base_identity(ground)
+
+
+def divergence(pinned, current):
+    """What changed between the approved changeset and scratch-now —
+    named item by item, so a refusal is actionable. Empty = frozen."""
+    problems = []
+    for section in ("nodes_added", "nodes_removed", "nodes_changed",
+                    "edges_added", "edges_removed", "edges_changed",
+                    "stitch"):
+        pinned_items = {json.dumps(item, ensure_ascii=False, sort_keys=True,
+                                   default=list)
+                        for item in json.loads(
+                            serialize_delta(pinned)).get(section, [])}
+        current_items = {json.dumps(item, ensure_ascii=False, sort_keys=True,
+                                    default=list)
+                         for item in json.loads(
+                             serialize_delta(current)).get(section, [])}
+        for item in sorted(current_items - pinned_items):
+            problems.append(f"{section}: scratch now proposes {item} — "
+                            "this was never reviewed")
+        for item in sorted(pinned_items - current_items):
+            problems.append(f"{section}: the reviewed item {item} is no "
+                            "longer in scratch")
+    return problems
+
+
+def apply_stitch(graph, stitch):
+    """The stitch mechanism: land the stitch on the re-derived graph IN MEMORY — after
+    derivation has birthed the round's new citizens, before anything is
+    written. Verify every endpoint exists and every connection is new;
+    problems collate and NOTHING lands unless everything can
+    (verify-all before apply-any, apply_delta's doctrine)."""
+    problems = []
+    for edge in stitch:
+        for label, name, side in ((edge.from_label, edge.from_name, "from"),
+                                  (edge.to_label, edge.to_name, "to")):
+            if (label, name) not in graph.nodes:
+                problems.append(
+                    f"cannot stitch ({edge.from_name})-[:{edge.type}]->"
+                    f"({edge.to_name}) — its {side} endpoint ({label}) "
+                    f"'{name}' does not exist even after re-derivation. "
+                    "Is the schema edit that births it part of this "
+                    "round?")
+        if edge in graph.edges:
+            problems.append(
+                f"cannot stitch ({edge.from_name})-[:{edge.type}]->"
+                f"({edge.to_name}) — that connection already exists; "
+                "the stitch entry is stale, remove it from the stitch "
+                "file.")
+    if problems:
+        return problems
+    graph.edges.extend(stitch)
+    return []
+
+
+# -- round files ----------------------------------------------------------
+
+
+def current_dir(base_dir):
+    return Path(base_dir) / "graph" / PROPOSALS / CURRENT
+
+
+def read_stitch(base_dir):
+    """The stitch mechanism: the round's declared stitch — ground edges the author files
+    at graph/proposals/current/stitch.json (a JSON list in delta.json's
+    edge shape) because their endpoints are born by this round's schema
+    edit and cannot be authored in scratch. Absent file = no stitch."""
+    path = current_dir(base_dir) / STITCH_FILE
+    if not path.exists():
+        return []
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(doc, list):
+        raise ValueError(
+            f"Attempted to read the stitch file ({STITCH_FILE}) as a "
+            "list of connections. Failed due to: the file holds a "
+            f"{type(doc).__name__} instead — write a JSON list of "
+            "objects with type, from_label, from_name, to_label, "
+            "to_name, and optional props.")
+    return [_edge_from_doc(d) for d in doc]
+
+
+def write_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2,
+                               sort_keys=True) + "\n", encoding="utf-8")
+
+
+def read_json(path):
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+APPLIED_LOG = "applied.log"
+
+
+def applied_log_path(base_dir):
+    return Path(base_dir) / "graph" / PROPOSALS / APPLIED_LOG
+
+
+def read_applied_log(base_dir):
+    """[(seq, delta_hash, base_before, base_after, prev_chain, chain)] —
+    the event log's ordered spine."""
+    path = applied_log_path(base_dir)
+    if not path.exists():
+        return []
+    entries = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        seq, delta_hash, base_before, base_after, prev_chain, chain = \
+            line.split()
+        entries.append((int(seq), delta_hash, base_before, base_after,
+                        prev_chain, chain))
+    return entries
+
+
+def next_log_sequence(base_dir):
+    """The sequence number the NEXT applied round will carry — one past
+    the log's last entry (1 for the first round). The project ontology's
+    version stamp reads this at apply so a fresh connection's version
+    moves with the event log, not with a file (owner ruling, 2026-08-03).
+    Computed the same way append_applied_log assigns seq, so the stamp and
+    the log entry always agree."""
+    entries = read_applied_log(base_dir)
+    return entries[-1][0] + 1 if entries else 1
+
+
+def append_applied_log(base_dir, delta_hash, base_before, base_after):
+    """One chained entry per applied round: each names its predecessor's
+    chain hash, so history is tamper-evident — rewriting any entry
+    breaks every later link. Returns the new entry's chain hash."""
+    entries = read_applied_log(base_dir)
+    seq = next_log_sequence(base_dir)
+    prev_chain = entries[-1][5] if entries else "genesis"
+    chain = content_hash(
+        f"{seq} {delta_hash} {base_before} {base_after} {prev_chain}")
+    path = applied_log_path(base_dir)
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "# The event log: one chained line per applied round —\n"
+            "# seq, delta hash, base identity before/after, predecessor's\n"
+            "# chain hash, this entry's chain hash. Rewriting any entry\n"
+            "# breaks every later link.\n", encoding="utf-8")
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write(f"{seq} {delta_hash} {base_before} {base_after} "
+                     f"{prev_chain} {chain}\n")
+    return chain
+
+
+def verify_applied_log(base_dir):
+    """The chain, re-derived and compared — a broken link is named."""
+    problems = []
+    prev = "genesis"
+    for seq, delta_hash, base_before, base_after, prev_chain, chain in \
+            read_applied_log(base_dir):
+        if prev_chain != prev:
+            problems.append(f"entry {seq}: predecessor hash mismatch — "
+                            "the log was rewritten above this line")
+        expected = content_hash(
+            f"{seq} {delta_hash} {base_before} {base_after} {prev_chain}")
+        if chain != expected:
+            problems.append(f"entry {seq}: chain hash mismatch — this "
+                            "line was altered")
+        prev = expected
+    return problems
+
+
+def archive_round(base_dir, delta_id):
+    """Move the current round's artifacts to their durable home,
+    graph/proposals/<id12>/. Returns the archive directory."""
+    src = current_dir(base_dir)
+    dst = Path(base_dir) / "graph" / PROPOSALS / delta_id[:12]
+    dst.mkdir(parents=True, exist_ok=True)
+    for name in (BASE_FILE, DELTA_FILE, APPROVAL_FILE, APPLIED_FILE,
+                 INVERSE_FILE, STITCH_FILE):
+        path = src / name
+        if path.exists():
+            (dst / name).write_text(path.read_text(encoding="utf-8"),
+                                    encoding="utf-8")
+            path.unlink()
+    return dst

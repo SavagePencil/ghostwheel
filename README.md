@@ -1,0 +1,250 @@
+# Ghostwheel
+
+**Ghostwheel** is a project-agnostic, Neo4j-backed knowledge-graph engine. You
+point it at a knowledge base — a rulebook, a manual, a storybook, a catalog —
+and it holds that knowledge as a queryable graph of **citizens** (facts,
+definitions, procedures, rulings, quotes), grows it through reviewed changes,
+and serves it back with citations. Nothing enters the graph without provenance;
+nothing changes it without an owner's approval; every applied change is recorded
+in a chained, reversible log.
+
+Ghostwheel is deliberately domain-neutral. Its worked examples throughout this
+repository use a small storybook knowledge base — **Gems**, **Chapters**,
+**Beasts**, and **Grades** — precisely because the engine cares nothing for any
+particular subject matter. A child's storybook and a legal code are the same
+shape to Ghostwheel.
+
+## What it is
+
+At its heart Ghostwheel keeps a single body of agreed-true knowledge — **canon**
+— as a Neo4j graph, and surrounds it with machinery that keeps that graph
+honest:
+
+- **Canon is the graph.** The live Neo4j database is primary. A deterministic,
+  line-oriented **export** in `graph/export/` is its committed backup, written
+  *from* the database and read back into it by `restore`. Because the export is
+  deterministic, a graph change reads as a clean diff in code review, and the
+  export is the baseline for the golden test.
+- **Schema lives on the graph, as ground.** The knowledge base's own vocabulary
+  — its categories, labels, catalogs, relationships — are themselves citizens on
+  the graph (the **Archetype** stratum), authored truth read back by the engine.
+  They are not a config file the graph is generated from; they are part of canon.
+- **Two ontology layers.** The engine ships a project-agnostic **kernel**
+  (`graph/metaontology.yaml`): the four roots — **Concept**, **Facet**,
+  **Provenance**, **Judgment** — plus a common facet library (Ordered, Exclusive,
+  Stateful, …). Each knowledge base layers its own **project ontology** on top.
+  References flow one way, project → kernel; the kernel must stay meaningful for a
+  knowledge base that has never heard of yours. See
+  [design/ontology-doctrine.md](design/ontology-doctrine.md).
+- **Changes flow through rounds and a diff gate.** Canon never changes by direct
+  edit. An author works in a **scratch** database cloned from canon; the itemized
+  changeset — the **delta** — is linted, reviewed, and approved by the owner at a
+  **diff gate**; only then does `canonize --apply` replay exactly the approved
+  changeset into canon, re-derive the machine layers, re-export the backup, and
+  chain the event log. See [design/agentic-etl.md](design/agentic-etl.md).
+- **Lenses decide who sees what.** Visibility is a first-class layer enforced on
+  the in-memory graph value itself, so traversals never yield a hidden element and
+  derived layers recompute coherently under a lens. See
+  [design/lenses.md](design/lenses.md).
+
+New here, or wondering what a "floor", "round", or "lens" is? The glossary — a
+lay tier and the working vocabulary beneath it — lives in
+[design/north-star-workflow.md](design/north-star-workflow.md). A knowledge
+base's own domain terms live on the graph itself (`python -m graph terms`; every
+citizen carries its own doc).
+
+## Why the package is called `graph`
+
+The distribution is **`ghostwheel`**; the importable Python package is
+**`graph`**, and the CLI is reached as `python -m graph` (or the installed
+`ghostwheel` console script). Keeping the internal module named `graph` is
+deliberate: a knowledge base that consumes the engine imports `graph` and runs
+`python -m graph` with zero churn. The product name lives on the outside; the
+code keeps the name its consumers already depend on.
+
+## Quickstart
+
+### 1. Install
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+```
+
+### 2. Stand up Neo4j
+
+The default backend is **Neo4j Desktop 2** — its Explore/Bloom visual tools only
+work against a Desktop-managed instance:
+
+1. Create a local DBMS (any name), set a password, and start it.
+2. `cp .env.example .env` and fill in the Bolt URI and credentials.
+
+A `docker-compose.yml` offers an alternative scriptable backend for automation
+and CI (`docker compose up -d`); the visual Explore tool does not work against
+it.
+
+### 3. Point Ghostwheel at your database
+
+`.env` holds the connection. The live canon connection uses the **query-only
+reader** credentials (`NEO4J_READER_*`) — canon is written only through the
+reviewed delta path, never through an ad-hoc connection.
+
+## Commands
+
+Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
+
+| Command | What it does |
+|---|---|
+| `validate` | Parse the sources/schema against the ontology; write a consistency report to `graph/reports/validation.md`. No database needed. |
+| `export` | Write a deterministic snapshot of canon to `graph/export/`. Commit it alongside any graph change. No database needed. |
+| `restore` | Rebuild the database from `graph/export/` alone, then verify it re-serializes byte-identical. |
+| `restore --database scratch` | Cut an authoring round: clone canon into a `scratch` database and pin the base. |
+| `load` | **Bootstrap scaffolding**: validate, then wipe and reload the database from the source files. |
+| `delta` | Diff `scratch` against canon's backup: a linted, itemized changeset. Its content hash is the proposal's identity. |
+| `approve` | Record the diff-gate approval against the proposal's content hash. |
+| `canonize` | Show the approved changeset and freeze status (dry run). |
+| `canonize --apply` | Apply the pinned changeset to the graph, re-derive the machine layers, re-export the backup, and chain the event log. |
+| `corpus` | Re-check every owner-blessed floor; reds name the blessing they break. |
+| `terms` | List the knowledge base's own domain terms — every citizen's doc, read from the graph. |
+| `generate "<name>"` | Render a citizen (e.g. a procedure) back into prose from the graph — measured against the authored text, never a replacement. |
+| `export --mask judgment --out dist/runtime` | Lens-scoped export: ship a runtime graph with the design-time stratum stripped. |
+| `restore --from dist/runtime --database scratch` | Inspect any export in a workspace database (never live canon; no round cut). |
+
+The export in `graph/export/` is committed: it makes graph changes reviewable in
+diffs and is the baseline for the golden test (`pytest`). If a change alters the
+graph, regenerate the export in the same commit.
+
+## How canon changes: a round
+
+Canon only ever changes through a **round**, and an owner appears at exactly two
+moments — the **plan gate** and the **diff gate**:
+
+1. **Cut scratch.** `restore --database scratch` clones canon into a private
+   working database and pins canon's content identity as the base. Mistakes in
+   scratch cost nothing.
+2. **Author ground facts.** An author (a person or an agent holding
+   scratch-only write credentials) creates the nodes and edges the source
+   asserts — a Gem, a Beast, the edge that says this Beast guards that Gem — each
+   carrying its **receipt** (the verbatim quote and source pointer). Authors never
+   write the *derived* layers (classification edges, projections, the term index);
+   the machine recomputes those, so a hand-written copy can never silently rot.
+3. **Delta.** `delta` diffs scratch against the base and emits the itemized
+   changeset — every node and edge to create, edit, or delete, each with its
+   inverse and receipt — linted so no derived edge can be authored. Its sha256 is
+   the proposal's id.
+4. **Diff gate.** The owner reviews the delta: an implications narrative in plain
+   prose, each claim beside its evidence, the derived consequences summarized, and
+   a walkable view of just the new and changed elements. `approve` records the
+   ruling against the proposal's hash.
+5. **Canonize.** `canonize --apply` refuses if there is no approval, if the base
+   moved since scratch was cut, or if scratch drifted from what was approved —
+   naming the divergence item by item. On success it verifies everything before
+   writing anything, re-derives the machine layers, re-exports the backup, and
+   appends a chained entry to the event log. The delta *is* the event; its
+   recorded inverse is the undo.
+
+## Schema as ground: the two ontology layers
+
+Ghostwheel's schema has two layers with different ownership and change ceremony:
+
+- The **kernel** (`graph/metaontology.yaml`) is project-agnostic — the four
+  roots and the common facet library. The membership test for anything in the
+  kernel is *"would a children's storybook project need it?"* Changing the kernel
+  is a **ceremony**: an explicit owner ruling, a Decision row naming it, and a
+  version bump in the same change set. Never a silent side effect of intake.
+- The **project ontology** is everything a given knowledge base derived — its
+  own labels, catalogs, and relationships, living on the graph as ground
+  citizens. This is the owner's daily surface.
+
+The full boundary rules — references flow one way, new vocabulary is born in the
+project layer, facets are promoted to the kernel only by earning the
+many-projects test — are in
+[design/ontology-doctrine.md](design/ontology-doctrine.md). Consuming knowledge
+bases import that doctrine into their own instructions so it is standing context
+for all work.
+
+## Rules as programs (procedures)
+
+Knowledge with process structure — a step-by-step resolution, a cascade of
+effects — can live on the graph as an approved **program**: a
+`(:Procedure)-[:FIRST_STEP]->(:Step)` chain. Programs exist for **comprehension,
+not execution**: a consumer can ask "how does this work?" and get structure back,
+and `python -m graph generate "<name>"` renders a program into prose (an
+experiment measured against the authored text, never a replacement). Every
+procedure is `KNOWN_AT` a **Completeness** level — `transcribed` (a full program
+whose signature is derived from its body), `attested` (an asserted signature plus
+a prose body, guarded against drift), or `cited` (name and link only). Only what
+cannot be derived is authored.
+
+## Lenses: who sees what
+
+Visibility is a layer, not an afterthought. Nodes and edges join named
+**Visibility Classes**; **Visibility Groups** (subjects of sight; individuals
+are size-1 groups that nest) are granted or denied access to those classes; a
+**lens** is the fold of a subject's groups compiled into what they may see. A
+lens is enforced on the in-memory graph value itself, so a traversal never yields
+a hidden element, edges never dangle, and derived layers recompute coherently
+under the lens. Lenses materialize in exactly one place — a lens-scoped export
+(the shipped runtime graph). The full design, including the branch-isolation
+walkthrough, is in [design/lenses.md](design/lenses.md).
+
+## Cypher cookbook and canned checks
+
+- `graph/cypher/cookbook.md` — worked queries (knowledge Q&A, metamodel,
+  housekeeping), runnable in Neo4j's Query tool or via an MCP client.
+- `graph/cypher/checks/*.cypher` — consistency checks, run with `make check`.
+  Two species: checks headed `// expect: empty` are **assertions** (rows mean a
+  graph-integrity bug; `make check` exits non-zero); the rest are **finding
+  reports** (rows are open questions, informational, expected to drift as the
+  knowledge base evolves).
+
+## Agentic intake and generation
+
+Ghostwheel ships agent-facing **skills** (`.claude/skills/`) that drive the
+graph-native workflows end to end. An intake is one conversation: hand the agent
+a source and say "intake this." The agent recons it, brings you the plan
+(implications first, then the questions only you can answer), authors ground
+facts in scratch with receipts, self-reviews the linted delta, brings you the
+changeset, and on your approval canonizes it. You appear exactly twice — the plan
+gate and the diff gate. The architecture is in
+[design/agentic-etl.md](design/agentic-etl.md); the philosophy in
+[design/agentic-approach.md](design/agentic-approach.md).
+
+## MCP
+
+Ghostwheel is designed to be driven by an MCP-connected agent over two
+`mcp-neo4j-cypher` connections: the **live** database (query-only by policy —
+the write tool is denied) and a **scratch** connection (write-enabled, for the
+agentic working copy). Launchers source `.env`, so the same credentials drive
+the engine and the MCP servers — no secrets in any committed file. Live content
+is applied only through the reviewed delta path (`canonize --apply`) and rebuilt
+from backup by `restore`.
+
+## Design records
+
+The `design/` directory holds the engine's design doctrine:
+
+- [ontology-doctrine.md](design/ontology-doctrine.md) — the two ontology layers
+  and the boundary rules between them.
+- [agentic-etl.md](design/agentic-etl.md) — the persistent-graph intake
+  architecture: rounds, the delta lifecycle, the event log, the micro-kernel.
+- [agentic-approach.md](design/agentic-approach.md) — the philosophy the engine
+  executes through: its Virtues, Tenets, and Method.
+- [lenses.md](design/lenses.md) — the visibility system.
+- [north-star-workflow.md](design/north-star-workflow.md) — the two-lane
+  workflow and the full glossary (lay tier and working vocabulary).
+
+## Development
+
+```bash
+make validate   # consistency report (no DB needed)
+make export     # deterministic snapshot -> graph/export/
+make restore    # rebuild the DB from the backup, verify byte-identical
+make check      # canned Cypher checks against the live DB
+make corpus     # re-check every owner-blessed floor
+make test       # full test suite (includes the golden-snapshot test)
+```
+
+## License
+
+[Add your license here]

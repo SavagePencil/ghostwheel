@@ -1,0 +1,39 @@
+name: Validate
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'graph/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'pyproject.toml'
+      - '.github/workflows/validate.yml'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      # No database needed: the test suite and validation are pure-Python
+      # over the committed export and source files.
+      run: |
+        python -m pip install --upgrade pip
+        pip install PyYAML pytest
+
+    - name: Run the full test suite
+      # Includes the golden-snapshot test and the no-trace lint.
+      run: pytest -q
+
+    - name: Validate sources against the ontology
+      run: python -m graph validate

@@ -1,0 +1,456 @@
+"""The delta: scratch database minus source-derived base.
+
+The agentic era's reviewable changeset (design: graph/design/agentic-etl.md
+— "the proposal is a graph"). An agent authors ground facts in the scratch
+database; this module reads scratch back, diffs it against the base derived
+from the sources, lints the additions against the machine layers (derived
+edges and labels are never authored by anyone), and renders the itemized
+report the approver reviews.
+
+Pure logic (diff/lint/report) is driver-free and unit-tested; only
+read_graph touches the neo4j driver.
+"""
+
+from dataclasses import dataclass, field
+
+from .extract import GraphData, make_edge
+from .ontology import (ARCHETYPE_LABEL, MACHINE_LABELS, SCHEMA_EDGE_TYPES,
+                       SCHEMA_LABELS, STRATIFIED_EDGE_TYPES,
+                       UNAUTHORABLE_EDGE_TYPES, UNAUTHORABLE_LABELS,
+                       is_derived_edge)
+
+
+def _is_schema_edge(edge):
+    """Is this connection part of the graph's own schema stratum (the schema inversion)?
+    The schema edge types always; the stratified types only when they
+    run FROM an Archetype (a concept tower / concept ladder) — a
+    stratified edge from a citizen is its re-derived machine shadow, not
+    schema. This split decides which refusal message a frozen row gets."""
+    return (edge.type in SCHEMA_EDGE_TYPES
+            or (edge.type in STRATIFIED_EDGE_TYPES
+                and edge.from_label == ARCHETYPE_LABEL))
+
+
+@dataclass
+class Delta:
+    nodes_added: list = field(default_factory=list)    # (label, name, props)
+    nodes_removed: list = field(default_factory=list)  # (label, name, props before-image)
+    nodes_changed: list = field(default_factory=list)  # (label, name, {prop: (before, after)})
+    edges_added: list = field(default_factory=list)    # Edge
+    edges_removed: list = field(default_factory=list)  # Edge (props are the before-image)
+    edges_changed: list = field(default_factory=list)  # (Edge after, {prop: (before, after)})
+    stitch: list = field(default_factory=list)         # Edge — lands after re-derivation (the stitch mechanism)
+
+    @property
+    def empty(self):
+        return not (self.nodes_added or self.nodes_removed
+                    or self.nodes_changed or self.edges_added
+                    or self.edges_removed or self.edges_changed
+                    or self.stitch)
+
+
+def read_graph(config):
+    """Read a database back into GraphData shape (nodes keyed by
+    (label, name), Edge list). Nodes without a name property are keyed by
+    None and surface in the lint — agents must name what they create."""
+    from neo4j import GraphDatabase  # deferred: only DB access needs it
+
+    graph = GraphData()
+    driver = GraphDatabase.driver(
+        config["NEO4J_URI"],
+        auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))
+    with driver, driver.session(database=config["NEO4J_DATABASE"]) as session:
+        for record in session.run(
+                "MATCH (n) RETURN labels(n) AS labels, properties(n) AS props"):
+            props = dict(record["props"])
+            name = props.pop("name", None)
+            label = (record["labels"] or ["(unlabeled)"])[0]
+            graph.ensure_node(label, name, **props)
+        for record in session.run(
+                "MATCH (a)-[r]->(b) RETURN labels(a)[0] AS fl, a.name AS fn, "
+                "type(r) AS t, properties(r) AS props, "
+                "labels(b)[0] AS tl, b.name AS tn"):
+            graph.edges.append(make_edge(
+                record["t"], record["fl"], record["fn"],
+                record["tl"], record["tn"], dict(record["props"])))
+    return graph
+
+
+def diff(base, scratch):
+    """Itemized changeset: what scratch holds that base does not, and vice
+    versa. A property edit on an edge is paired into edges_changed (one
+    entry, before → after per property) when the pairing is unambiguous —
+    exactly one removed and one added edge between the same endpoints with
+    the same type; genuinely parallel edges stay as adds/removes. Removals
+    carry their full property before-image: the undo record."""
+    delta = Delta()
+    # Machine-label nodes (Step/Outcome) never itemize as changes or
+    # removals: when a rederive moves canon's machine layer mid-round, a
+    # scratch cut earlier holds the STALE machine nodes, and the drift
+    # would ride the changeset toward a guaranteed apply refusal — the
+    # applier works on the machine-stripped ground layer, where those
+    # nodes do not exist to verify. Re-derivation owns them at apply.
+    # Schema-label nodes (the Archetype stratum) are GROUND since the
+    # inversion and DO itemize as changes and removals — the
+    # freeze must refuse an authored schema mutation by name, never
+    # swallow it into a green apply. Authored machine-label ADDITIONS
+    # still itemize so the lint can refuse them.
+    machine = (lambda key: key[0] in MACHINE_LABELS)
+    for key in sorted(scratch.nodes.keys() - base.nodes.keys(),
+                      key=lambda k: (k[0], str(k[1]))):
+        delta.nodes_added.append((key[0], key[1], dict(scratch.nodes[key])))
+    for key in sorted(base.nodes.keys() - scratch.nodes.keys(),
+                      key=lambda k: (k[0], str(k[1]))):
+        if machine(key):
+            continue
+        delta.nodes_removed.append((key[0], key[1], dict(base.nodes[key])))
+    for key in sorted(scratch.nodes.keys() & base.nodes.keys(),
+                      key=lambda k: (k[0], str(k[1]))):
+        if machine(key):
+            continue
+        before, after = base.nodes[key], scratch.nodes[key]
+        changes = {prop: (before.get(prop), after.get(prop))
+                   for prop in sorted(set(before) | set(after))
+                   if before.get(prop) != after.get(prop)}
+        if changes:
+            delta.nodes_changed.append((key[0], key[1], changes))
+    base_edges, scratch_edges = set(base.edges), set(scratch.edges)
+    edge_key = (lambda e: (e.type, e.from_label, str(e.from_name),
+                           e.to_label, str(e.to_name), e.props))
+    added = sorted(scratch_edges - base_edges, key=edge_key)
+    removed = sorted(base_edges - scratch_edges, key=edge_key)
+    identity = (lambda e: (e.type, e.from_label, str(e.from_name),
+                           e.to_label, str(e.to_name)))
+    added_by, removed_by = {}, {}
+    for e in added:
+        added_by.setdefault(identity(e), []).append(e)
+    for e in removed:
+        removed_by.setdefault(identity(e), []).append(e)
+    paired = set()
+    for ident in sorted(added_by.keys() & removed_by.keys()):
+        if len(added_by[ident]) != 1 or len(removed_by[ident]) != 1:
+            continue  # parallel edges — pairing would be a guess
+        before, after = removed_by[ident][0], added_by[ident][0]
+        bp, ap = dict(before.props), dict(after.props)
+        changes = {prop: (bp.get(prop), ap.get(prop))
+                   for prop in sorted(set(bp) | set(ap))
+                   if bp.get(prop) != ap.get(prop)}
+        delta.edges_changed.append((after, changes))
+        paired.update({before, after})
+    delta.edges_added = [e for e in added if e not in paired]
+    # Machine-derived edges never itemize as bare removals: they are
+    # shadows of ground-fact changes (a deleted node takes its INSTANCE_OF
+    # with it), and the applier works on the machine-stripped ground layer
+    # where they cannot verify — re-derivation owns them at apply. Schema
+    # edges (the stratum from an Archetype) are GROUND since the
+    # inversion and DO itemize as removals, so the freeze can
+    # refuse a schema deletion by name instead of silently discarding
+    # it. Authored derived-edge additions and paired modifications still
+    # itemize so the lint can refuse them.
+    delta.edges_removed = [e for e in removed
+                           if e not in paired and not is_derived_edge(e)]
+    return delta
+
+
+def lint(delta):
+    """Ground-facts violations: machine labels or derived edge types among
+    the ADDITIONS (the machine's own base-side layers are fine — the lint
+    guards what the author wrote, not what the derivation computed)."""
+    violations = []
+    for label, name, _ in delta.nodes_added:
+        if label in SCHEMA_LABELS:
+            # Frozen, not machine-built: schema citizens are ground truth
+            # since the inversion, but authoring changes to them
+            # waits on the schema-delta ceremony.
+            violations.append(
+                f"Attempted to author '{name}' as a {label}. Failed due "
+                f"to: {label} nodes are the graph's own schema, and "
+                "schema changes are frozen until the schema-delta "
+                "ceremony lands. Propose the schema change to the "
+                "owner at the plan gate instead — do not hand-author it "
+                "in scratch. To undo: delete the node from scratch, or "
+                "reset scratch entirely (python -m graph load --database "
+                "scratch).")
+        elif label in UNAUTHORABLE_LABELS:
+            violations.append(
+                f"'{name}' can't be created as a {label} — nodes of that "
+                "kind are built automatically by the system, never by "
+                "hand (machine label). If you meant to propose a new "
+                "concept or step, say so in the plan and the owner "
+                "will place it. To undo: delete the node from scratch, "
+                "or reset scratch entirely (python -m graph load "
+                "--database scratch).")
+        if name is None:
+            violations.append(
+                f"a {label} node was created without a name — every "
+                "citizen needs one. Give it a name property or delete it "
+                "from scratch.")
+    # The freeze covers every mutation class, not just additions: an
+    # authored schema edit or deletion must be REFUSED by name — never
+    # silently dropped from the changeset into a green apply.
+    for label, name, _ in delta.nodes_changed:
+        if label in SCHEMA_LABELS:
+            violations.append(
+                f"Attempted to modify '{name}' ({label}). Failed due "
+                f"to: {label} nodes are the graph's own schema, and "
+                "schema changes are frozen until the schema-delta "
+                "ceremony lands. Propose the schema change to "
+                "the owner at the plan gate instead. To undo: restore "
+                "the node's properties in scratch, or reset scratch "
+                "entirely (python -m graph load --database scratch).")
+    for label, name, _ in delta.nodes_removed:
+        if label in SCHEMA_LABELS:
+            violations.append(
+                f"Attempted to remove '{name}' ({label}). Failed due "
+                f"to: {label} nodes are the graph's own schema, and "
+                "schema changes are frozen until the schema-delta "
+                "ceremony lands. Propose the schema change to "
+                "the owner at the plan gate instead. To undo: reset "
+                "scratch entirely (python -m graph load --database "
+                "scratch).")
+    for edge in delta.edges_removed:
+        if _is_schema_edge(edge):
+            violations.append(
+                f"Attempted to remove the connection ({edge.from_name})-"
+                f"[:{edge.type}]->({edge.to_name}). Failed due to: "
+                f"{edge.type} links are part of the graph's own schema, "
+                "and schema changes are frozen until the schema-delta "
+                "ceremony lands. Propose the schema change to "
+                "the owner at the plan gate instead. To undo: reset "
+                "scratch entirely (python -m graph load --database "
+                "scratch).")
+    for edge in delta.edges_added:
+        if _is_schema_edge(edge):
+            violations.append(
+                f"Attempted to author the connection ({edge.from_name})-"
+                f"[:{edge.type}]->({edge.to_name}). Failed due to: "
+                f"{edge.type} links are part of the graph's own schema, "
+                "and schema changes are frozen until the schema-delta "
+                "ceremony lands. Propose the schema change to the "
+                "owner at the plan gate instead. To undo: MATCH the "
+                "relationship in scratch and DELETE it, or reset scratch.")
+        elif edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
+            violations.append(
+                f"the connection ({edge.from_name}) → ({edge.to_name}) "
+                f"can't be added by hand — {edge.type} links are computed "
+                "automatically from the facts, so a manual one would go "
+                "stale the moment the facts change (derived type "
+                f"{edge.type}). If the intent is 'these two should be "
+                "related', that's an owner question — raise it at the "
+                "plan gate. To undo: MATCH the relationship in scratch "
+                "and DELETE it, or reset scratch.")
+        if edge.from_name is None or edge.to_name is None:
+            violations.append(
+                f"a {edge.type} connection touches an unnamed node — "
+                "name the node or remove the connection.")
+    for edge, _ in delta.edges_changed:
+        if _is_schema_edge(edge):
+            violations.append(
+                f"Attempted to modify the connection ({edge.from_name})-"
+                f"[:{edge.type}]->({edge.to_name}). Failed due to: "
+                f"{edge.type} links are part of the graph's own schema, "
+                "and schema changes are frozen until the schema-delta "
+                "ceremony lands. Propose the schema change to the "
+                "owner at the plan gate instead. To undo: restore the "
+                "relationship's properties in scratch, or reset scratch.")
+        elif edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
+            violations.append(
+                f"the connection ({edge.from_name}) → ({edge.to_name}) "
+                f"can't be modified by hand — {edge.type} links are "
+                "computed automatically from the facts (derived type "
+                f"{edge.type}). If the underlying fact is wrong, change "
+                "the fact; the link follows. To undo: restore the "
+                "relationship's properties in scratch, or reset scratch.")
+    return violations
+
+
+def lint_stitch(delta, scratch):
+    """The stitch mechanism: the stitch carries ground edges whose endpoint is born by
+    this round's schema edit — they cannot be authored in scratch (the
+    endpoint does not exist there to point at), so they ride the
+    proposal in the stitch file and land at apply, after re-derivation
+    births their endpoints. This lint holds the door narrow: a stitch
+    edge must genuinely need the stitch."""
+    violations = []
+    for edge in delta.stitch:
+        if _is_schema_edge(edge):
+            violations.append(
+                f"Attempted to author the stitch connection "
+                f"({edge.from_name})-[:{edge.type}]->({edge.to_name}). "
+                f"Failed due to: {edge.type} links are part of the "
+                "graph's own schema, and schema changes are frozen until "
+                "the schema-delta ceremony lands. Propose the "
+                "schema change to the owner at the plan gate instead. "
+                "Remove it from the stitch file.")
+            continue
+        if edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
+            violations.append(
+                f"the stitch connection ({edge.from_name}) → "
+                f"({edge.to_name}) can't be authored — {edge.type} links "
+                "are computed automatically from the facts (derived type "
+                f"{edge.type}); the stitch carries ground facts only. "
+                "Remove it from the stitch file.")
+            continue
+        if edge.from_name is None or edge.to_name is None:
+            violations.append(
+                f"a stitch {edge.type} connection touches an unnamed "
+                "node — name both endpoints in the stitch file.")
+            continue
+        if (edge.from_label, edge.from_name) in scratch.nodes and \
+                (edge.to_label, edge.to_name) in scratch.nodes:
+            violations.append(
+                f"the stitch connection ({edge.from_name})-"
+                f"[:{edge.type}]->({edge.to_name}) doesn't need the "
+                "stitch — both ends already exist in scratch. Author it "
+                "there like any other ground fact and it will ride the "
+                "main changeset.")
+    return violations
+
+
+def render_report(delta, violations):
+    """Human-readable delta report (markdown). Lint verdicts first; a
+    schema-layer section joins when the ontology-embedding precedent embeds the ontology on the graph."""
+    lines = ["# Delta report — scratch vs source-derived base", ""]
+    if delta.empty:
+        lines += ["Scratch matches the base exactly — no proposal present.",
+                  ""]
+        return "\n".join(lines)
+    lines += [f"**Summary:** {len(delta.nodes_added)} nodes added · "
+              f"{len(delta.nodes_changed)} changed · "
+              f"{len(delta.nodes_removed)} removed · "
+              f"{len(delta.edges_added)} edges added · "
+              f"{len(delta.edges_changed)} changed · "
+              f"{len(delta.edges_removed)} removed"
+              + (f" · {len(delta.stitch)} stitched"
+                 if delta.stitch else ""), ""]
+    lines += ["## Ground-facts lint", ""]
+    if violations:
+        lines += ["The items below cannot become canon as written — each "
+                  "says why, and what to do instead. Nothing canonizes "
+                  "until they are resolved.", ""]
+        lines += [f"- ⚠ {violation}" for violation in violations] + [""]
+    else:
+        lines += ["Clean — every addition is a ground fact.", ""]
+    if delta.nodes_added:
+        lines += ["## Nodes added", ""]
+        for label, name, props in delta.nodes_added:
+            detail = ", ".join(f"{k}: {v!r}" for k, v in sorted(props.items()))
+            lines.append(f"- ({label}) **{name}**"
+                         + (f" — {detail}" if detail else ""))
+        lines.append("")
+    if delta.nodes_changed:
+        lines += ["## Nodes changed (before → after)", ""]
+        for label, name, changes in delta.nodes_changed:
+            edits = "; ".join(f"{prop}: {b!r} → {a!r}"
+                              for prop, (b, a) in sorted(changes.items()))
+            lines.append(f"- ({label}) **{name}** — {edits}")
+        lines.append("")
+    if delta.nodes_removed:
+        lines += ["## Nodes removed (with what they held)", ""]
+        for label, name, props in delta.nodes_removed:
+            detail = ", ".join(f"{k}: {v!r}" for k, v in sorted(props.items()))
+            lines.append(f"- ({label}) **{name}**"
+                         + (f" — held {detail}" if detail else ""))
+        lines.append("")
+    if delta.edges_added:
+        lines += ["## Edges added", ""]
+        for e in delta.edges_added:
+            props = ", ".join(f"{k}: {v!r}" for k, v in e.props)
+            lines.append(f"- ({e.from_name})-[:{e.type}"
+                         + (f" {{{props}}}" if props else "")
+                         + f"]->({e.to_name})")
+        lines.append("")
+    if delta.edges_changed:
+        lines += ["## Edges changed (before → after)", ""]
+        for e, changes in delta.edges_changed:
+            edits = "; ".join(f"{prop}: {b!r} → {a!r}"
+                              for prop, (b, a) in sorted(changes.items()))
+            lines.append(f"- ({e.from_name})-[:{e.type}]->({e.to_name}) "
+                         f"— {edits}")
+        lines.append("")
+    if delta.edges_removed:
+        lines += ["## Edges removed", ""]
+        lines += [f"- ({e.from_name})-[:{e.type}]->({e.to_name})"
+                  for e in delta.edges_removed] + [""]
+    if delta.stitch:
+        lines += ["## Stitch — lands after re-derivation", "",
+                  "These connections point at citizens born by this "
+                  "round's schema edit, so they cannot exist in scratch "
+                  "yet. They ride this same approval and land in the "
+                  "same apply — verified in memory after re-derivation "
+                  "births their endpoints, before anything is written.",
+                  ""]
+        for e in delta.stitch:
+            props = ", ".join(f"{k}: {v!r}" for k, v in e.props)
+            lines.append(f"- ({e.from_name})-[:{e.type}"
+                         + (f" {{{props}}}" if props else "")
+                         + f"]->({e.to_name})")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def body_sync_violations(scratch, base_dir):
+    """Program-body carriage: every node carrying an approved program (body + source_path)
+    must match its file byte-for-byte. The WHOLE scratch graph is
+    scanned, not just the changeset — the classic failure is editing the
+    file and forgetting the paste, which leaves the node out of the
+    delta entirely."""
+    violations = []
+    for (label, name), props in sorted(
+            scratch.nodes.items(), key=lambda item: str(item[0])):
+        source_path = (props or {}).get("source_path")
+        body = (props or {}).get("body")
+        if not source_path or body is None:
+            continue
+        path = base_dir / source_path
+        try:
+            file_text = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            violations.append(
+                f"'{name}' cites {source_path} as its approved program, "
+                f"but the file is not readable ({exc}) — restore the "
+                "file or fix the node's source_path.")
+            continue
+        if file_text != body:
+            violations.append(
+                f"'{name}' carries a program body out of sync with "
+                f"{source_path}. The approved file is the truth — run "
+                "python -m graph delta --sync-bodies to update the "
+                "graph copy from the file.")
+    return violations
+
+
+def sync_bodies(config, base_dir):
+    """Program-body carriage: write each program-carrying node's body from its approved
+    file — the file is the truth; the paste-and-hash ritual retires.
+    Returns (synced node names, problem messages)."""
+    from neo4j import GraphDatabase  # deferred: only DB access needs it
+
+    synced, problems = [], []
+    driver = GraphDatabase.driver(
+        config["NEO4J_URI"],
+        auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))
+    with driver, driver.session(database=config["NEO4J_DATABASE"]) as session:
+        rows = session.run(
+            "MATCH (n) WHERE n.source_path IS NOT NULL "
+            "AND n.body IS NOT NULL "
+            "RETURN labels(n)[0] AS label, n.name AS name, "
+            "n.source_path AS source_path, n.body AS body").data()
+        for row in rows:
+            path = base_dir / row["source_path"]
+            try:
+                file_text = path.read_text(encoding="utf-8")
+            except OSError as exc:
+                problems.append(
+                    f"'{row['name']}': {row['source_path']} is not "
+                    f"readable ({exc})")
+                continue
+            if file_text == row["body"]:
+                continue
+            session.run(
+                "MATCH (n {name: $name}) WHERE labels(n)[0] = $label "
+                "AND n.source_path = $source_path SET n.body = $body",
+                name=row["name"], label=row["label"],
+                source_path=row["source_path"], body=file_text)
+            synced.append(row["name"])
+    return synced, problems

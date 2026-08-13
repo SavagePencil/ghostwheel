@@ -1,0 +1,247 @@
+"""Canon attribution: the source ladder, verdict semantics, the earned
+flag, and the whole-book unit — pure logic over GraphData plus the
+roundtrip harness's fixture patterns."""
+
+import json
+
+from graph.attribution import (ATTRIBUTED, CANON_GAP, INVENTION,
+                               PROPERTIES, PROSE, RECEIPT, CanonIndex,
+                               census, census_claims, render_census)
+from graph.extract import GraphData, make_edge
+
+
+def canon():
+    g = GraphData()
+    g.ensure_node("Terrain", "Bog", defense_mod=-2,
+                  from_text="A Bog Beast suffers -2 to defense.")
+    g.ensure_node("Knack", "Fading Step",
+                  description="Beasts may need to perform a Fading Step "
+                              "Knack to keep their footing while leaving "
+                              "the mire.")
+    g.ensure_node("Archetype", "Bravery",
+                  doc="Bravery measures a Beast's will to keep going "
+                      "when the tale turns against it.")
+    return g
+
+
+def test_ladder_prefers_structured_over_receipt_over_prose():
+    index = CanonIndex(canon())
+    first = index.attribute("Bog imposes -2 to defense.")
+    assert first.verdict == ATTRIBUTED and first.rung == PROPERTIES
+    assert ("Terrain", "Bog") in first.citizens
+    receipt = index.attribute("A Bog Beast suffers -2 to defense.")
+    # the receipt sentence ALSO matches rung 1 (name + value present) —
+    # the ladder stops at the strongest home
+    assert receipt.rung == PROPERTIES
+    soup = index.attribute("Bravery measures a Beast's will to keep "
+                           "going.")
+    assert soup.verdict == ATTRIBUTED and soup.rung == PROSE
+    step = index.attribute("Beasts may need to perform a Fading Step "
+                           "Knack to keep their footing.")
+    assert step.rung == PROSE  # description is a prose home
+
+
+def test_receipt_rung_matches_carried_sentences():
+    g = GraphData()
+    g.ensure_node("Knack", "Warden",
+                  from_text="The Warden steps into harm's way for "
+                            "an adjacent ally.")
+    verdict = CanonIndex(g).attribute(
+        "The Warden steps into harm's way for an adjacent ally.")
+    assert verdict.verdict == ATTRIBUTED and verdict.rung == RECEIPT
+
+
+def test_homeless_claim_splits_on_parity():
+    # census claims come back judge-normalized (lowercase, no period)
+    draft = ("Bog imposes -2 to defense. The moon phase doubles all "
+             "wear. Lanterns cost two gold each.")
+    results = census(draft, canon(),
+                     invented=["The moon phase doubles all wear."])
+    by_claim = {r.claim: r for r in results}
+    assert by_claim["bog imposes -2 to defense"].verdict == ATTRIBUTED
+    # parity called it invented and canon has no home: the named red
+    assert by_claim["the moon phase doubles all wear"].verdict == \
+        INVENTION
+    # parity-green but homeless: the hole is the graph's, not the
+    # drafter's — a debt that never blocks
+    assert by_claim["lanterns cost two gold each"].verdict == CANON_GAP
+
+
+def test_earned_flag_follows_the_consulted_set():
+    index = CanonIndex(canon())
+    earned = index.attribute("Bog imposes -2 to defense.",
+                             consulted={("Terrain", "Bog")})
+    assert earned.earned is True
+    unearned = index.attribute("Bog imposes -2 to defense.",
+                               consulted={("Knack", "Fading Step")})
+    assert unearned.earned is False
+    silent = index.attribute("Bog imposes -2 to defense.")
+    assert silent.earned is None  # no trace supplied — nothing claimed
+
+
+def test_census_skips_tables_and_embeds():
+    draft = ("Bog imposes -2 to defense.\n"
+             "| Knack | Spark |\n| Bound | Faint |\n"
+             "{{csv:data/knacks.csv}}\n")
+    # claims come back judge-normalized; table rows and embeds are gone
+    assert census_claims(draft) == ["bog imposes -2 to defense"]
+
+
+def test_metadata_props_attest_nothing():
+    g = GraphData()
+    g.ensure_node("Decision", "A ruling on lamps",
+                  source="docs/tale.md section Harbor",
+                  grade="agent-proposed")
+    verdict = CanonIndex(g).attribute(
+        "The harbor section of the tale explains the lamps.")
+    assert verdict.verdict == CANON_GAP  # provenance strings are not homes
+
+
+def test_report_names_the_ruled_semantics():
+    draft = ("Bog imposes -2 to defense. The moon phase doubles all "
+             "wear. Lanterns cost two gold each. Bravery measures a "
+             "Beast's will to keep going.")
+    results = census(draft, canon(),
+                     invented=["The moon phase doubles all wear."])
+    report = render_census(results)
+    # a gap with a near miss names its nearest citizens readably
+    near_gap = census("Bog Beasts suffer badly in mud.", canon())
+    near_report = render_census(near_gap)
+    assert "(Terrain) Bog" in near_report or "nearest" not in \
+        near_report
+    assert "1 canon gaps" in report
+    assert "1 unattributed inventions" in report
+    assert "presented, never hidden" in report          # the S4 ruling
+    assert "shipping does not stop" in report            # the S3 ruling
+    assert "the soup" in report
+
+
+# --- structural attribution: the matcher reads the citizens' structure —
+#     edges, lifted step text, mechanical value paraphrases — not just
+#     their prose ---
+
+def test_edge_relation_attributes_first_class_to_both_endpoints():
+    # a claim that names BOTH endpoints of a ground edge AND speaks one
+    # of the edge type's own words homes first-class on both citizens
+    g = GraphData()
+    g.ensure_node("Terrain", "Bog")
+    g.ensure_node("Knack", "Bound")
+    g.edges.append(make_edge("GRANTS_KNACK", "Terrain", "Bog",
+                             "Knack", "Bound"))
+    verdict = CanonIndex(g).attribute("Bog grants the Bound knack.")
+    assert verdict.verdict == ATTRIBUTED and verdict.rung == PROPERTIES
+    assert ("Terrain", "Bog") in verdict.citizens
+    assert ("Knack", "Bound") in verdict.citizens
+    assert "edge" in verdict.evidence
+    assert "edge" in verdict.row()["evidence"]
+
+
+def test_edge_matching_requires_a_type_word_not_mere_co_occurrence():
+    # both endpoints named but NO edge-type word spoken → the sentence
+    # does not assert the relationship, so it is not an edge home
+    g = GraphData()
+    g.ensure_node("Terrain", "Bog")
+    g.ensure_node("Knack", "Bound")
+    g.edges.append(make_edge("GRANTS_KNACK", "Terrain", "Bog",
+                             "Knack", "Bound"))
+    verdict = CanonIndex(g).attribute("Bog and Bound are both trouble.")
+    assert verdict.verdict == CANON_GAP
+
+
+def test_edge_matching_excludes_machine_derived_and_projection_types():
+    # the SAME endpoints + type words: a ground edge is a home; a
+    # machine-derived type and the ASSIGNS_* projection family are not
+    def graph_with(edge_type):
+        g = GraphData()
+        g.ensure_node("Cat", "Alpha")
+        g.ensure_node("Cat", "Beta")
+        g.edges.append(make_edge(edge_type, "Cat", "Alpha", "Cat", "Beta"))
+        return CanonIndex(g)
+
+    ground = graph_with("GRANTS_KNACK").attribute("Alpha grants Beta knack.")
+    assert ground.verdict == ATTRIBUTED and ground.rung == PROPERTIES
+    derived = graph_with("MENTIONS").attribute("Alpha mentions Beta.")
+    assert derived.verdict == CANON_GAP
+    projected = graph_with("ASSIGNS_CONDITION").attribute(
+        "Alpha assigns condition Beta.")
+    assert projected.verdict == CANON_GAP
+
+
+def test_step_lift_attributes_at_receipt_grade_citing_the_procedure():
+    # a procedure's lifted step text is receipt-grain prose the OWNING
+    # procedure carries; a claim found there cites the procedure, not
+    # the step (the owner is the step name's prefix before the mark)
+    g = GraphData()
+    g.ensure_node("Procedure", "Tally the Points")
+    g.ensure_node("Step", "Tally the Points §1",
+                  kind="compute",
+                  text="the top point total equals the might score")
+    verdict = CanonIndex(g).attribute(
+        "the top point total equals the might score")
+    assert verdict.verdict == ATTRIBUTED and verdict.rung == RECEIPT
+    assert ("Procedure", "Tally the Points") in verdict.citizens
+    assert "step" in verdict.evidence
+    # the step itself is never the cited home
+    assert not any(label == "Step" for label, _ in verdict.citizens)
+
+
+def test_value_matching_folds_numeric_format_and_parentheticals():
+    g = GraphData()
+    g.ensure_node("Gem", "Core Shine (Close)", bonus="+10")
+    g.ensure_node("Beast", "Ox", wear="3.0")
+    index = CanonIndex(g)
+    # parenthetical name: "(close)" tokenizes as "close"; "+10" == "10"
+    paren = index.attribute("Core Shine (Close) adds 10 to the roll.")
+    assert paren.verdict == ATTRIBUTED and paren.rung == PROPERTIES
+    assert ("Gem", "Core Shine (Close)") in paren.citizens
+    assert "value" in paren.evidence
+    # trailing point-zero strips: "3.0" == "3"
+    dotzero = index.attribute("Ox adds 3 wear.")
+    assert dotzero.verdict == ATTRIBUTED and dotzero.rung == PROPERTIES
+
+
+def test_numeric_folding_is_format_only_never_sign_or_spelling():
+    # only mechanical FORMAT folds (strip +, strip trailing .0). A bare
+    # "2" does NOT match a stored "-2", and "minus 2" never matches "-2"
+    g = GraphData()
+    g.ensure_node("Gem", "Chill", penalty="-2")
+    index = CanonIndex(g)
+    assert index.attribute("Chill imposes 2 to the roll.").verdict \
+        == CANON_GAP
+    assert index.attribute("Chill imposes minus 2 to the roll.").verdict \
+        == CANON_GAP
+
+
+def test_whole_book_unit_produces_one_scorecard(make_repo):
+    # two docs judged as ONE artifact: canon rows from every scope
+    # apply, and the attribution census runs against the export
+    from graph.roundtrip import ALL_SCOPES, run
+    base_dir, _ = make_repo({
+        "docs/one.md": "# One\n\nBog imposes -2 to defense.\n",
+        "docs/two.md": "# Two\n\nRain soaks everyone completely.\n",
+        "build/book.md": "# One\n\nBog imposes -2 to defense.\n\n"
+                         "# Two\n\nRain soaks everyone completely.\n",
+    }, "version: 1\nnodes: {}\n")
+    export_dir = base_dir / "graph" / "export"
+    export_dir.mkdir(parents=True)
+    (export_dir / "nodes.jsonl").write_text(
+        json.dumps({"label": "Terrain", "name": "Bog",
+                    "properties": {"defense_mod": -2}}) + "\n"
+        + json.dumps({"label": "Approved Omission",
+                      "name": "rain soaks everyone completely",
+                      "properties": {"scope": "docs/two.md"}}) + "\n",
+        encoding="utf-8")
+    (export_dir / "edges.jsonl").write_text("", encoding="utf-8")
+    draft = base_dir / "draft.md"
+    draft.write_text("# One\n\nBog imposes -2 to defense.\n",
+                     encoding="utf-8")
+    result = run(base_dir, "build/book.md", draft,
+                 canon_scope=ALL_SCOPES)
+    # the doc-two-scoped Approved Omission row covers the book run:
+    # the dropped rain sentence is an approved omission, not a red
+    assert result.passed, [f.message for t in result.tiers
+                           for f in t.findings]
+    # and the census attributed the surviving claim at the top rung
+    [homed] = [r for r in result.attribution
+               if r.verdict == ATTRIBUTED]
+    assert homed.rung == PROPERTIES

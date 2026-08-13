@@ -1,0 +1,313 @@
+# =============================================================================
+# METAONTOLOGY — the engine's own ontology (kernel + common facet library)
+# =============================================================================
+# VERSIONING (owner rule, the self-description round): semver, bumped WHENEVER this file
+# changes — MAJOR: a name removed/renamed or semantics changed;
+# MINOR: additive (new root, facet, concept, key); PATCH: wording/docs
+# only. Every change appends (version, fingerprint) to
+# graph/schema-versions.txt — a test enforces both.
+# 0.x.x is the development era: breaking changes are allowed and
+# MINOR may break (semver's own 0.x convention). 1.0.0 means STABLE and
+# only the owner declares it — the canon flip does NOT imply it; the
+# schema stays 0.x through campaign and refactor churn until stability
+# is a promise worth making.
+#
+# This file belongs to the ENGINE, not to any one project. It is loaded first;
+# the project's graph/ontology.yaml is layered on top and may reference
+# everything declared here (e.g. `instance_of: Concept`). Projects may NOT
+# redeclare kernel names.
+#
+# The kernel is deliberately tiny — four things across three kinds:
+#   - one label:    Archetype   (what every metamodel node IS)
+#   - one relation: INSTANCE_OF (how anything points at its archetype)
+#   - four roots:   declared below
+# Everything else — domain categories, project facets, labels — is DERIVED
+# through intake, project by project. The metaontology stays fluid: entries
+# arrive here when artifacts (or design dialogues) demand them.
+#
+# Doc strings below become queryable `doc` properties on the Archetype nodes.
+#
+# MACHINERY MARKING (owner ruling): citizens the owner designates as
+# machinery — vocabulary customers interrogate but never say — wear
+# square brackets in their NAME: '[Segment Scheme]', '[Schema Layer]'
+# (vim-special-buffer prior art: in your list, not yours to touch).
+# Customer-facing kernel citizens (the Judgment family, Procedure, the
+# Metaontology/Ontology anchors) stay unbracketed. Designating more is
+# one bracket-wrap + a MINOR bump. Filter for relevance:
+#   WHERE NOT a.name STARTS WITH '['
+#
+# --- Reserved vocabulary (documented before it exists) -----------------------
+# Under Judgment:   Question / Decision / Answer / TODO / Approved Omission /
+#                   Requirement / Opinion are KERNEL
+#                   concepts (declared below; promoted from project
+#                   labels at the self-description round — the storybook
+#                   test: every corpus with gates has them). Projects bind
+#                   labels + tables to them (a project's own question
+#                   tables, etc.).
+#                   Reserved: Inconsistency (assertion vs. the world's rules,
+#                   e.g. a character speaks after dying), Contradiction
+#                   (source vs. source).
+# Under Provenance: Artifact and DocSection are project-level labels
+#                   (declared in a project's ontology, bound to this root),
+#                   with MENTIONS / PART_OF edges; SPECIFIED_IN reserved.
+# Relations:        SUBTYPE_OF (genuine taxonomy — never use for the
+#                   instance tower; declared via `subtypes:` on a concept
+#                   entry naming the citizens that are its KINDS, derived
+#                   at every rebuild, never authored; first activated at
+#                   a project's kernel ceremony). TRANSITIONS_TO {trigger} is the
+#                   Stateful facet's edge vocabulary. HAS_DISCIPLINE /
+#                   HAS_AUDIENCE route Judgment rows to the project's
+#                   Discipline / Audience citizens (one system, shared
+#                   names).
+# Engine-stamped:   'Metaontology' and 'Ontology' Archetypes
+#                   (under Provenance) carry version + content
+#                   fingerprint — the self-description slice;
+#                   projects may not declare citizens by these names.
+# Deferred:         Objective / Subjective as parents above Provenance and
+#                   Judgment — add later if the distinction becomes
+#                   load-bearing (reparenting is a one-line edit + rebuild).
+# =============================================================================
+
+# Ledger — 0.12.0 (the split ceremony): the kernel now ships from its
+# own repository, an agnostic graph engine versioned and released
+# independently of any consuming project. No vocabulary change; the
+# metaontology simply moves to its own home.
+version: "0.12.0"
+
+roots:
+  Concept: >-
+    User-level subject matter: what the project's things are about (game,
+    story, character, ...). Everything under Concept is domain vocabulary a
+    designer or player would recognize.
+  Facet: >-
+    Structural vocabulary: how a concept's value-space behaves. Machinery,
+    deliberately kept out of domain queries.
+  Provenance: >-
+    Objective knowledge-carriers: artifacts, sources, doc sections — where
+    assertions about the domain come from.
+  Judgment: >-
+    Subjective, adjudicated knowledge: Questions awaiting decisions,
+    Decisions (with who/when), candidate Inconsistencies and Contradictions
+    awaiting rulings. Supersession expected — judgments flip as evidence
+    arrives.
+
+concepts:
+  # Engine-provided concepts: mechanized vocabulary lives with its machinery.
+  # The engine owns the procedure reader and the Step lift, so Procedure
+  # ships here — a peer of the project's own concept categories, itself an
+  # instance of Concept.
+  Procedure: >-
+    A rule-governed happening: preconditions, inputs and outputs,
+    evaluations, dice, branches, and effects. Exists for comprehension
+    (agents reason about it; code and prose can be generated from it),
+    not direct execution. Every Procedure is KNOWN_AT one of the
+    Completeness levels (see that facet); its possible Outcomes carry
+    plain-English guarantees: read-only, cannot-fail, fails-clean,
+    fails-with-side-effects. Only what cannot be derived is authored: inputs
+    (required/optional), outcome names and guarantees, completeness.
+    Reads, consults, mutates, calls, and outcome effects are derived
+    for transcribed procedures.
+  Question:
+    instance_of: Judgment
+    doc: >-
+      Something genuinely open, awaiting a ruling. Openness is DERIVED —
+      no incoming RESOLVES edge — never flagged. Rows accumulate;
+      nothing is deleted: the tables are the rationale record.
+  Decision:
+    instance_of: Judgment
+    doc: >-
+      A ruling that WAS made: by whom, when. Supersession is EXPECTED —
+      decisions flip as evidence arrives, mechanized via SUPERSEDES.
+  Answer:
+    instance_of: Judgment
+    doc: >-
+      A clarification: the truth already existed; the Question dissolves
+      rather than being legislated (contrast Decision, which settles
+      something genuinely open).
+  TODO:
+    instance_of: Judgment
+    doc: >-
+      Known work pending. A Question resolves via a Decision; a TODO
+      resolves via work.
+  Approved Omission:
+    instance_of: Judgment
+    doc: >-
+      An editorial ruling at the parity gates: this claim of a source is
+      deliberately absent from its regeneration and passes forever
+      after. The claim-diff judge consults these rows.
+  # Visibility vocabulary (kernel ceremony, the visibility lens design,
+  # owner-ruled 2026-08-11): mechanized vocabulary lives with its
+  # machinery — the engine owns the lens (graph/lens.py). The storybook
+  # test passes from both directions: any project needs lenses, and a
+  # wholly different project (a node-library permissions model) is
+  # expressible without one addition. Ground edge vocabulary admitted by the same
+  # ceremony — MEMBER_OF (Visibility Group→Visibility Group),
+  # IN_CLASS (element→Visibility Class), ALLOWED / DENIED
+  # (Visibility Group→Visibility Class; denies against
+  # flat classes only), INCLUDES (knowledge grant-inheritance), MANAGES
+  # (delegated administration, enforcement at multi-user) — specs land
+  # project-side with their first consumers, per the deferred pattern.
+  Visibility Group: >-
+    A subject of visibility: who can be granted sight. Individuals are
+    size-1 groups; groups nest via MEMBER_OF, and the transitive fold
+    of a subject's groups is what a visibility lens compiles from.
+    Wearing a subset of one's groups (session activation) and
+    subtracting a group are lens operations, never membership edits.
+  Visibility Class: >-
+    A named set of graph elements that visibility verdicts speak about
+    — the only permission-bearing unit. kind is knowledge (assume-deny:
+    hidden unless a folded group holds an allow) or masking
+    (assume-allow: removed only when a mask names it); postures are
+    fixed per kind, never switchable. Elements join by IN_CLASS edges
+    or by declared label/type selectors. INCLUDES carries knowledge
+    grant-inheritance (holding the child includes the parent);
+    hierarchical resource trees model as OVERLAPPING MEMBERSHIPS,
+    never as INCLUDES (owner-ruled at the ceremony).
+  Discipline:
+    instance_of: Judgment
+    doc: >-
+      A kind of concern — the axis a team splits its thinking along.
+      The kernel declares only the class: every project's disciplines
+      are its own (a film crew's are not a game studio's), disclosed by
+      the team or discerned from the corpus as the ontology evolves.
+      Judgment rows point at theirs via HAS_DISCIPLINE, so a parked
+      question can be routed to the kind of thinking it needs.
+  Audience:
+    instance_of: Judgment
+    doc: >-
+      Who should weigh a thing when its moment arrives — a role or
+      group a judgment is routed to, not a named person. The kernel
+      declares only the class: every project's audiences are its own,
+      disclosed by the team or discerned as the ontology evolves.
+      Judgment rows point at theirs via HAS_AUDIENCE.
+  # Kernel ceremony (the Judgment-vocabulary ceremony): Requirement, Opinion, and Theme enter the
+  # engine — the first two by necessity (the engine's own machinery
+  # mints them: tenets bind as Requirements; run-scoped judgment graphs
+  # mint agent Opinions in any universe), Theme by the owner's
+  # many-projects prediction (every project has design intent; the
+  # kernel is where "Philosophy" stops being reinvented).
+  Requirement:
+    instance_of: Judgment
+    doc: >-
+      A binding constraint the work must satisfy, held by someone — an
+      individual or a group/org — and checkable where its wording
+      allows. Requirements outrank preference: a dispute between taste
+      and a Requirement resolves for the Requirement, and a dispute
+      about whether work satisfies one resolves at a gate. Supersession
+      is expected, as with any ruling.
+  Opinion:
+    instance_of: Judgment
+    doc: >-
+      A stance held with stated confidence, not yet ruled. Agents mint
+      Opinions during runs (mapping choices, judgment calls,
+      classifications); people hold them too. An Opinion carries its
+      holder and its confidence, is preserved rather than averaged,
+      and binds nothing until ratified — ratification promotes its
+      content into a Decision carrying the ratifier's authority.
+  Theme:
+    instance_of: Concept
+    doc: >-
+      A design message the project weaves through everything it does.
+      Themes are not rules and not flavor: they are intent, stated in
+      the owner's words, and every generated artifact is expected to
+      honor them. The kernel declares only the class: each project's
+      themes are its own ("orthogonality above all" is one corpus's;
+      a storybook's moral is another's).
+  '[Schema Layer]':
+    doc: >-
+      A stratum of this graph's own schema. Every graph carries at least
+      two — the Metaontology (the engine's kernel, rank 0, loaded
+      beneath) and the Ontology (this graph's domain vocabulary, rank 1,
+      layered on top) — and every schema citizen DECLARED_IN exactly one.
+      The interrogation path for a fresh connection: ask the Metaontology
+      (what engine family), then the Ontology (what domain), then dig.
+      Future strata (cross-graph stacks, overlays) arrive as instances —
+      the concept is engine-owned; customers interrogate, never edit.
+
+facets:
+  # The common library: natively supported, used by MANY (not all) projects.
+  # A project activates a facet by referencing it (concept: lists, ordered:).
+  # Project-specific facets go in the project file's own facets: section.
+  '[Segment Scheme]': >-
+    A corpus's structure vocabulary ("Story Units", in the roadmap's
+    language): an ordered ladder of segment types (coarse to fine) whose
+    instances nest via PART_OF chains. Membership test — a segment type
+    subdivides an EXTENDED MEDIUM (text, time, space, film, an
+    execution) into ADDRESSABLE PARTS, readable both as containers
+    ("Round 3", "frame 1042") and as counts ("lasts 3 rounds", "takes 4
+    T-cycles"). NOT admitted: units of measure as denominations — ruler
+    refinement (1000 g = 1 kg) and scalar quantities (weight,
+    encumbrance) have no addressable instances and stay plain property
+    values. Schemes are DEDUCED from a corpus's artifacts by recon and
+    ratified at a plan gate — never engine-hardcoded — and a corpus may
+    carry several parallel schemes (organizational, temporal,
+    narrative). A project declares a scheme as a facet instance of
+    Segment Scheme with an ordered values: ladder naming its segment
+    types (declared as sibling facet entries); segment types with
+    existing citizen populations bind to their label via that label's
+    concept: list. A segment type declared `recursive: true` may contain
+    any number of children of its own type (a Section holds
+    sub-Sections). A scheme declared `temporal: true` is a time axis:
+    its units are when-vocabulary, and claims may later be scoped to
+    them ("true during this Round") — the scoping machinery arrives with
+    the contradiction work; the declaration is honest now.
+  Ordered: >-
+    Values form a ladder: rank property + bidirectional PRECEDES/FOLLOWS
+    edges. Applied automatically by `ordered: true` on a label.
+  Exclusive: >-
+    A holder has one-and-only-one value at a time (a traffic light shows
+    exactly one of red, amber, green). Value-spaces whose members stack are
+    deliberately NOT Exclusive. Declared semantics today; enforcement
+    machinery may arrive with live-state work.
+  Stateful: >-
+    Rule-governed transitions exist between values, carried as
+    TRANSITIONS_TO {trigger} edges from an approved transition table.
+  Parameterized: >-
+    The concept's value-space contains templates with variables
+    ("Noun of Verbing"-style entries); concrete instances bind each
+    variable via FULFILLS {variable, value} edges, one per variable.
+  Completeness:
+    ordered: true
+    values: [Cited, Attested, Transcribed]
+    doc: >-
+      How much of a procedure the graph holds — coverage, not accuracy
+      (accuracy is guarded by the approved_hash tripwire and derivation
+      answer-keys) and not trust. Procedures point at their level via
+      KNOWN_AT; the per-section *_closed markers are the same dimension
+      at section granularity. The two-axis test decides the level: does
+      an agent need the inner workings, and do we own the source?
+  Cited:
+    instance_of: Completeness
+    doc: >-
+      The graph holds that the procedure exists: a name, a link to where
+      it lives (SPECIFIED_IN), a description. Every signature section is
+      open — a missing edge means unknown, not known-absent. The right
+      level for procedures we neither own nor need the innards of (a
+      DCC tool's million operations).
+  Attested:
+    instance_of: Completeness
+    doc: >-
+      The graph holds the procedure's surface: an asserted signature
+      (inputs, possible outcomes, reads/consults/mutates with per-section
+      open/closed markers) vouched against a prose body via the
+      approved_hash tripwire — validation warns when the approved source
+      drifts. The signature is asserted, so it can lie; the hash catches
+      staleness, not wrongness.
+  Transcribed:
+    instance_of: Completeness
+    doc: >-
+      The graph holds the whole procedure: the approved program is lifted
+      to Step chains and the signature (READS, MUTATES, CALLS, outcomes
+      via HAS_POSSIBLE_OUTCOME) is DERIVED from the body — closed by
+      construction, unable to drift. Derived signature edges land on
+      value citizens; concept-level observations (a branch's subject, a
+      computation's sources) land on the concept's Archetype. Reference
+      resolution goes through the term index — canonical names, aliases,
+      surface forms, and plural variants all resolve; unresolved terms
+      are worklist findings, never silent. Where an approved fact table
+      overlaps the
+      program, a derivation test keeps them in agreement. CAVEAT:
+      derived closure is relative to the graph's VOCABULARY — complete
+      over what the graph can name, silent about what it cannot. The
+      unresolved-term report lists what the source names that the graph
+      does not; each entry is an asterisk on the closure claim.
