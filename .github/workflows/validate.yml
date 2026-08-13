@@ -32,8 +32,9 @@ jobs:
         pip install PyYAML pytest
 
     - name: Run the full test suite
-      # Includes the golden-snapshot test and the no-trace lint.
+      # The suite exercises every engine surface against fixture
+      # corpora, including the from-sources validate path. The engine
+      # repo itself carries no corpus, so there is nothing repo-level
+      # to validate — a consuming knowledge base runs `validate` over
+      # ITS sources in its own CI.
       run: pytest -q
-
-    - name: Validate sources against the ontology
-      run: python -m graph validate
