@@ -26,7 +26,7 @@ with an EXPLAIN operation that re-evaluates unfolded to name the
 blocking group, consumers declaring the lenses they REQUIRE or AFFORD
 so misconfiguration refuses at build time, super-admin defined as NO
 LENS APPLIED, and lens-scoped EXPORTS as the one place lenses
-materialize (the shipped runtime graph); pocket universes stay out of
+materialize (the shipped runtime graph); Pocket Universes stay out of
 the permission model entirely — they are branches on the existing
 scratch/delta/canonize machinery, with permissions owning only branch
 READABILITY (creator-only by default), and canonize re-tags class
@@ -73,7 +73,7 @@ membership as work becomes canon.
   bypass (BYPASSRLS, Cedar's implicit default), never a subject
   granted everything — under any-deny-wins a modeled admin loses to
   the first deny, and every new class would have to remember them.
-- **Pocket universes are branches, not permissions** [record + owner]:
+- **Pocket Universes are branches, not permissions** [record + owner]:
   every system whose job is isolated adds-AND-removals with later
   merge is a branch system (TerminusDB does it for a knowledge graph;
   tombstones appear in the record only as internal versioning
@@ -86,7 +86,7 @@ membership as work becomes canon.
   is one authored verdict: (their group × the branch) → allow, read
   or write grade; an invited COLLABORATOR gets no lens, an invited
   PLAYER gets a subject's knowledge lens — branch selects the
-  world, the lens filters within it.
+  reality, the lens filters within it.
 - **The storage contract** [owner concern, ruled]: branch = pinned
   base + delta IS the contract (base.json/delta.json already are it);
   clone, filesystem copy-on-write, and delta-overlay-over-a-shared-
@@ -117,7 +117,7 @@ isolation); author the Emberstone fact and its Emberstone Lore class
 membership in the branch; author the grant (Bramble × Emberstone Lore)
 → allow in the branch — the grant is itself branch content, so
 "temporary permission" needs no mechanism at all; ask "what does
-Bramble know?" inside the branch (the branch selects the world,
+Bramble know?" inside the branch (the branch selects the reality,
 Bramble's folded lens filters within it — she knows Universal + Keeper
 knowledge + the Emberstone; other keepers do not); exit the branch
 (view returns to canon, where there is nothing to know); land it via

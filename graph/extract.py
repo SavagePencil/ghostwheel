@@ -1388,6 +1388,31 @@ def strip_derived(graph):
     return ground
 
 
+def schema_only(graph):
+    """A copy holding ONLY the schema stratum: the Archetype citizens and
+    their schema edges (DECLARED_IN, SUBTYPE_OF, and the schema-level
+    INSTANCE_OF/PRECEDES/FOLLOWS FROM an Archetype). No ground facts, no
+    machine layers — the seed a fresh branch is grown from.
+
+    The complement view to strip_derived, over the same stratum
+    predicates: strip_derived keeps the schema stratum PLUS ground; this
+    keeps the schema stratum ALONE. Because is_derived_edge maps a
+    stratified edge from an Archetype to the schema side, the kept edge
+    set is exactly DECLARED_IN + SUBTYPE_OF + Archetype-level ladders —
+    every one with both endpoints an Archetype citizen."""
+    from .ontology import SCHEMA_LABELS, is_derived_edge
+    seed = GraphData()
+    for (label, name), props in graph.nodes.items():
+        if label in SCHEMA_LABELS:
+            seed.ensure_node(label, name, **dict(props))
+    seed.edges = [
+        edge for edge in graph.edges
+        if edge.from_label in SCHEMA_LABELS
+        and edge.to_label in SCHEMA_LABELS
+        and not is_derived_edge(edge)]
+    return seed
+
+
 def embed_schema_stratum(ontology, graph):
     """Ride the ontology.yaml specs the derive-era passes still need onto
     the schema stratum as verbatim whole-spec embeddings (the schema inversion, the

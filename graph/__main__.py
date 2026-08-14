@@ -67,12 +67,15 @@ def cmd_validate(base_dir, write_files=True):
     return 0, graph
 
 
-def canon_base(base_dir):
-    """The base of a round, post-flip: canon's committed backup (the
-    export). No database needed to read it; apply verifies the live
+def canon_base(base_dir, branch=None):
+    """The base of a round, post-flip: the committed backup (the export).
+    Default line: canon's graph/export. A named branch reads its own
+    backup (graph/branches/<name>/export) — its independent line of
+    truth. No database needed to read it; apply verifies the live
     database still matches it before writing anything."""
+    from . import proposal as proposal_mod
     from . import restore as restore_mod
-    return restore_mod.read_export(base_dir / "graph" / "export")
+    return restore_mod.read_export(proposal_mod.export_dir(base_dir, branch))
 
 
 def cmd_export_lensed(base_dir, mask, out):
@@ -172,16 +175,24 @@ def cmd_export(base_dir, from_sources=False):
     return 0
 
 
-def cmd_restore(base_dir, database=None, from_dir=None):
+def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
+                base=None):
     """Rebuild a database from graph/export/ alone, then read it back
     and prove byte-identity with the backup — the D55 drill.
     With --database scratch: clone canon to scratch and pin the round
     (post-flip round cut). With --from <dir> (the visibility lens design): load any
     export — e.g. a lens-scoped materialization — into a WORKSPACE
     database for inspection; requires --database, never targets live
-    canon, and cuts no round."""
+    canon, and cuts no round. With --branch <name> --base schema-only:
+    cut a new branch — an independent line of truth within this KB, born
+    from canon's schema stratum alone, with its own home, backup, and
+    chained log; a branch never becomes canon by flag (succession is the
+    owner's ceremony)."""
     from . import load as load_mod  # deferred: needs the neo4j driver
     from . import restore as restore_mod
+
+    if branch is not None or base is not None:
+        return _restore_branch(base_dir, branch, base, database)
 
     if from_dir and not database:
         print("Attempted to restore from a custom export with no "
@@ -236,6 +247,97 @@ def cmd_restore(base_dir, database=None, from_dir=None):
     if database and not from_dir:
         # a custom export is an inspection load, never a round cut
         pin_round(base_dir, graph, database)
+    return 0
+
+
+def _restore_branch(base_dir, branch, base, database):
+    """Cut a branch: build its seed from canon's committed backup, write
+    the branch's own backup, load it into the branch's database, prove
+    byte-identity, and pin the branch round. The branch is a line of
+    truth WITHIN this KB — hard-isolated from live canon (its target
+    database can never be the canon database) and born from a declared
+    base (only schema-only in this slice; clone-of-canon is a future
+    Pocket base). Collates every problem before touching the DBMS."""
+    from . import load as load_mod
+    from . import proposal as proposal_mod
+    from . import restore as restore_mod
+    from .extract import schema_only
+
+    config = load_mod.read_config(base_dir)
+    # Verify-all before apply-any: collate every refusal — the name lint,
+    # the base check, the no-alias rule, and the existing-home guard —
+    # before writing a single byte.
+    problems = list(proposal_mod.branch_name_problems(
+        branch, config["NEO4J_DATABASE"]))
+    if base != "schema-only":
+        problems.append(
+            "Attempted to cut a branch with base "
+            f"{base!r}. Failed due to: the only branch base in this "
+            "release is 'schema-only' (the schema stratum alone) — pass "
+            "--base schema-only.")
+    if database is not None:
+        problems.append(
+            f"Attempted to cut branch '{branch}' with --database "
+            f"'{database}'. Failed due to: a branch's database IS its "
+            f"name ('{branch}') — one identity, no aliases. Drop "
+            "--database.")
+    if branch:
+        home = proposal_mod.branch_home(base_dir, branch)
+        if home.exists():
+            problems.append(
+                f"Attempted to cut branch '{branch}'. Failed due to: its "
+                f"home ({home.relative_to(base_dir)}) already exists — "
+                "cutting again would overwrite its backup, base pin, and "
+                "event log, stranding its applied.log and archives on a "
+                "vanished base. Deleting a branch home is the owner's own "
+                "act; remove it deliberately to re-cut.")
+    if problems:
+        print("\n".join(problems), file=sys.stderr)
+        return 1
+
+    target = branch  # a branch's database IS its name — no override
+    try:
+        canon = restore_mod.read_export(proposal_mod.export_dir(base_dir))
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        print("Attempted to read canon's committed backup to seed branch "
+              f"'{branch}'. Failed due to: {exc}.", file=sys.stderr)
+        return 1
+
+    seed = schema_only(canon)
+    branch_export = proposal_mod.export_dir(base_dir, branch)
+    # The branch's backup is born at the cut, written FROM the seed — the
+    # drill then proves the branch DATABASE re-serializes to it.
+    export_mod.write_export(seed, branch_export)
+    config["NEO4J_DATABASE"] = target
+    print(f"Cutting branch '{branch}' (database '{target}') from canon's "
+          f"schema stratum alone — {len(seed.nodes)} schema citizens, "
+          f"{len(seed.edges)} schema edges; no ground facts ...")
+    try:
+        summary = load_mod.load(seed, config)
+        dumped = restore_mod.dump_db(config)
+    except Exception as exc:  # driver errors: auth, unreachable, etc.
+        print(f"Branch cut failed: {exc}", file=sys.stderr)
+        print("Is the Neo4j Desktop DBMS running, and does .env match its "
+              "credentials?", file=sys.stderr)
+        return 1
+    print(f"Loaded {summary['loaded_nodes']} nodes, "
+          f"{summary['loaded_edges']} edges into the branch.")
+    drill = restore_mod.verify_against_backup(dumped, branch_export)
+    if drill:
+        for problem in drill:
+            print(problem, file=sys.stderr)
+        print("DRILL FAILED — the branch database was built but does not "
+              "match its backup. The backup files are untouched.",
+              file=sys.stderr)
+        return 1
+    print("DRILL PASSED — the branch database re-serializes byte-identical "
+          "to its freshly-written backup.")
+    pin_round(base_dir, seed, target, branch)
+    print(f"Branch '{branch}' cut. Clone its authoring copy "
+          f"(python -m graph restore --from "
+          f"{branch_export.relative_to(base_dir)} --database "
+          f"{branch}-scratch), author there, then run the round with "
+          f"--branch {branch}.")
     return 0
 
 
@@ -348,9 +450,10 @@ def cmd_rederive(base_dir):
     return 0
 
 
-def pin_round(base_dir, graph, database):
+def pin_round(base_dir, graph, database, branch=None):
     """Cutting a working database starts a round: pin the base's content
-    identity so drift under the round is detectable."""
+    identity so drift under the round is detectable. A named branch pins
+    into its own home (graph/branches/<name>/proposals/current)."""
     from . import proposal as proposal_mod
     import subprocess
     try:
@@ -360,12 +463,24 @@ def pin_round(base_dir, graph, database):
         ).stdout.strip() or "unknown"
     except Exception:
         ref = "unknown"
+    base_path = proposal_mod.current_dir(base_dir, branch) \
+        / proposal_mod.BASE_FILE
     proposal_mod.write_json(
-        proposal_mod.current_dir(base_dir) / proposal_mod.BASE_FILE,
+        base_path,
         {"base_hash": proposal_mod.base_identity(graph),
-         "git_ref": ref, "database": database})
+         "git_ref": ref, "database": database, "branch": branch})
     print(f"Round cut: base pinned at {ref} "
-          f"(graph/proposals/current/base.json)")
+          f"({base_path.relative_to(base_dir)})")
+
+
+def _authoring_database(database, branch):
+    """The authoring copy a round reads. When --database is given it
+    wins; otherwise the default line reads 'scratch' and a branch reads
+    its own '<name>-scratch' — the branch's half of the canon/scratch
+    symmetry."""
+    if database is not None:
+        return database
+    return "scratch" if branch is None else f"{branch}-scratch"
 
 
 def cmd_load(base_dir, database=None):
@@ -490,22 +605,32 @@ def cmd_corpus(base_dir):
     return 1 if (missing or failures) else 0
 
 
-def cmd_delta(base_dir, database, sync_bodies=False):
+def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     """The agentic changeset: diff the scratch database against the
-    canon base (the export backup), lint additions against the machine
-    layers, and
-    write the reviewable report (see graph/design/agentic-etl.md)."""
+    base (the export backup), lint additions against the machine
+    layers, and write the reviewable report (see design/agentic-etl.md).
+    With --branch <name>: the base and round files are the branch's own,
+    and the authoring copy defaults to <name>-scratch — the branch's half
+    of the ceremony surface."""
     from . import delta as delta_mod
     from . import load as load_mod
 
     from . import proposal as proposal_mod
 
+    database = _authoring_database(database, branch)
     try:
-        base = canon_base(base_dir)
+        base = canon_base(base_dir, branch)
     except FileNotFoundError as exc:
         print(exc, file=sys.stderr)
         return 1
     config = load_mod.read_config(base_dir)
+    # A branch may never read live canon as its authoring source.
+    if branch is not None:
+        read_problem = proposal_mod.authoring_read_problem(
+            database, config["NEO4J_DATABASE"])
+        if read_problem:
+            print(read_problem, file=sys.stderr)
+            return 1
     config["NEO4J_DATABASE"] = database
     if sync_bodies:
         try:
@@ -530,12 +655,12 @@ def cmd_delta(base_dir, database, sync_bodies=False):
     changes = delta_mod.diff(base, scratch)
     stitch_problem = None
     try:
-        changes.stitch = proposal_mod.read_stitch(base_dir)
+        changes.stitch = proposal_mod.read_stitch(base_dir, branch)
     except (ValueError, KeyError) as exc:
         stitch_problem = (
             "Attempted to read the round's stitch file "
-            f"(graph/proposals/current/{proposal_mod.STITCH_FILE}). "
-            f"Failed due to: {exc}")
+            f"({proposal_mod.current_dir(base_dir, branch).relative_to(base_dir)}"
+            f"/{proposal_mod.STITCH_FILE}). Failed due to: {exc}")
     violations = delta_mod.lint(changes)
     if stitch_problem:
         violations.append(stitch_problem)
@@ -572,31 +697,36 @@ def cmd_delta(base_dir, database, sync_bodies=False):
     # the proposal document: the machine-readable changeset whose hash
     # IS the proposal's id — what `approve` freezes and apply replays
     delta_text = proposal_mod.serialize_delta(changes)
-    delta_path = proposal_mod.current_dir(base_dir) / proposal_mod.DELTA_FILE
+    delta_path = proposal_mod.current_dir(base_dir, branch) \
+        / proposal_mod.DELTA_FILE
     delta_path.parent.mkdir(parents=True, exist_ok=True)
     delta_path.write_text(delta_text, encoding="utf-8")
     delta_id = proposal_mod.content_hash(delta_text)
     print(f"Proposal id: {delta_id[:12]} "
           f"({delta_path.relative_to(base_dir)})")
-    base_pin = proposal_mod.current_dir(base_dir) / proposal_mod.BASE_FILE
+    base_pin = proposal_mod.current_dir(base_dir, branch) \
+        / proposal_mod.BASE_FILE
     if base_pin.exists():
         pinned = proposal_mod.read_json(base_pin)
         if pinned.get("base_hash") != proposal_mod.base_identity(base):
             print("WARNING: the base has moved under this round — the "
                   "sources changed since scratch was cut. Drafting may "
-                  "continue, but apply will refuse: re-cut scratch "
-                  "(python -m graph load --database scratch) to "
+                  "continue, but apply will refuse: re-cut scratch to "
                   "re-baseline and re-review.", file=sys.stderr)
     return 1 if violations else 0
 
 
-def cmd_canonize(base_dir, database, apply):
+def cmd_canonize(base_dir, database, apply, branch=None):
     """Apply the approved delta to canon — graph-native. The dry
     run shows the changeset and freeze status; --apply verifies
     everything, applies the pinned changeset to the ground layer in
     memory, re-derives every machine layer, loads the result into the
-    live database, re-exports the backup from it, and appends the
-    chained event log. No file is edited; the graph is primary."""
+    target database, re-exports the backup from it, and appends the
+    chained event log. No file is edited; the graph is primary.
+    With --branch <name>: the base, round files, target database, backup,
+    and log are all the branch's own — and the hard guard refuses if the
+    branch's target database is the KB's live canon (a branch never
+    becomes canon by flag; succession is the owner's ceremony)."""
     from . import canonize as canonize_mod
     from . import delta as delta_mod
     from . import load as load_mod
@@ -606,16 +736,39 @@ def cmd_canonize(base_dir, database, apply):
     from .ontology import ERROR as SEV_ERROR
     from .ontology import ontology_from_graph
 
-    try:
-        base = canon_base(base_dir)
-    except FileNotFoundError as exc:
-        print("Attempted to load the schema from the graph's committed "
-              f"backup (graph/export). Failed due to: {exc}. For a "
-              "from-sources bootstrap, use the load/validate path.",
-              file=sys.stderr)
-        return 1
+    database = _authoring_database(database, branch)
     config = load_mod.read_config(base_dir)
-    live_database = config["NEO4J_DATABASE"]
+    live_canon_database = config["NEO4J_DATABASE"]
+    # The target line's canon database: live canon for the default line;
+    # the branch's own database (= its name) for a branch. The hard guard
+    # — a branch can NEVER write to live canon, nor read it as its
+    # authoring source — is collated and checked FIRST, before the base is
+    # even read, so a canon-named or canon-sourced branch never gets there.
+    if branch is None:
+        target_database, guard = live_canon_database, []
+    else:
+        target_database, guard = proposal_mod.branch_target_database(
+            branch, live_canon_database)
+        read_problem = proposal_mod.authoring_read_problem(
+            database, live_canon_database)
+        if read_problem:
+            guard = list(guard) + [read_problem]
+    if guard:
+        print("--apply refused — a branch is hard-isolated from canon:"
+              if apply else
+              "REFUSED — a branch is hard-isolated from canon:",
+              file=sys.stderr)
+        for problem in guard:
+            print(f"  ⚠ {problem}", file=sys.stderr)
+        return 1
+    try:
+        base = canon_base(base_dir, branch)
+    except FileNotFoundError as exc:
+        print("Attempted to load the schema from the committed "
+              f"backup ({proposal_mod.export_dir(base_dir, branch).relative_to(base_dir)}). "
+              f"Failed due to: {exc}. For a from-sources bootstrap, use "
+              "the load/validate path.", file=sys.stderr)
+        return 1
     config = dict(config)
     config["NEO4J_DATABASE"] = database
     try:
@@ -625,7 +778,7 @@ def cmd_canonize(base_dir, database, apply):
         return 1
     changes = delta_mod.diff(base, scratch)
     try:
-        changes.stitch = proposal_mod.read_stitch(base_dir)
+        changes.stitch = proposal_mod.read_stitch(base_dir, branch)
     except (ValueError, KeyError) as exc:
         print("REFUSED: the round's stitch file is unreadable — "
               f"{exc}", file=sys.stderr)
@@ -639,9 +792,10 @@ def cmd_canonize(base_dir, database, apply):
             print(f"  ⚠ {violation}", file=sys.stderr)
         return 1
 
-    current = proposal_mod.current_dir(base_dir)
+    current = proposal_mod.current_dir(base_dir, branch)
     approval_path = current / proposal_mod.APPROVAL_FILE
     delta_path = current / proposal_mod.DELTA_FILE
+    target_label = "canon" if branch is None else f"branch '{branch}'"
     if not apply:
         counts = (f"{len(changes.nodes_added)} added, "
                   f"{len(changes.nodes_changed)} changed, "
@@ -652,13 +806,13 @@ def cmd_canonize(base_dir, database, apply):
         if changes.stitch:
             counts += (f"; {len(changes.stitch)} stitched (land after "
                        "re-derivation)")
-        print(f"Changeset vs canon: {counts}")
+        print(f"Changeset vs {target_label}: {counts}")
         print("Approval on record: "
               + ("yes" if approval_path.exists() else
                  "no — review at the diff gate, then python -m graph "
                  "approve"))
-        print("Dry run — python -m graph canonize --apply applies the "
-              "approved changeset to the live graph.")
+        print(f"Dry run — python -m graph canonize --apply applies the "
+              f"approved changeset to {target_label}.")
         return 0
 
     # --- the approval freeze: apply replays only what was approved ------
@@ -695,21 +849,21 @@ def cmd_canonize(base_dir, database, apply):
               file=sys.stderr)
         return 1
 
-    # --- the live database must still equal the backup it came from ----
-    live_config = dict(config)
-    live_config["NEO4J_DATABASE"] = live_database
+    # --- the target database must still equal the backup it came from --
+    target_export = proposal_mod.export_dir(base_dir, branch)
+    target_config = dict(config)
+    target_config["NEO4J_DATABASE"] = target_database
     try:
-        live = restore_mod.dump_db(live_config)
+        live = restore_mod.dump_db(target_config)
     except Exception as exc:
-        print(f"--apply refused: cannot read the live database "
-              f"('{live_database}'): {exc}", file=sys.stderr)
+        print(f"--apply refused: cannot read the {target_label} database "
+              f"('{target_database}'): {exc}", file=sys.stderr)
         return 1
-    live_drift = restore_mod.verify_against_backup(
-        live, base_dir / "graph" / "export")
+    live_drift = restore_mod.verify_against_backup(live, target_export)
     if live_drift:
-        print("--apply refused: the live database no longer matches the "
-              "backup it was restored from — canon moved outside the "
-              "delta path:", file=sys.stderr)
+        print(f"--apply refused: the {target_label} database no longer "
+              "matches the backup it was restored from — it moved outside "
+              "the delta path:", file=sys.stderr)
         for problem in live_drift:
             print(f"  ⚠ {problem}", file=sys.stderr)
         return 1
@@ -753,7 +907,7 @@ def cmd_canonize(base_dir, database, apply):
     # graph, not with a file (the schema-delta ceremony, owner ruling 2026-08-03); restamp the
     # fingerprint from the ground schema stratum too. Verify-all before
     # apply-any: a missing anchor collates here, nothing written.
-    version = proposal_mod.next_log_sequence(base_dir)
+    version = proposal_mod.next_log_sequence(base_dir, branch)
     stamp_problems = canonize_mod.stamp_ontology_anchor(new_graph, version)
     if stamp_problems:
         print("--apply refused — the version anchor cannot be stamped; "
@@ -762,23 +916,23 @@ def cmd_canonize(base_dir, database, apply):
             print(f"  ⚠ {problem}", file=sys.stderr)
         return 1
 
-    # --- write: load canon, re-export the backup FROM the database -----
+    # --- write: load the target, re-export the backup FROM the database
     try:
-        summary = load_mod.load(new_graph, live_config)
-        dumped = restore_mod.dump_db(live_config)
+        summary = load_mod.load(new_graph, target_config)
+        dumped = restore_mod.dump_db(target_config)
     except Exception as exc:
         print(f"Apply failed mid-write: {exc}. The backup files are "
-              "untouched — python -m graph restore returns the live "
+              "untouched — python -m graph restore returns the "
               "database to the last applied state.", file=sys.stderr)
         return 1
     if export_mod.serialize(dumped) != export_mod.serialize(new_graph):
         print("EVENT LOG NOT WRITTEN — the database read back differently "
               "than what was written (driver round-trip fault). The "
               "backup files are untouched; python -m graph restore "
-              "returns the live database to the last applied state.",
+              "returns the database to the last applied state.",
               file=sys.stderr)
         return 1
-    export_mod.write_export(dumped, base_dir / "graph" / "export")
+    export_mod.write_export(dumped, target_export)
 
     # --- the event log: inverse, chained entry, archive ----------------
     inverse_text = proposal_mod.serialize_delta(
@@ -789,31 +943,37 @@ def cmd_canonize(base_dir, database, apply):
         proposal_mod.base_identity(base)
     base_after = proposal_mod.base_identity(dumped)
     chain = proposal_mod.append_applied_log(
-        base_dir, approval["delta_hash"], base_before, base_after)
+        base_dir, approval["delta_hash"], base_before, base_after, branch)
     proposal_mod.write_json(current / proposal_mod.APPLIED_FILE,
                             {"delta_hash": approval["delta_hash"],
                              "base_after": base_after,
                              "applied": "graph-native",
                              "chain": chain})
-    archive = proposal_mod.archive_round(base_dir, approval["delta_hash"])
-    print(f"Applied to canon: {summary['loaded_nodes']} nodes, "
+    archive = proposal_mod.archive_round(base_dir, approval["delta_hash"],
+                                         branch)
+    print(f"Applied to {target_label}: {summary['loaded_nodes']} nodes, "
           f"{summary['loaded_edges']} edges now live; backup re-exported "
           "from the database.")
     print(f"Round archived: {archive.relative_to(base_dir)} — event log "
           f"entry chained ({chain[:12]}), inverse recorded.")
+    ritual_cut = ("python -m graph restore --database scratch"
+                  if branch is None else
+                  f"python -m graph restore --from "
+                  f"{target_export.relative_to(base_dir)} --database "
+                  f"{branch}-scratch")
     print("Ritual: pytest, commit the export + round archive; the next "
-          "round cuts scratch with python -m graph restore --database "
-          "scratch.")
+          f"round cuts scratch with {ritual_cut}.")
     return 0
 
 
-def cmd_approve(base_dir, by):
+def cmd_approve(base_dir, by, branch=None):
     """Record the diff-gate approval against the current proposal's
     content hash. Run by the submitter — or an agent on their behalf;
-    the record names the human. Apply replays only what this froze."""
+    the record names the human. Apply replays only what this froze.
+    With --branch <name>: approves the branch's own current round."""
     from . import proposal as proposal_mod
 
-    current = proposal_mod.current_dir(base_dir)
+    current = proposal_mod.current_dir(base_dir, branch)
     delta_path = current / proposal_mod.DELTA_FILE
     if not delta_path.exists():
         print("Attempted to record an approval, but no proposal document "
@@ -1323,6 +1483,18 @@ def main(argv=None):
         help="target database override (e.g. 'scratch' — cuts a round: "
              "clone of canon, base pinned)")
     restore_parser.add_argument(
+        "--branch", default=None,
+        help="cut a BRANCH — an independent line of truth within this KB "
+             "(its own home, backup, and chained log), born from --base. "
+             "The branch's database IS its name (one identity, no alias — "
+             "--database is refused here); author in its <name>-scratch "
+             "copy. A branch never becomes canon by flag; succession is "
+             "the owner's ceremony.")
+    restore_parser.add_argument(
+        "--base", default=None, choices=["schema-only"],
+        help="the branch's declared base — only 'schema-only' (the schema "
+             "stratum alone, from nothing) in this release")
+    restore_parser.add_argument(
         "--from", dest="from_dir", default=None,
         help="load a CUSTOM export directory (e.g. a lens-scoped "
              "materialization) into a workspace database for "
@@ -1362,8 +1534,13 @@ def main(argv=None):
         help="diff the scratch database against canon's backup: "
              "the agentic changeset, linted and itemized")
     delta_parser.add_argument(
-        "--database", default="scratch",
-        help="the working database to diff (default: scratch)")
+        "--database", default=None,
+        help="the working database to diff (default: scratch, or "
+             "<branch>-scratch with --branch)")
+    delta_parser.add_argument(
+        "--branch", default=None,
+        help="diff a BRANCH's authoring copy against the branch's own "
+             "base and write to the branch's round files")
     delta_parser.add_argument(
         "--sync-bodies", action="store_true",
         help="before diffing, update program-carrying nodes' body from "
@@ -1375,8 +1552,15 @@ def main(argv=None):
              "re-derive, re-export the backup, chain the event log "
              "(dry run by default; --apply writes)")
     canonize_parser.add_argument(
-        "--database", default="scratch",
-        help="the working database to canonize from (default: scratch)")
+        "--database", default=None,
+        help="the working database to canonize from (default: scratch, "
+             "or <branch>-scratch with --branch)")
+    canonize_parser.add_argument(
+        "--branch", default=None,
+        help="apply to a BRANCH's own database, backup, and log — never "
+             "live canon (the hard guard refuses if they collide). A "
+             "branch never becomes canon by flag; succession is the "
+             "owner's ceremony.")
     canonize_parser.add_argument(
         "--apply", action="store_true",
         help="write the deterministic edits to the source files")
@@ -1403,6 +1587,9 @@ def main(argv=None):
     approve_parser.add_argument(
         "--by", default=None,
         help="who approved (defaults to git user.name)")
+    approve_parser.add_argument(
+        "--branch", default=None,
+        help="approve a BRANCH's own current round")
     comprehend_parser = sub.add_parser(
         "comprehend",
         help="build the reading room for an artifact: fingerprint it, "
@@ -1445,7 +1632,8 @@ def main(argv=None):
         return cmd_export(base_dir, from_sources=args.from_sources)
     if args.command == "restore":
         return cmd_restore(base_dir, database=args.database,
-                           from_dir=args.from_dir)
+                           from_dir=args.from_dir, branch=args.branch,
+                           base=args.base)
     if args.command == "rederive":
         return cmd_rederive(base_dir)
     if args.command == "verify-seal":
@@ -1463,14 +1651,16 @@ def main(argv=None):
     if args.command == "terms":
         return cmd_terms(base_dir)
     if args.command == "delta":
-        return cmd_delta(base_dir, args.database, args.sync_bodies)
+        return cmd_delta(base_dir, args.database, args.sync_bodies,
+                         branch=args.branch)
     if args.command == "canonize":
-        return cmd_canonize(base_dir, args.database, args.apply)
+        return cmd_canonize(base_dir, args.database, args.apply,
+                            branch=args.branch)
     if args.command == "roundtrip":
         return cmd_roundtrip(base_dir, args.scope, args.draft,
                              book=args.book)
     if args.command == "approve":
-        return cmd_approve(base_dir, args.by)
+        return cmd_approve(base_dir, args.by, branch=args.branch)
     if args.command == "comprehend":
         return cmd_comprehend(base_dir, args.artifacts, args.recall,
                               args.dispose)

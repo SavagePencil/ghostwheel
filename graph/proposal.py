@@ -312,19 +312,111 @@ def apply_stitch(graph, stitch):
     return []
 
 
+# -- branches: independent lines of truth within a KB ---------------------
+# A branch is a line of truth WITHIN a knowledge base — its own base,
+# authoring ceremony, and chained log, hard-isolated from live canon.
+# Live canon is the unnamed default line (branch=None): its homes keep
+# today's exact paths, byte-unchanged. A named branch lives under
+# graph/branches/<name>/ with its own export, proposals, and applied.log.
+# (The future composition layer above branches — a KB-mounting manifest
+# role, issue #6 — is never a filesystem home here.)
+
+
+def branch_home(base_dir, branch):
+    """A named branch's filesystem home. The default line has no single
+    home — its paths are the legacy graph/ ones — so this is for named
+    branches only."""
+    return Path(base_dir) / "graph" / "branches" / branch
+
+
+def export_dir(base_dir, branch=None):
+    """The branch's committed backup directory. Default line: graph/export
+    (unchanged). Named branch: graph/branches/<name>/export."""
+    if branch is None:
+        return Path(base_dir) / "graph" / "export"
+    return branch_home(base_dir, branch) / "export"
+
+
+def proposals_dir(base_dir, branch=None):
+    """The branch's proposals directory (current/ + archived rounds).
+    Default line: graph/proposals (unchanged). Named branch:
+    graph/branches/<name>/proposals."""
+    if branch is None:
+        return Path(base_dir) / "graph" / PROPOSALS
+    return branch_home(base_dir, branch) / PROPOSALS
+
+
+RESERVED_SCRATCH = "scratch"
+RESERVED_SUFFIX = "-scratch"
+
+
+def branch_name_problems(branch, live_canon_db):
+    """The branch-name lint, collated in plain words. A branch name is a
+    line-of-truth identity, so it may never be:
+      - the live canon database (a branch never becomes canon by flag;
+        succession is the owner's ceremony),
+      - 'scratch' (the default line's authoring copy — an ordinary round
+        would clobber it),
+      - any '<name>-scratch' name (those name authoring copies, including
+        a branch's own <name>-scratch — never a line of truth).
+    Empty list = the name is clean."""
+    problems = []
+    if not branch:
+        problems.append(
+            "Attempted a branch operation with no branch name. Failed "
+            "due to: name the line of truth with --branch <name>.")
+        return problems
+    if branch == live_canon_db:
+        problems.append(
+            f"Attempted to name a branch '{branch}'. Failed due to: that "
+            "is the live canon database — a branch is a separate line of "
+            "truth and never becomes canon by flag (succession is the "
+            "owner's ceremony). Pick another name.")
+    if branch == RESERVED_SCRATCH or branch.endswith(RESERVED_SUFFIX):
+        problems.append(
+            f"Attempted to name a branch '{branch}'. Failed due to: "
+            "'scratch' and any '<name>-scratch' name is reserved for "
+            "authoring copies, not lines of truth — an ordinary round or "
+            "a branch's own authoring copy would collide with it. Pick "
+            "another name.")
+    return problems
+
+
+def branch_target_database(branch, live_canon_db):
+    """The database a branch round writes to: the branch's name — one
+    identity, no aliases — with the branch-name lint applied. Returns
+    (target_db, problems); problems is empty when the name is clean, so
+    the caller collates it verify-all-before-apply-any."""
+    return branch, branch_name_problems(branch, live_canon_db)
+
+
+def authoring_read_problem(authoring_db, live_canon_db):
+    """A branch may never read the live canon database as its authoring
+    source — it is hard-isolated from canon on the read side too, not
+    only the write side. Returns the error-doctrine refusal, or None."""
+    if authoring_db == live_canon_db:
+        return (
+            f"Attempted to read the live canon database '{authoring_db}' "
+            "as a branch round's authoring source. Failed due to: a "
+            "branch is hard-isolated from canon — it can never read "
+            "canon as its source nor write to it. Name the branch's own "
+            "authoring copy (<name>-scratch).")
+    return None
+
+
 # -- round files ----------------------------------------------------------
 
 
-def current_dir(base_dir):
-    return Path(base_dir) / "graph" / PROPOSALS / CURRENT
+def current_dir(base_dir, branch=None):
+    return proposals_dir(base_dir, branch) / CURRENT
 
 
-def read_stitch(base_dir):
+def read_stitch(base_dir, branch=None):
     """The stitch mechanism: the round's declared stitch — ground edges the author files
-    at graph/proposals/current/stitch.json (a JSON list in delta.json's
+    at proposals/current/stitch.json (a JSON list in delta.json's
     edge shape) because their endpoints are born by this round's schema
     edit and cannot be authored in scratch. Absent file = no stitch."""
-    path = current_dir(base_dir) / STITCH_FILE
+    path = current_dir(base_dir, branch) / STITCH_FILE
     if not path.exists():
         return []
     doc = json.loads(path.read_text(encoding="utf-8"))
@@ -351,14 +443,19 @@ def read_json(path):
 APPLIED_LOG = "applied.log"
 
 
-def applied_log_path(base_dir):
-    return Path(base_dir) / "graph" / PROPOSALS / APPLIED_LOG
+def applied_log_path(base_dir, branch=None):
+    """The chained event log's path. Default line: graph/proposals/
+    applied.log (unchanged). Named branch: graph/branches/<name>/
+    applied.log — a sibling of proposals/, per the branch home layout."""
+    if branch is None:
+        return Path(base_dir) / "graph" / PROPOSALS / APPLIED_LOG
+    return branch_home(base_dir, branch) / APPLIED_LOG
 
 
-def read_applied_log(base_dir):
+def read_applied_log(base_dir, branch=None):
     """[(seq, delta_hash, base_before, base_after, prev_chain, chain)] —
     the event log's ordered spine."""
-    path = applied_log_path(base_dir)
+    path = applied_log_path(base_dir, branch)
     if not path.exists():
         return []
     entries = []
@@ -373,27 +470,28 @@ def read_applied_log(base_dir):
     return entries
 
 
-def next_log_sequence(base_dir):
+def next_log_sequence(base_dir, branch=None):
     """The sequence number the NEXT applied round will carry — one past
     the log's last entry (1 for the first round). The project ontology's
     version stamp reads this at apply so a fresh connection's version
     moves with the event log, not with a file (owner ruling, 2026-08-03).
     Computed the same way append_applied_log assigns seq, so the stamp and
     the log entry always agree."""
-    entries = read_applied_log(base_dir)
+    entries = read_applied_log(base_dir, branch)
     return entries[-1][0] + 1 if entries else 1
 
 
-def append_applied_log(base_dir, delta_hash, base_before, base_after):
+def append_applied_log(base_dir, delta_hash, base_before, base_after,
+                       branch=None):
     """One chained entry per applied round: each names its predecessor's
     chain hash, so history is tamper-evident — rewriting any entry
     breaks every later link. Returns the new entry's chain hash."""
-    entries = read_applied_log(base_dir)
-    seq = next_log_sequence(base_dir)
+    entries = read_applied_log(base_dir, branch)
+    seq = next_log_sequence(base_dir, branch)
     prev_chain = entries[-1][5] if entries else "genesis"
     chain = content_hash(
         f"{seq} {delta_hash} {base_before} {base_after} {prev_chain}")
-    path = applied_log_path(base_dir)
+    path = applied_log_path(base_dir, branch)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
@@ -407,12 +505,12 @@ def append_applied_log(base_dir, delta_hash, base_before, base_after):
     return chain
 
 
-def verify_applied_log(base_dir):
+def verify_applied_log(base_dir, branch=None):
     """The chain, re-derived and compared — a broken link is named."""
     problems = []
     prev = "genesis"
     for seq, delta_hash, base_before, base_after, prev_chain, chain in \
-            read_applied_log(base_dir):
+            read_applied_log(base_dir, branch):
         if prev_chain != prev:
             problems.append(f"entry {seq}: predecessor hash mismatch — "
                             "the log was rewritten above this line")
@@ -425,11 +523,11 @@ def verify_applied_log(base_dir):
     return problems
 
 
-def archive_round(base_dir, delta_id):
+def archive_round(base_dir, delta_id, branch=None):
     """Move the current round's artifacts to their durable home,
-    graph/proposals/<id12>/. Returns the archive directory."""
-    src = current_dir(base_dir)
-    dst = Path(base_dir) / "graph" / PROPOSALS / delta_id[:12]
+    proposals/<id12>/. Returns the archive directory."""
+    src = current_dir(base_dir, branch)
+    dst = proposals_dir(base_dir, branch) / delta_id[:12]
     dst.mkdir(parents=True, exist_ok=True)
     for name in (BASE_FILE, DELTA_FILE, APPROVAL_FILE, APPLIED_FILE,
                  INVERSE_FILE, STITCH_FILE):

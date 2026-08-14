@@ -6,7 +6,7 @@ The successor architecture to the derived-graph ETL. One paragraph: **the
 proposal is a graph, review is a graph walk, verification is a query, and
 the only code is a fixed micro-kernel that never grows.** Agents author
 ground facts directly in a scratch graph — *scratch for now*: whether
-isolation in the end means a pocket universe on the live graph, a lock,
+isolation in the end means a branch of the live graph, a lock,
 or a temporal mechanism is the open decision below, and everything else
 in this design survives any of those answers. The reviewable artifact is
 the **delta**; canonization is deterministic replay of an approved delta;
@@ -429,6 +429,29 @@ apply the stitch lands in memory after re-derivation births the
 endpoints and before anything is written — the same
 verify-all-before-apply-any window as every other precondition. The
 inverse removes stitched edges like any other addition.
+
+**Branches — independent lines of truth within a KB.** The default line
+is live canon (the unnamed line every command works on absent a branch),
+with `scratch` as its authoring copy. A *branch* is a second line WITHIN
+the same knowledge base: `restore --branch <name> --base schema-only`
+projects canon's schema stratum alone (`schema_only` — the complement of
+`strip_derived`: the Archetype citizens and their DECLARED_IN / SUBTYPE_OF
+/ Archetype-level ladder edges, no ground, no machine layers) into the
+branch's own database and writes the branch's first backup, pinning the
+round against that content identity — "the whole chapter, from nothing."
+Each branch owns a home — `graph/branches/<name>/{export,proposals,
+applied.log}` — with its own backup, chained event log, and authoring copy
+(`<name>-scratch`), and `delta` / `approve` / `canonize --apply` each learn
+`--branch <name>`: the full verify-all-before-apply-any round, targeting the
+branch's own database and re-exporting the branch's backup and log. The
+hard guard: a branch-scoped apply can never touch the live canon database —
+the applier refuses by name (before any read or write) if the resolved
+target is the KB's canon. The schema freeze still applies inside branches
+(the lint is shared). Succession — a branch *becoming* canon — is the
+owner's ceremony, never a flag. A branch is one line within one KB, the
+atom; a *world* (a KB that mounts other KBs) and a *Pocket Universe* (a
+correlation of branches across KBs at one collated gate) are the future
+composition layer above it, not a branch.
 
 **Findings are rows**: the parity harness files every judged
 difference as a structured row — archived as `findings.jsonl` beside

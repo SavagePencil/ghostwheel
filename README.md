@@ -109,6 +109,10 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `generate "<name>"` | Render a citizen (e.g. a procedure) back into prose from the graph — measured against the authored text, never a replacement. |
 | `export --mask judgment --out dist/runtime` | Lens-scoped export: ship a runtime graph with the design-time stratum stripped. |
 | `restore --from dist/runtime --database scratch` | Inspect any export in a workspace database (never live canon; no round cut). |
+| `restore --branch <name> --base schema-only` | Cut a **branch**: an independent line of truth within this KB, born from canon's schema stratum alone, with its own home, backup, and pinned base. |
+| `delta --branch <name>` | Diff the branch's authoring copy (`<name>-scratch`) against the branch's own base. |
+| `approve --branch <name>` | Record the diff-gate approval for the branch's current round. |
+| `canonize --branch <name> --apply` | Apply the branch's approved changeset to the branch's own database, backup, and log — never live canon (a hard guard refuses if they collide). |
 
 The export in `graph/export/` is committed: it makes graph changes reviewable in
 diffs and is the baseline for the golden test (`pytest`). If a change alters the
@@ -142,6 +146,26 @@ moments — the **plan gate** and the **diff gate**:
    writing anything, re-derives the machine layers, re-exports the backup, and
    appends a chained entry to the event log. The delta *is* the event; its
    recorded inverse is the undo.
+
+## Branches: independent lines of truth
+
+Live canon is the **default line** — the unnamed line of truth every command
+works on when no branch is named, and `scratch` is its authoring copy. A
+**branch** is an independent line of truth *within the same knowledge base*:
+born from a declared base (`--base schema-only` cuts one from the schema stratum
+alone — the whole chapter, from nothing), it lives in its own home
+(`graph/branches/<name>/{export,proposals,applied.log}`) with its own backup,
+its own chained event log, and its own authoring copy (`<name>-scratch`). It runs
+the identical round ceremony — `delta`/`approve`/`canonize --apply`, each learning
+`--branch <name>` — targeting the branch's own database, and it is
+hard-isolated from live canon: a branch-scoped apply can **never** write to the
+canon database (the applier refuses by name if they collide). A branch never
+becomes canon by a flag; **succession is the owner's ceremony**.
+
+A *branch* is one line within one KB. It is not a *world*: a world is a future
+composition layer — a KB whose citizens mount other KBs — and a *Pocket
+Universe* correlates branches across several KBs at one collated gate (see the
+governing taxonomy in issue #6). This slice builds the branch, the atom.
 
 ## Schema as ground: the two ontology layers
 

@@ -15,24 +15,36 @@ the reconciliation is recorded once in [agentic-etl.md](agentic-etl.md)
 
 - **Artifact** — anything a person hands the system: a document, a
   table, an image, an audio or video file.
-- **Canon** — the single shared world of agreed-true facts that
-  everyone's work builds on.
+- **Knowledge Base ("KB")** — one body of knowledge as one graph: a
+  game's rules could be one KB; a chip's instruction set another that
+  someone else publishes and you simply use. Each KB keeps its own
+  facts, its own history, and its own approval gate.
+- **World** — a context you step INTO that gathers several KBs and
+  knows how they relate — nothing is melted together; the world just
+  knows which KBs it uses and how to navigate them. (A world is
+  itself a KB whose subject is the other KBs. Future layer.)
+- **Branch** — an independent working line inside one KB: your own
+  copy with its own history and gate, physically unable to touch the
+  real thing, adopted only when the owner ceremonially says so.
+- **Canon** — the single shared line of agreed-true facts that
+  everyone's work builds on — a KB's main line.
 - **Reading room** — the machinery's temporary workspace for
   understanding what was dropped; all artifacts in a submission are
   read into the same room, side by side. Disposable, never part of
   canon.
-- **Pocket** — a private playground that behaves like your own copy
-  of the world: a branch — canon plus your changes, physically its
-  own database, readable only by you until you invite someone
-  (permissions gate who may *see* the pocket; the isolation itself
-  is the branch). Canon cannot be touched from inside it; exit and
-  your view returns to canon, discard and nothing happened.
+- **Pocket Universe ("Pocket")** — a private playground spanning a
+  world: one invitation-ready bundle of branches, one per KB the work
+  actually changes (KBs only read from are pinned, not copied),
+  readable only by you until you invite someone (permissions gate who
+  may *see* the Pocket; the isolation itself is the branches). Canon
+  cannot be touched from inside it; exit and your view returns to
+  canon, discard and nothing anywhere happened.
 - **Proposal** — a bundled set of changes to canon, frozen so that what
   gets approved is exactly what gets applied.
 - **Plan gate** — the first conversation: "here's how I read your
   artifact — did I read it right?"
 - **Diff gate** — the second conversation: "here's exactly what would
-  change in the world — approve it?"
+  change in canon — approve it?"
 - **Convergence loop** — the machinery re-checking and re-writing its
   own work until only questions needing human judgment remain.
 - **Event log** — the permanent history of every applied change, each
@@ -113,13 +125,17 @@ freely. Wiped and re-cut per round; mistakes here cost nothing.
 
 **Base pin** — cutting scratch records canon's content identity. If
 canon moves mid-round, the apply refuses by name — no round lands on a
-world that shifted under it.
+base that shifted under it.
 
-**Pocket universe** — an isolated branch of the world: canon plus a
-delta, physically its own database, readable only by its creator until
-shared. Exit and your view returns to canon; abandon and nothing
-happened. Branch = pinned base + delta is the contract; the clone is
-an implementation detail.
+**Branch** — an independent line of truth WITHIN a KB: born from a
+declared base (schema-only, or clone-of-canon), with its own authoring
+copy, ceremony, and chained log, physically unable to write the KB's
+live canon, adopted only by the owner's succession ceremony — never a
+flag. Pinned base + delta is the contract; the clone is an
+implementation detail. A **Pocket Universe ("Pocket")** is the
+world-level correlation of branches — one per member KB the work
+mutates, read-pins for the rest, landing at one collated gate with
+verify-all-before-apply-any extended across every member KB.
 
 **Delta / proposal** — the itemized changeset: scratch minus base,
 linted (machine layers refuse authorship), rendered as a report. Its
@@ -242,7 +258,7 @@ class; denies target flat classes only.
 lens is that fold compiled into what they may see, enforced on the
 in-memory graph itself so edges never dangle and derived layers
 recompute under it. **Activation** — wearing a subset of your groups
-this session; exiting a pocket is a lens subtraction, not a
+this session; exiting a Pocket is a lens subtraction, not a
 membership edit.
 
 **Super admin** — no lens applied. Not a subject with every grant — the
@@ -288,7 +304,7 @@ sequenceDiagram
     G->>M: the ratified reading
     Note over M: scratch mapping → proposal, frozen by content
     opt play first, commit later
-        S->>S: pocket copy — experiment, interrogate,<br/>discard without trace
+        S->>S: Pocket copy — experiment, interrogate,<br/>discard without trace
     end
     loop convergence — until nothing lacks a ruling
         Note over M: regenerate cold, judge against the originals,<br/>burn down every finding agents can fix
@@ -323,7 +339,7 @@ sequenceDiagram
 - **The machinery's stations, in a phrase each**: *fingerprint & keep*
   — recognize the artifact forever and preserve the original untouched;
   *reading room* — understand its structure and what each piece claims;
-  *scratch mapping* — translate the reading into the world's own
+  *scratch mapping* — translate the reading into canon's own
   vocabulary (the judgment step); *proposal* — bundle the changes,
   frozen by content; *convergence loop* — regenerate cold, judge
   against the original, burn down every finding agents can fix;
@@ -332,11 +348,11 @@ sequenceDiagram
   *event log* — archive the change and its undo, chained so history
   cannot be quietly rewritten; *serve* — answer from canon, cited,
   scoped to the asker.
-- **The pocket** (upper lane) is deliberately gateless: anyone can make
+- **The Pocket** (upper lane) is deliberately gateless: anyone can make
   a copy, experiment, interrogate, and discard. Canon is untouchable
-  from inside a pocket; a proposal carries only what the submitter chose
+  from inside a Pocket; a proposal carries only what the submitter chose
   to keep.
-- **After canon** (Serve → Live with the world), the relationship
+- **After canon** (Serve → Live with canon), the relationship
   inverts: the submitter asks and the machinery answers — scoped to
   their clearance, cited to its sources, in the medium the evidence
   lives in (images shown, audio played, video cued to the moment). A

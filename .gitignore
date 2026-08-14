@@ -35,6 +35,9 @@ graph/reports/
 
 # Proposal rounds: archives are the durable trail; current/ is working state
 graph/proposals/current/
+# Branch lines of truth: each branch's export, applied.log, and round
+# archives are the durable trail; only its current/ is working state
+graph/branches/*/proposals/current/
 
 # The trace checker stays local-only (owner ruling): its banned list is
 # itself a dictionary of the source domain, so it runs as a pre-push
