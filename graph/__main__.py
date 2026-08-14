@@ -674,9 +674,18 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     # The schema is reconstructed FROM canon's backup (the schema-delta ceremony): `base` is the
     # committed graph read above; ontology.yaml is bootstrap-only now.
     ontology = ontology_from_graph(base, base_dir)
+    roster_advisories = []
     if ontology is not None:
-        violations += [f.detail
-                       for f in procedure_roster_findings(ontology, scratch)]
+        roster_details = [f.detail
+                          for f in procedure_roster_findings(ontology,
+                                                             scratch)]
+        if branch:
+            # A branch mid-rebuild is incomplete by design: the roster
+            # census blocks only a finished line. Advisory here; full
+            # strength again when the branch stands for succession.
+            roster_advisories = roster_details
+        else:
+            violations += roster_details
     # The stitch mechanism: preview the stitch's landing against the graph this round
     # will actually produce (changeset applied, machine layers
     # re-derived) — the diff gate must never approve a connection that
@@ -689,6 +698,15 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
             violations += proposal_mod.apply_stitch(derived_preview,
                                                     changes.stitch)
     report = delta_mod.render_report(changes, violations)
+    if roster_advisories:
+        report += (
+            "\n## Advisories — the branch's roster, for the record\n\n"
+            "These registered program files have no citizen on this "
+            "branch yet. A branch mid-rebuild is incomplete by design, "
+            "so these do not block its rounds — the roster check "
+            "returns to full strength when the branch stands for "
+            "succession.\n\n")
+        report += "".join(f"- {detail}\n" for detail in roster_advisories)
     report_path = base_dir / "graph" / "reports" / "delta.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report, encoding="utf-8")
@@ -733,6 +751,7 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     from . import proposal as proposal_mod
     from . import restore as restore_mod
     from .extract import derive, strip_derived
+    from .ontology import Category
     from .ontology import ERROR as SEV_ERROR
     from .ontology import ontology_from_graph
 
@@ -883,6 +902,21 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     ontology = ontology_from_graph(base, base_dir)
     new_graph, derive_findings = derive(ontology, ground)
     derive_errors = [f for f in derive_findings if f.severity == SEV_ERROR]
+    if branch:
+        # The roster census (every registered program file has its
+        # citizen) is a property of a finished line; a branch
+        # mid-rebuild fails it by design. Advisory for branch applies —
+        # it blocks again when the branch stands for succession.
+        roster = [f for f in derive_errors
+                  if f.category == Category.ROSTER]
+        derive_errors = [f for f in derive_errors
+                         if f.category != Category.ROSTER]
+        if roster:
+            print(f"Advisory: {len(roster)} registered program files "
+                  f"have no citizen on branch '{branch}' yet — a "
+                  "mid-rebuild branch is incomplete by design; the "
+                  "roster check blocks only a finished line and must "
+                  "be clean before this branch can succeed canon.")
     if derive_errors:
         print("--apply refused — re-derivation reported errors; nothing "
               "was written:", file=sys.stderr)

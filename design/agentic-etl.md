@@ -447,8 +447,15 @@ branch's own database and re-exporting the branch's backup and log. The
 hard guard: a branch-scoped apply can never touch the live canon database —
 the applier refuses by name (before any read or write) if the resolved
 target is the KB's canon. The schema freeze still applies inside branches
-(the lint is shared). Succession — a branch *becoming* canon — is the
-owner's ceremony, never a flag. A branch is one line within one KB, the
+(the lint is shared). One check relaxes by design: the **procedure
+roster census** (every registered program file has its citizen) is a
+completeness property of a *finished* line, and a branch mid-rebuild is
+incomplete on purpose — so branch-scoped rounds carry roster findings as
+advisories (in the delta report and at apply) instead of refusals, while
+the default line keeps them as hard errors. The check returns to full
+strength when a branch stands for succession: a branch must be
+roster-clean to be adopted. Succession — a branch *becoming* canon — is
+the owner's ceremony, never a flag. A branch is one line within one KB, the
 atom; a *world* (a KB that mounts other KBs) and a *Pocket Universe* (a
 correlation of branches across KBs at one collated gate) are the future
 composition layer above it, not a branch.

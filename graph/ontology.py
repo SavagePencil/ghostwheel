@@ -41,6 +41,7 @@ class Category(enum.StrEnum):
     ONTOLOGY = "ontology"
     UNMAPPED_CSV = "unmapped-csv"
     PROCEDURE = "procedure"
+    ROSTER = "roster"
     UNRESOLVED_TERM = "unresolved-term"
     ANSWER_KEY = "answer-key"
 

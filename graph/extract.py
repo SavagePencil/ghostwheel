@@ -1473,7 +1473,13 @@ def procedure_roster_findings(ontology, graph):
     its citizen stays invisible (its steps and links simply absent) until
     this roster check names it. Matched by source_path: the citizen a
     file produces carries the file's path. One ERROR per orphaned file,
-    per the error doctrine."""
+    per the error doctrine.
+
+    The roster is a completeness census of a FINISHED line: a branch
+    mid-rebuild has not yet absorbed the registered programs by design,
+    so branch-scoped applies treat these findings as advisory (the
+    Category.ROSTER tag is what lets them). The check returns to full
+    strength when a branch stands for succession."""
     registered = []
     for label, spec in ontology.nodes.items():
         if not isinstance(spec, dict) or \
@@ -1488,7 +1494,7 @@ def procedure_roster_findings(ontology, graph):
     for label, relpath in registered:
         if (label, relpath) not in present:
             findings.append(Finding(
-                ERROR, Category.PROCEDURE, relpath, "-",
+                ERROR, Category.ROSTER, relpath, "-",
                 f"Attempted to verify the procedure roster with "
                 f"{len(registered)} registered program files. Failed: "
                 f"{relpath} has no {label} citizen — the file shipped "

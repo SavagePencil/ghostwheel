@@ -449,3 +449,74 @@ def test_restore_branch_rejects_database_alias_over_the_cli(driven_kb,
     assert "no aliases" in capsys.readouterr().err
     assert fake.load_calls == []
     assert not branch_home(base, "rebuild").exists()
+
+
+# -- the roster census is advisory for a mid-rebuild branch ----------------
+
+
+def register_orphan_program(base):
+    """Register a procedure-shaped program file in the exported schema
+    stratum with no citizen to match — the roster census names it. The
+    registration is written straight into the backup (a test may; the
+    ceremony path may not) so any line cut from it reads the same
+    incomplete roster."""
+    import json
+    canon = read_export(export_dir(base))
+    canon.ensure_node(
+        "Archetype", "Ritual",
+        spec_json=json.dumps({"key": "Ritual",
+                              "reader": "procedure_yaml",
+                              "source": ["data/rituals/first-light.yaml"]},
+                             sort_keys=True))
+    export_mod.write_export(canon, export_dir(base))
+    return canon
+
+
+def test_branch_apply_treats_roster_as_advisory(driven_kb, capsys):
+    # A branch mid-rebuild has not absorbed the registered programs by
+    # design: its rounds land with the roster named as an advisory, and
+    # the check returns to full strength at succession.
+    base, fake, canon_snapshot = driven_kb
+    register_orphan_program(base)
+    canon_before = canon_snapshot()
+    branch = "rebuild"
+    assert main_mod.cmd_restore(base, branch=branch, base="schema-only") == 0
+    seed = read_export(export_dir(base, branch))
+    assert ("Archetype", "Ritual") in seed.nodes  # registration rode the cut
+
+    authored = clone(seed)
+    authored.ensure_node("Character", "Ember", temperament="bright")
+    fake.databases[f"{branch}-scratch"] = authored
+
+    assert main_mod.cmd_delta(base, None, branch=branch) == 0
+    out = capsys.readouterr().out
+    assert "Advisories" in out and "first-light" in out
+    assert main_mod.cmd_approve(base, "owner", branch=branch) == 0
+    assert main_mod.cmd_canonize(base, None, apply=True, branch=branch) == 0
+    out = capsys.readouterr().out
+    assert "Advisory" in out and "roster" in out
+
+    branch_canon = read_export(export_dir(base, branch))
+    assert ("Character", "Ember") in branch_canon.nodes  # the round landed
+    assert canon_snapshot() == canon_before   # default line untouched
+
+
+def test_live_apply_still_blocks_on_an_incomplete_roster(driven_kb, capsys):
+    # The demotion is branch-scoped only: on the default line a
+    # registered file without its citizen still refuses the apply.
+    base, fake, _ = driven_kb
+    canon = register_orphan_program(base)
+    fake.databases["neo4j"] = clone(canon)    # live db equals its backup
+    authored = clone(canon)
+    authored.ensure_node("Character", "Ember", temperament="bright")
+    fake.databases["scratch"] = authored
+
+    # on the default line the roster stays a lint violation — the delta
+    # exits nonzero naming it, and the apply refuses even if the round
+    # is pushed through the gate anyway
+    assert main_mod.cmd_delta(base, None) == 1
+    assert main_mod.cmd_approve(base, "owner") == 0
+    assert main_mod.cmd_canonize(base, None, apply=True) == 1
+    err = capsys.readouterr().err
+    assert "no Ritual citizen" in err
+    assert not read_applied_log(base)         # nothing landed
