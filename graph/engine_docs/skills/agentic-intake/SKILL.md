@@ -447,6 +447,12 @@ Standing rules the loop rides on:
   own content.
 - Draft-then-verify discipline: claims about what the machinery will
   derive are tested against the machinery (run the tools), not asserted.
+  **A dry run proves only the stages it actually executes** — a
+  verification that lives in the apply alone (re-derivation, a
+  completeness census) can refuse a round the dry run waved through.
+  Never present a dry run as evidence that findings "don't block";
+  either run the blocking stage or state aloud which stages the dry
+  run skipped.
 - If the source is quirky-formatted, write the normalized canonical
   intermediate (approver-approved, hash-pinned) rather than proposing
   engine parsers — the kernel does not grow per artifact.
