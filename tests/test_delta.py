@@ -145,7 +145,7 @@ def test_lint_rejects_derived_edges_machine_and_schema():
     problems = " | ".join(lint(d))
     # human-readable refusals: what happened, why, what to do instead
     assert "built automatically by the system" in problems  # machine label
-    assert "frozen until the schema-delta ceremony" in problems  # schema label
+    assert "without declaring it" in problems  # schema add, no DECLARED_IN
     assert "derived type INSTANCE_OF" in problems
     assert "derived type READS" in problems
     assert "computed automatically from the facts" in problems
@@ -173,9 +173,9 @@ def test_schema_label_node_is_the_freeze_not_the_machine_message():
     scratch.ensure_node("Archetype", "Woven Concept")
     d = diff(base, scratch)
     problems = " | ".join(lint(d))
-    assert "frozen until the schema-delta ceremony" in problems
-    assert "Attempted to author 'Woven Concept' as a Archetype" in problems
-    assert "propose the schema change to the owner".lower() in problems.lower()
+    assert "without declaring it" in problems
+    assert "Attempted to author 'Woven Concept' as a new Archetype" \
+        in problems
     assert "built automatically by the system" not in problems
 
 
@@ -193,7 +193,7 @@ def test_schema_edge_addition_is_frozen_not_machine_built():
     problems = lint(d)
     text = " | ".join(problems)
     assert len(problems) == 2
-    assert text.count("frozen until the schema-delta ceremony") == 2
+    assert text.count("outside the ceremony's classes") == 2
     assert "DECLARED_IN" in text and "INSTANCE_OF" in text
     assert "computed automatically from the facts" not in text
 
@@ -213,7 +213,7 @@ def test_schema_edge_modification_is_frozen():
     assert edge.type == "SUBTYPE_OF"
     problems = " | ".join(lint(d))
     assert "Attempted to modify the connection" in problems
-    assert "frozen until the schema-delta ceremony" in problems
+    assert "outside the ceremony's classes" in problems
     assert "computed automatically from the facts" not in problems
 
 
@@ -294,7 +294,7 @@ def test_hand_authored_schema_node_still_itemizes_and_refuses():
     scratch.ensure_node("Archetype", "Woven Concept")
     d = diff(base, scratch)
     assert [name for _, name, _ in d.nodes_added] == ["Woven Concept"]
-    assert any("frozen until the schema-delta ceremony" in v for v in lint(d))
+    assert any("without declaring it" in v for v in lint(d))
 
 
 def test_node_deletion_changeset_applies_to_ground_layer():
@@ -348,7 +348,7 @@ def test_stitch_schema_edge_gets_the_freeze_message():
     problems = lint_stitch(d, scratch)
     text = " | ".join(problems)
     assert len(problems) == 1
-    assert "frozen until the schema-delta ceremony" in text
+    assert "the stitch never carries schema" in text
     assert "Remove it from the stitch file" in text
     assert "computed automatically" not in text
 
@@ -368,18 +368,19 @@ def test_stitch_itemizes_in_the_report():
 # -- the freeze covers every mutation class --------------------------------
 
 
-def test_schema_node_prop_edit_is_itemized_and_refused():
-    # An Archetype prop edit must surface as a freeze refusal — never
-    # vanish from the changeset into a green apply.
+def test_schema_node_prop_edit_beyond_doc_is_refused():
+    # A schema prop edit BEYOND the doc classes surfaces as a refusal —
+    # never vanishes from the changeset into a green apply.
     base = base_graph()
     scratch = scratch_from(base)
-    scratch.nodes[("Archetype", "Terrain")]["doc"] = "edited by hand"
+    scratch.nodes[("Archetype", "Terrain")]["temporal"] = True
     d = diff(base, scratch)
     assert [(l, n) for l, n, _ in d.nodes_changed] == \
         [("Archetype", "Terrain")]
     problems = lint(d)
-    assert any("Attempted to modify 'Terrain' (Archetype)" in p
-               and "frozen until the schema-delta ceremony" in p
+    assert any("Attempted to modify 'Terrain' (Archetype) beyond its "
+               "doc text" in p
+               and "outside the ceremony's classes" in p
                for p in problems)
 
 
@@ -393,9 +394,9 @@ def test_schema_node_removal_is_itemized_and_refused():
     d = diff(base, scratch)
     assert [(l, n) for l, n, _ in d.nodes_removed] == \
         [("Archetype", "Terrain")]
-    problems = lint(d)
+    problems = lint(d)   # no base in view: removals refuse outright
     assert any("Attempted to remove 'Terrain' (Archetype)" in p
-               and "frozen until the schema-delta ceremony" in p
+               and "without the base graph in view" in p
                for p in problems)
 
 
@@ -412,7 +413,7 @@ def test_schema_edge_removal_is_itemized_and_refused():
     problems = lint(d)
     assert any("Attempted to remove the connection" in p
                and "DECLARED_IN" in p
-               and "frozen until the schema-delta ceremony" in p
+               and "outside the ceremony's classes" in p
                for p in problems)
 
 

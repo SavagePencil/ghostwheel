@@ -32,7 +32,7 @@ The graph schema has two layers with different ownership and change ceremony:
   event-log sequence, auto-stamped on the graph's Ontology anchor at
   apply, with an optional free-text `tag` beside it — semver stays
   with the kernel, whose bumps are ceremony (owner ruling).
-  Schema changes are frozen until the schema-delta ceremony lands.
+  Schema changes ride the SCHEMA CEREMONY: an ordinary owner-gated round may add a new declared concept, edit a schema row's doc text, or remove an unreferenced schema row — itemized under the delta report's marked ceremony section, whose approval IS the ceremony ruling. Label and spec changes move data underneath them and stay refused: they ride the migration charter.
 
 ## Boundary rules
 

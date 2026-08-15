@@ -152,25 +152,157 @@ def diff(base, scratch):
     return delta
 
 
-def lint(delta):
+# The schema ceremony: property classes an owner-gated round may touch on
+# a schema row. Everything else on the schema stratum stays out of class.
+CEREMONY_DOC_PROPS = frozenset({"doc"})
+
+_OUT_OF_CLASS = (
+    "this schema change is outside the ceremony's classes (new declared "
+    "concepts, doc edits, removal of unreferenced rows) — label and spec "
+    "changes move data underneath them and ride the migration charter. "
+    "Propose the change to the owner at the plan gate instead.")
+
+
+def ceremony_classify(delta, base=None):
+    """Split the delta's schema-stratum changes into the ceremony's
+    permitted classes and out-of-class violations.
+
+    Permitted, itemized for the diff gate (the owner's approval of the
+    round IS the ceremony ruling):
+    - a new CONCEPT row: an Archetype without spec_json, arriving WITH its
+      DECLARED_IN edge (and optionally INSTANCE_OF into a parent concept);
+    - a DOC EDIT: a schema row change touching only CEREMONY_DOC_PROPS;
+    - an UNREFERENCED REMOVAL: a concept row with no spec_json and, in the
+      base, no inbound edges (no members, no anchors) and no outbound
+      edges beyond its own declaration — verified against the base, so
+      base=None refuses removals outright.
+
+    Returns (items, violations, permitted_node_keys, permitted_edge_ids):
+    items are human lines for the report's ceremony section; the permitted
+    sets tell lint() which schema rows to skip its freeze refusals for.
+    """
+    items, violations = [], []
+    permitted_nodes, permitted_edges = set(), set()
+
+    added_concepts = {}
+    for label, name, props in delta.nodes_added:
+        if label not in SCHEMA_LABELS:
+            continue
+        if "spec_json" in (props or {}):
+            violations.append(
+                f"Attempted to author '{name}' as a new {label} LABEL "
+                f"(it carries spec_json). Failed due to: {_OUT_OF_CLASS}")
+        else:
+            added_concepts[(label, name)] = props or {}
+    declared = {}
+    for edge in delta.edges_added:
+        if edge.type == "DECLARED_IN" \
+                and (edge.from_label, edge.from_name) in added_concepts:
+            declared[(edge.from_label, edge.from_name)] = edge.to_name
+    for key, props in added_concepts.items():
+        label, name = key
+        if key not in declared:
+            violations.append(
+                f"Attempted to author '{name}' as a new {label} concept "
+                "without declaring it. Failed due to: a ceremony concept "
+                "arrives WITH its DECLARED_IN edge (and usually an "
+                "INSTANCE_OF into its parent concept) in the same round "
+                "— an undeclared schema row would be invisible to the "
+                "schema readers. Add the declaration in scratch, or "
+                "delete the node.")
+            continue
+        permitted_nodes.add(key)
+        parents = [e.to_name for e in delta.edges_added
+                   if e.type == "INSTANCE_OF"
+                   and (e.from_label, e.from_name) == key]
+        doc = str(props.get("doc", ""))
+        items.append(
+            f"NEW CONCEPT '{name}' — declared in {declared[key]}"
+            + (f", an instance of {', '.join(map(str, parents))}"
+               if parents else "")
+            + (f'; doc: "{doc[:160]}{"…" if len(doc) > 160 else ""}"'
+               if doc else "; no doc text"))
+        for edge in delta.edges_added:
+            if (edge.from_label, edge.from_name) == key \
+                    and edge.type in ("DECLARED_IN", "INSTANCE_OF"):
+                permitted_edges.add(id(edge))
+
+    for label, name, changes in delta.nodes_changed:
+        if label not in SCHEMA_LABELS:
+            continue
+        out_of_class = sorted(set(changes) - CEREMONY_DOC_PROPS)
+        if out_of_class:
+            violations.append(
+                f"Attempted to modify '{name}' ({label}) beyond its doc "
+                f"text ({', '.join(out_of_class)}). Failed due to: "
+                + _OUT_OF_CLASS)
+            continue
+        permitted_nodes.add((label, name))
+        for prop, (before, after) in changes.items():
+            b = "(none)" if before is None else f'"{str(before)[:110]}…"' \
+                if len(str(before)) > 110 else f'"{before}"'
+            a = "(none)" if after is None else f'"{str(after)[:110]}…"' \
+                if len(str(after)) > 110 else f'"{after}"'
+            items.append(f"DOC EDIT on '{name}' — {prop}: {b} → {a}")
+
+    for label, name, props in delta.nodes_removed:
+        if label not in SCHEMA_LABELS:
+            continue
+        key = (label, name)
+        if "spec_json" in (props or {}):
+            violations.append(
+                f"Attempted to remove '{name}' ({label}), a LABEL row "
+                f"(it carries spec_json). Failed due to: {_OUT_OF_CLASS}")
+            continue
+        if base is None:
+            violations.append(
+                f"Attempted to remove '{name}' ({label}) without the "
+                "base graph in view. Failed due to: a schema removal is "
+                "permitted only when nothing references the row, and "
+                "that can only be verified against the base — run the "
+                "removal through the delta pipeline.")
+            continue
+        inbound = [e for e in base.edges
+                   if (e.to_label, str(e.to_name)) == (label, str(name))]
+        stray = [e for e in base.edges
+                 if (e.from_label, str(e.from_name)) == (label, str(name))
+                 and e.type not in ("DECLARED_IN", "INSTANCE_OF")]
+        if inbound or stray:
+            kinds = sorted({e.type for e in inbound + stray})
+            violations.append(
+                f"Attempted to remove '{name}' ({label}). Failed due "
+                f"to: the row is still referenced in the base "
+                f"({len(inbound) + len(stray)} connections: "
+                f"{', '.join(kinds)}) — a referenced schema row cannot "
+                "be ceremonially removed; re-point or retire its "
+                "references first, or propose a migration.")
+            continue
+        permitted_nodes.add(key)
+        items.append(f"REMOVED CONCEPT '{name}' — unreferenced in the "
+                     "base (no members, no anchors); its declaration "
+                     "goes with it")
+        for edge in delta.edges_removed:
+            if (edge.from_label, edge.from_name) == key \
+                    and edge.type in ("DECLARED_IN", "INSTANCE_OF"):
+                permitted_edges.add(id(edge))
+
+    return items, violations, permitted_nodes, permitted_edges
+
+
+def lint(delta, base=None):
     """Ground-facts violations: machine labels or derived edge types among
     the ADDITIONS (the machine's own base-side layers are fine — the lint
-    guards what the author wrote, not what the derivation computed)."""
-    violations = []
+    guards what the author wrote, not what the derivation computed).
+    Schema-stratum changes route through ceremony_classify: the permitted
+    classes itemize for the gate instead of refusing; everything else on
+    the stratum still refuses by name."""
+    (_, violations, ceremony_nodes,
+     ceremony_edges) = ceremony_classify(delta, base)
     for label, name, _ in delta.nodes_added:
         if label in SCHEMA_LABELS:
-            # Frozen, not machine-built: schema citizens are ground truth
-            # since the inversion, but authoring changes to them
-            # waits on the schema-delta ceremony.
-            violations.append(
-                f"Attempted to author '{name}' as a {label}. Failed due "
-                f"to: {label} nodes are the graph's own schema, and "
-                "schema changes are frozen until the schema-delta "
-                "ceremony lands. Propose the schema change to the "
-                "owner at the plan gate instead — do not hand-author it "
-                "in scratch. To undo: delete the node from scratch, or "
-                "reset scratch entirely (python -m graph load --database "
-                "scratch).")
+            # Schema adds are fully adjudicated by ceremony_classify:
+            # permitted concepts itemize, everything else already refused.
+            pass
         elif label in UNAUTHORABLE_LABELS:
             violations.append(
                 f"'{name}' can't be created as a {label} — nodes of that "
@@ -185,49 +317,27 @@ def lint(delta):
                 f"a {label} node was created without a name — every "
                 "citizen needs one. Give it a name property or delete it "
                 "from scratch.")
-    # The freeze covers every mutation class, not just additions: an
-    # authored schema edit or deletion must be REFUSED by name — never
-    # silently dropped from the changeset into a green apply.
-    for label, name, _ in delta.nodes_changed:
-        if label in SCHEMA_LABELS:
-            violations.append(
-                f"Attempted to modify '{name}' ({label}). Failed due "
-                f"to: {label} nodes are the graph's own schema, and "
-                "schema changes are frozen until the schema-delta "
-                "ceremony lands. Propose the schema change to "
-                "the owner at the plan gate instead. To undo: restore "
-                "the node's properties in scratch, or reset scratch "
-                "entirely (python -m graph load --database scratch).")
-    for label, name, _ in delta.nodes_removed:
-        if label in SCHEMA_LABELS:
-            violations.append(
-                f"Attempted to remove '{name}' ({label}). Failed due "
-                f"to: {label} nodes are the graph's own schema, and "
-                "schema changes are frozen until the schema-delta "
-                "ceremony lands. Propose the schema change to "
-                "the owner at the plan gate instead. To undo: reset "
-                "scratch entirely (python -m graph load --database "
-                "scratch).")
+    # Schema node edits and removals are fully adjudicated by
+    # ceremony_classify above — permitted classes itemize for the gate,
+    # everything else is already refused by name. Schema EDGES outside a
+    # permitted concept's own declaration still refuse here.
     for edge in delta.edges_removed:
-        if _is_schema_edge(edge):
+        if _is_schema_edge(edge) and id(edge) not in ceremony_edges:
             violations.append(
                 f"Attempted to remove the connection ({edge.from_name})-"
                 f"[:{edge.type}]->({edge.to_name}). Failed due to: "
                 f"{edge.type} links are part of the graph's own schema, "
-                "and schema changes are frozen until the schema-delta "
-                "ceremony lands. Propose the schema change to "
-                "the owner at the plan gate instead. To undo: reset "
-                "scratch entirely (python -m graph load --database "
-                "scratch).")
+                f"and {_OUT_OF_CLASS} To undo: reset scratch entirely "
+                "(python -m graph load --database scratch).")
     for edge in delta.edges_added:
         if _is_schema_edge(edge):
+            if id(edge) in ceremony_edges:
+                continue
             violations.append(
                 f"Attempted to author the connection ({edge.from_name})-"
                 f"[:{edge.type}]->({edge.to_name}). Failed due to: "
                 f"{edge.type} links are part of the graph's own schema, "
-                "and schema changes are frozen until the schema-delta "
-                "ceremony lands. Propose the schema change to the "
-                "owner at the plan gate instead. To undo: MATCH the "
+                f"and {_OUT_OF_CLASS} To undo: MATCH the "
                 "relationship in scratch and DELETE it, or reset scratch.")
         elif edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
             violations.append(
@@ -249,9 +359,7 @@ def lint(delta):
                 f"Attempted to modify the connection ({edge.from_name})-"
                 f"[:{edge.type}]->({edge.to_name}). Failed due to: "
                 f"{edge.type} links are part of the graph's own schema, "
-                "and schema changes are frozen until the schema-delta "
-                "ceremony lands. Propose the schema change to the "
-                "owner at the plan gate instead. To undo: restore the "
+                f"and {_OUT_OF_CLASS} To undo: restore the "
                 "relationship's properties in scratch, or reset scratch.")
         elif edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
             violations.append(
@@ -278,9 +386,9 @@ def lint_stitch(delta, scratch):
                 f"Attempted to author the stitch connection "
                 f"({edge.from_name})-[:{edge.type}]->({edge.to_name}). "
                 f"Failed due to: {edge.type} links are part of the "
-                "graph's own schema, and schema changes are frozen until "
-                "the schema-delta ceremony lands. Propose the "
-                "schema change to the owner at the plan gate instead. "
+                "graph's own schema, and the stitch never carries "
+                "schema — a ceremony concept authors its declaration "
+                "directly in scratch, in the same round. "
                 "Remove it from the stitch file.")
             continue
         if edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
@@ -307,9 +415,11 @@ def lint_stitch(delta, scratch):
     return violations
 
 
-def render_report(delta, violations):
-    """Human-readable delta report (markdown). Lint verdicts first; a
-    schema-layer section joins when the ontology-embedding precedent embeds the ontology on the graph."""
+def render_report(delta, violations, ceremony=None):
+    """Human-readable delta report (markdown). Lint verdicts first; when
+    the round carries schema-stratum changes within the ceremony's
+    classes, they get their own marked section — the owner's approval of
+    a round whose report carries that section IS the schema ceremony."""
     lines = ["# Delta report — scratch vs source-derived base", ""]
     if delta.empty:
         lines += ["Scratch matches the base exactly — no proposal present.",
@@ -331,6 +441,14 @@ def render_report(delta, violations):
         lines += [f"- ⚠ {violation}" for violation in violations] + [""]
     else:
         lines += ["Clean — every addition is a ground fact.", ""]
+    if ceremony:
+        lines += ["## Schema changes — the ceremony", "",
+                  "The rows below change the graph's OWN SCHEMA. They "
+                  "are within the ceremony's permitted classes (new "
+                  "declared concepts, doc edits, unreferenced removals); "
+                  "approving this round is the ceremony ruling that "
+                  "makes them schema.", ""]
+        lines += [f"- ⚑ {item}" for item in ceremony] + [""]
     if delta.nodes_added:
         lines += ["## Nodes added", ""]
         for label, name, props in delta.nodes_added:

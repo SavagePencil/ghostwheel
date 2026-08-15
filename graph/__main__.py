@@ -661,7 +661,8 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
             "Attempted to read the round's stitch file "
             f"({proposal_mod.current_dir(base_dir, branch).relative_to(base_dir)}"
             f"/{proposal_mod.STITCH_FILE}). Failed due to: {exc}")
-    violations = delta_mod.lint(changes)
+    violations = delta_mod.lint(changes, base)
+    ceremony_items = delta_mod.ceremony_classify(changes, base)[0]
     if stitch_problem:
         violations.append(stitch_problem)
     violations += delta_mod.lint_stitch(changes, scratch)
@@ -697,7 +698,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
             derived_preview, _ = derive(ontology, preview)
             violations += proposal_mod.apply_stitch(derived_preview,
                                                     changes.stitch)
-    report = delta_mod.render_report(changes, violations)
+    report = delta_mod.render_report(changes, violations, ceremony_items)
     if roster_advisories:
         report += (
             "\n## Advisories — the branch's roster, for the record\n\n"
@@ -802,7 +803,7 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         print("REFUSED: the round's stitch file is unreadable — "
               f"{exc}", file=sys.stderr)
         return 1
-    violations = delta_mod.lint(changes)
+    violations = delta_mod.lint(changes, base)
     violations += delta_mod.lint_stitch(changes, scratch)
     if violations:
         print("REFUSED: the delta has ground-facts lint violations — "
@@ -897,9 +898,11 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         for problem in problems:
             print(f"  ⚠ {problem}", file=sys.stderr)
         return 1
-    # The schema is reconstructed FROM canon's backup (the schema-delta ceremony): `base` is the
-    # committed graph; ontology.yaml is bootstrap-only now.
-    ontology = ontology_from_graph(base, base_dir)
+    # The schema is reconstructed from the POST-apply ground: a ceremony
+    # round's schema changes are already in `ground` here, and derive
+    # must see the schema the round produces, not the one it started
+    # from. For a round with no schema changes the two are identical.
+    ontology = ontology_from_graph(ground, base_dir)
     new_graph, derive_findings = derive(ontology, ground)
     derive_errors = [f for f in derive_findings if f.severity == SEV_ERROR]
     if branch:

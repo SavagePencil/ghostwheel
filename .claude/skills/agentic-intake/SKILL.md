@@ -98,19 +98,23 @@ Procedure-shaped content inside the source
 follows procedure-intake at this point. Nothing has been written
 anywhere.
 
-### 3. Schema is ground on the graph — and frozen until its ceremony
+### 3. Schema is ground on the graph — and changes by ceremony
 The schema stratum (the concept citizens and their edges) is ground
 truth on the graph itself: post-bootstrap machinery reads it from the
 graph, never from a schema file, and the schema anchor's version
-auto-stamps from the event-log sequence at apply. **Schema changes are
-frozen until the schema-delta ceremony exists**: the delta lint refuses
-hand-authored schema rows by name, and editing the bootstrap schema
-file changes nothing the machinery reads. When an intake surfaces a
-schema-shaped need — a new label, edge type, facet, or catalog entry —
-it PARKS as a Question at the plan gate for the owner to rule and
-sequence; it never blocks the fact-plane work that doesn't need it,
-and it is never worked around with a lesser encoding. Facts whose
-schema doesn't exist yet wait with their Question.
+auto-stamps from the event-log sequence at apply. **Schema changes
+ride the schema ceremony**: an owner-gated round may add a new
+DECLARED concept (the Archetype arrives WITH its DECLARED_IN edge, and
+usually INSTANCE_OF into its parent), edit a schema row's doc text, or
+remove an UNREFERENCED schema row — the delta report itemizes these
+under its marked ceremony section, and the owner's approval of that
+round IS the ceremony ruling. Everything else on the stratum — new
+labels, spec/catalog changes, renames, referenced removals — still
+refuses by name (data moves underneath those; they ride the migration
+charter) and PARKS as a Question at the plan gate for the owner to
+rule and sequence; it never blocks the fact-plane work that doesn't
+need it, and it is never worked around with a lesser encoding. Facts
+whose schema doesn't exist yet wait with their Question.
 
 ### 4. Scratch authoring (agent + machine)
 Reset scratch first (`python -m graph restore --database scratch`) — stale
