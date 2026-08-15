@@ -67,7 +67,7 @@ REDACTED to defect class plus citizen pointers ("a claim carried by
 the fix through the graph. Generators read canon, the brief, and the
 owner's steering — nothing else. Drafters RECORD the citizens they
 consult as rows on the run trace: that consulted set is what makes a
-citation earned (graph/attribution.py's strong form); an unearned-but-
+citation earned (the engine attribution module's strong form); an unearned-but-
 correct claim is re-derived with the citizen provisioned, invisibly —
 the trace records both passes.
 
@@ -76,7 +76,7 @@ the trace records both passes.
 - Every run records who was cast, what they were told, what they
   cited, what the judge ruled, what escalated. Claims about runs cite
   the trace; recollection is not a source.
-- The trace machinery is graph/runs.py: open with new_run(brief,
+- The trace machinery is the engine's runs module (graph.runs): open with new_run(brief,
   started), record judgments with add_row (question / answer /
   decision / opinion — decided_by names the agent, confidence graded
   honestly), and file the archive with write_archive under graph/runs/
@@ -89,7 +89,7 @@ the trace records both passes.
   margin; an owner catch on an UNFLAGGED decision means confidence was
   miscalibrated — record it.
 - Annotations anchor to (artifact, span) from day one. The machinery
-  is graph/runs.py: pass anchor={artifact, start, end, text} to
+  is the engine's runs module: pass anchor={artifact, start, end, text} to
   add_row (the exact quote is mandatory — it re-locates the span if
   the artifact moves); margin(run, fingerprint, artifact_text) reads
   the floor census in span order; render_margin presents artifact and
@@ -99,7 +99,7 @@ the trace records both passes.
   owner previously approved — a fix must not silently break prior
   approvals; a defect class the owner caught once is checked by
   machine thereafter. The machinery is `python -m graph corpus`
-  (graph/corpus.py, ledger at graph/corpus/floors.jsonl): run it
+  (the engine's corpus module; the KB keeps its ledger at graph/corpus/floors.jsonl): run it
   before any "done" report, and when the owner blesses a new
   expectation or catches an unflagged decision, record the floor
   (record_floor: guard test node id, scope, plain-words expectation,
@@ -107,7 +107,7 @@ the trace records both passes.
 
 ## Attribution: every claim seeks its graph home
 
-After parity, the census (graph/attribution.py, wired into the
+After parity, the census (the engine's attribution module, wired into the
 roundtrip scorecard): every draft claim is attributed against canon on
 the graded source ladder — a citizen's structured properties, its
 carried receipts, or a long-prose home (the soup rung: attributed AND
