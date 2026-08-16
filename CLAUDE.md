@@ -26,6 +26,9 @@ never heard of any other consumer.
   NEVER committed (the banned list is itself a trace dictionary).
 - **Tests ride with every change**; refusals are tested from both
   sides (what is permitted lands, what is refused refuses by name).
+- **Local test gates**: `make hooks` (one-time per clone) installs the
+  tracked pre-commit hook, which blocks commits on a red suite and runs
+  the trace check when the local-only tool is present.
 - **Docs are the one living copy**: design records in `design/` and
   skills in `.claude/skills/` mirror into the package under
   `graph/engine_docs/` — sync the mirror in the same change set (the

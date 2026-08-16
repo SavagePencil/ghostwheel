@@ -261,6 +261,7 @@ The `design/` directory holds the engine's design doctrine:
 ## Development
 
 ```bash
+make hooks      # one-time per clone: install the local test gates (pre-commit)
 make validate   # consistency report (no DB needed)
 make export     # deterministic snapshot -> graph/export/
 make restore    # rebuild the DB from the backup, verify byte-identical
@@ -268,6 +269,11 @@ make check      # canned Cypher checks against the live DB
 make corpus     # re-check every owner-blessed floor
 make test       # full test suite (includes the golden-snapshot test)
 ```
+
+The pre-commit gate blocks a commit unless the full test suite (including
+the packaged-docs mirror test) is green; it also runs the local trace
+check when that local-only tool is present, and skips it with a notice
+otherwise.
 
 ## License
 

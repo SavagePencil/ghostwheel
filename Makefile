@@ -2,7 +2,10 @@
 PYTHON := .venv/bin/python
 PYTEST := .venv/bin/pytest
 
-.PHONY: validate export restore check corpus test
+.PHONY: validate export restore check corpus test hooks
+
+hooks:           ## one-time per clone: route git hooks through the tracked githooks/ dir
+	git config core.hooksPath githooks
 
 validate:        ## consistency report (no DB needed)
 	$(PYTHON) -m graph validate
