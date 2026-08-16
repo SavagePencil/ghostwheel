@@ -1,0 +1,61 @@
+#!/bin/sh
+# Pre-commit gate: a commit lands only if every check below passes.
+#
+# Installed once per clone with `make hooks` (routes git's core.hooksPath
+# through this tracked directory). Bypassing with --no-verify is possible
+# but CI runs the same suite on every pull request.
+#
+# Gates (all run, results collated — never fail-on-first):
+#   1. packaged-docs mirror test (named, because it is the easiest local miss)
+#   2. full pytest suite
+#   3. trace check — tools/no_trace.py is a deliberately local-only,
+#      untracked tool; when absent the gate is skipped with a notice.
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+cd "$repo_root" || exit 1
+
+if [ -x .venv/bin/pytest ]; then
+    pytest_cmd=.venv/bin/pytest
+    python_cmd=.venv/bin/python
+elif command -v pytest >/dev/null 2>&1; then
+    pytest_cmd=pytest
+    python_cmd=python3
+else
+    echo "pre-commit gate: Attempted to run the test suite before committing." >&2
+    echo "Failed due to no pytest found (.venv/bin/pytest missing, none on PATH)." >&2
+    echo "To fix: python3 -m venv .venv && .venv/bin/pip install -e \".[dev]\"" >&2
+    exit 1
+fi
+
+failures=""
+
+echo "pre-commit gate 1/3: packaged-docs mirror test"
+if ! "$pytest_cmd" -q tests/test_engine_docs_mirror.py; then
+    failures="$failures
+- Attempted to verify the packaged docs mirror before committing. Failed due to a mirror mismatch. To fix: sync design/ and .claude/skills/ into graph/engine_docs/ in this change set."
+fi
+
+echo "pre-commit gate 2/3: full test suite"
+if ! "$pytest_cmd" -q; then
+    failures="$failures
+- Attempted to run the full test suite before committing. Failed due to failing tests (see output above). To fix: make the suite green, then commit."
+fi
+
+echo "pre-commit gate 3/3: trace check"
+if [ -f tools/no_trace.py ]; then
+    if ! "$python_cmd" tools/no_trace.py; then
+        failures="$failures
+- Attempted the trace check before committing. Failed due to findings (see report above). To fix: remove the flagged content, then commit."
+    fi
+else
+    echo "trace check skipped: tools/no_trace.py is a local-only tool and is not present in this clone."
+fi
+
+if [ -n "$failures" ]; then
+    echo "" >&2
+    echo "pre-commit gate: commit blocked. Failures:$failures" >&2
+    exit 1
+fi
+
+echo "pre-commit gate: all checks passed."
+exit 0
