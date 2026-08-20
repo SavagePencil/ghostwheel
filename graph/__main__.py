@@ -286,8 +286,16 @@ def _restore_branch(base_dir, branch, base, database):
             f"name ('{branch}') — one identity, no aliases. Drop "
             "--database.")
     if branch:
+        from . import succession as succession_mod
         home = proposal_mod.branch_home(base_dir, branch)
-        if home.exists():
+        adopted = succession_mod.adopted_branch_problem(
+            base_dir, branch, "a branch cut")
+        if adopted:
+            # An adopted branch's home is provenance — the generic
+            # home-exists remedy ("remove it to re-cut") must never be
+            # suggested for it.
+            problems.append(adopted)
+        elif home.exists():
             problems.append(
                 f"Attempted to cut branch '{branch}'. Failed due to: its "
                 f"home ({home.relative_to(base_dir)}) already exists — "
@@ -628,12 +636,17 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         print(exc, file=sys.stderr)
         return 1
     config = load_mod.read_config(base_dir)
-    # A branch may never read live canon as its authoring source.
+    # A branch may never read live canon as its authoring source, and an
+    # adopted branch is provenance, not a working line.
     if branch is not None:
+        from . import succession as succession_mod
         read_problem = proposal_mod.authoring_read_problem(
             database, config["NEO4J_DATABASE"])
-        if read_problem:
-            print(read_problem, file=sys.stderr)
+        adopted = succession_mod.adopted_branch_problem(
+            base_dir, branch, "a delta round")
+        for problem in filter(None, (read_problem, adopted)):
+            print(problem, file=sys.stderr)
+        if read_problem or adopted:
             return 1
     config["NEO4J_DATABASE"] = database
     if sync_bodies:
@@ -773,10 +786,12 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     else:
         target_database, guard = proposal_mod.branch_target_database(
             branch, live_canon_database)
+        from . import succession as succession_mod
         read_problem = proposal_mod.authoring_read_problem(
             database, live_canon_database)
-        if read_problem:
-            guard = list(guard) + [read_problem]
+        adopted = succession_mod.adopted_branch_problem(
+            base_dir, branch, "a canonize round")
+        guard = list(guard) + [p for p in (read_problem, adopted) if p]
     if guard:
         print("--apply refused — a branch is hard-isolated from canon:"
               if apply else
@@ -1007,6 +1022,302 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     return 0
 
 
+def _ruled_by(by, base_dir):
+    """The human a ceremony record names — the given name, or git's."""
+    if by:
+        return by
+    import subprocess
+    try:
+        return subprocess.run(
+            ["git", "config", "user.name"], cwd=base_dir,
+            capture_output=True, text=True, timeout=10,
+        ).stdout.strip() or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
+    """The owner's ceremony: a finished branch becomes canon. The dry
+    run walks every verify gate and writes nothing; --apply walks the
+    same gates, then captures the outgoing canon as an archive branch,
+    rebuilds the live canon database from the branch's line, re-exports
+    the backup FROM the database, appends the adoption entry to canon's
+    chained event log, and — last, so the seal implies the entry is
+    durable — marks the branch home adopted. Verify-all-before-apply-
+    any: refusals collate, and nothing is written on any failure."""
+    from datetime import datetime, timezone
+
+    from . import canonize as canonize_mod
+    from . import load as load_mod
+    from . import proposal as proposal_mod
+    from . import restore as restore_mod
+    from . import succession as succession_mod
+    from .extract import derive, strip_derived
+    from .ontology import ERROR as SEV_ERROR
+    from .ontology import ontology_from_graph
+
+    config = load_mod.read_config(base_dir)
+    live_canon_database = config["NEO4J_DATABASE"]
+    refusal = ("--apply refused — the ceremony cannot proceed:" if apply
+               else "REFUSED — the ceremony cannot proceed:")
+
+    # --- name and home guards, before any database is read --------------
+    problems = list(proposal_mod.branch_name_problems(
+        branch, live_canon_database))
+    branch_export = proposal_mod.export_dir(base_dir, branch)
+    if branch and not (branch_export / "nodes.jsonl").exists():
+        problems.append(
+            f"Attempted the succession ceremony for branch '{branch}'. "
+            "Failed due to: no branch line exists at "
+            f"{branch_export.relative_to(base_dir)} — a branch stands "
+            "for succession only after it was cut and its rounds "
+            "applied (python -m graph restore --branch ... , delta, "
+            "approve, canonize --apply --branch ...).")
+    adopted = succession_mod.adopted_branch_problem(
+        base_dir, branch, "the succession ceremony")
+    if adopted:
+        problems.append(adopted)
+    sequence = proposal_mod.next_log_sequence(base_dir)
+    archive_branch = archive_as or f"superseded-{sequence}"
+    problems += proposal_mod.branch_name_problems(
+        archive_branch, live_canon_database)
+    if archive_branch == branch:
+        problems.append(
+            f"Attempted to archive the outgoing canon as '{archive_branch}'. "
+            "Failed due to: that is the succeeding branch itself — the "
+            "archive preserves the OLD line; name it differently with "
+            "--archive-as.")
+    elif proposal_mod.branch_home(base_dir, archive_branch).exists():
+        problems.append(
+            "Attempted to archive the outgoing canon as branch "
+            f"'{archive_branch}'. Failed due to: that branch home already "
+            "exists — pick an unused name with --archive-as.")
+    if problems:
+        print(refusal, file=sys.stderr)
+        for problem in problems:
+            print(f"  ⚠ {problem}", file=sys.stderr)
+        return 1
+
+    # --- verify phase: every gate runs, every problem collates -----------
+    print(f"SUCCESSION VERIFY — branch '{branch}' standing for canon:")
+    gates = []  # (gate label, problem list)
+
+    try:
+        canon_backup = canon_base(base_dir)
+    except FileNotFoundError as exc:
+        canon_backup = None
+        gates.append(("live canon backup readable", [
+            "Attempted to read canon's committed backup (graph/export). "
+            f"Failed due to: {exc}."]))
+    branch_backup = None
+    try:
+        branch_backup = canon_base(base_dir, branch)
+    except FileNotFoundError as exc:
+        gates.append(("branch backup readable", [
+            f"Attempted to read branch '{branch}''s committed backup. "
+            f"Failed due to: {exc}."]))
+
+    if canon_backup is not None:
+        live_config = dict(config)
+        live_config["NEO4J_DATABASE"] = live_canon_database
+        try:
+            live = restore_mod.dump_db(live_config)
+            gates.append((
+                "live canon matches its committed backup (nothing moved "
+                "outside the delta path)",
+                restore_mod.verify_against_backup(
+                    live, proposal_mod.export_dir(base_dir))))
+        except Exception as exc:
+            gates.append(("live canon database readable", [
+                "Attempted to read the live canon database "
+                f"('{live_canon_database}'). Failed due to: {exc}."]))
+
+    branch_live = None
+    if branch_backup is not None:
+        branch_config = dict(config)
+        branch_config["NEO4J_DATABASE"] = branch
+        try:
+            branch_live = restore_mod.dump_db(branch_config)
+            gates.append((
+                "branch database re-serializes byte-identical to its "
+                "backup",
+                restore_mod.verify_against_backup(branch_live,
+                                                  branch_export)))
+        except Exception as exc:
+            gates.append((f"branch database '{branch}' readable", [
+                f"Attempted to read the branch database ('{branch}'). "
+                f"Failed due to: {exc}. Rehydrate it from the branch's "
+                f"backup: python -m graph restore --from "
+                f"{branch_export.relative_to(base_dir)} --database "
+                f"{branch}."]))
+
+    gates.append(("canon's event-log chain verifies unbroken",
+                  proposal_mod.verify_applied_log(base_dir)))
+    gates.append((f"branch '{branch}''s event-log chain verifies unbroken",
+                  proposal_mod.verify_applied_log(base_dir, branch)))
+
+    if branch_backup is not None:
+        # The advisory era ends at this gate: the roster census and every
+        # other derivation error block succession — a finished line only.
+        ontology = ontology_from_graph(branch_backup, base_dir)
+        _, derive_findings = derive(ontology, strip_derived(branch_backup))
+        derive_errors = [f"{f.file} {f.location}: {f.detail}"
+                         for f in derive_findings
+                         if f.severity == SEV_ERROR]
+        gates.append(("roster at full strength and re-derivation clean",
+                      derive_errors))
+        gates.append(("ground-facts lint clean over the branch's full line",
+                      succession_mod.line_lint(branch_backup)))
+        from .canonize import ONTOLOGY_ANCHOR
+        from .ontology import ARCHETYPE_LABEL
+        anchor_missing = [] if (
+            (ARCHETYPE_LABEL, ONTOLOGY_ANCHOR) in branch_backup.nodes) else [
+            f"Attempted to verify the ({ARCHETYPE_LABEL}, "
+            f"'{ONTOLOGY_ANCHOR}') version anchor on the branch. Failed "
+            "due to: the branch carries no such anchor — every line "
+            "carries one as ground schema."]
+        gates.append(("the version anchor rides the branch", anchor_missing))
+
+    failed = []
+    for label, gate_problems in gates:
+        mark = "✓" if not gate_problems else "⚠"
+        print(f"  {mark} {label}")
+        failed.extend(gate_problems)
+    if failed:
+        print(refusal + " nothing was written:", file=sys.stderr)
+        for problem in failed:
+            print(f"  ⚠ {problem}", file=sys.stderr)
+        return 1
+    if not apply:
+        print(f"Ready. Adopt with: python -m graph succession --branch "
+              f"{branch} --apply")
+        return 0
+
+    # --- adopt: capture the old line FIRST, then rebuild live canon ------
+    ruled_by = _ruled_by(by, base_dir)
+    if ruled_by == "unknown":
+        print("--apply refused: Attempted the adoption with no named "
+              "ruler. Failed due to: --by was not given and git config "
+              "user.name is unset — the adoption record must name who "
+              "ruled. Pass --by <name>.", file=sys.stderr)
+        return 1
+    ruled_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    branch_log = proposal_mod.read_applied_log(base_dir, branch)
+    canon_before = proposal_mod.base_identity(canon_backup)
+    try:
+        succession_mod.archive_line(base_dir, archive_branch)
+    except Exception as exc:
+        import shutil
+        shutil.rmtree(proposal_mod.branch_home(base_dir, archive_branch),
+                      ignore_errors=True)
+        print("Attempted to archive the outgoing canon as branch "
+              f"'{archive_branch}'. Failed due to: {exc}. Nothing was "
+              "written to live canon, and the partial archive was "
+              "removed — re-run the ceremony.", file=sys.stderr)
+        return 1
+
+    # The adoption is an event in CANON's line: its sequence stamps the
+    # version anchor, so the version a fresh connection reads keeps
+    # climbing through the ceremony.
+    new_graph = branch_live
+    stamp_problems = canonize_mod.stamp_ontology_anchor(new_graph, sequence)
+    if stamp_problems:
+        print("--apply refused — the version anchor cannot be stamped; "
+              "live canon was not written (the outgoing line is archived "
+              f"at graph/branches/{archive_branch}):", file=sys.stderr)
+        for problem in stamp_problems:
+            print(f"  ⚠ {problem}", file=sys.stderr)
+        return 1
+    target_config = dict(config)
+    target_config["NEO4J_DATABASE"] = live_canon_database
+    retry_note = (
+        "The outgoing line was already archived at "
+        f"graph/branches/{archive_branch} — re-run the ceremony with "
+        "--archive-as <unused name>, or remove that archive deliberately "
+        "first.")
+    try:
+        summary = load_mod.load(new_graph, target_config)
+        dumped = restore_mod.dump_db(target_config)
+    except Exception as exc:
+        print(f"Adoption failed mid-write: {exc}. The backup files are "
+              "untouched — python -m graph restore returns the live "
+              f"database to the pre-ceremony canon. {retry_note}",
+              file=sys.stderr)
+        return 1
+    if export_mod.serialize(dumped) != export_mod.serialize(new_graph):
+        print("ADOPTION NOT RECORDED — the database read back differently "
+              "than what was written (driver round-trip fault). The "
+              "backup files are untouched; python -m graph restore "
+              f"returns the live database to the pre-ceremony canon. "
+              f"{retry_note}", file=sys.stderr)
+        return 1
+
+    # --- the point of no return: overwrite the backup, then the record,
+    # then the chained adoption entry, and LAST the branch seal — a
+    # marker present always means the adoption entry is durable, and a
+    # missing marker means the ceremony may be re-run to completion.
+    canon_after = proposal_mod.base_identity(dumped)
+    record = {
+        "branch": branch,
+        "adopted_by": ruled_by,
+        "adopted_at": ruled_at,
+        "sequence": sequence,
+        "branch_rounds": len(branch_log),
+        "branch_chain_tip": branch_log[-1][5] if branch_log else "genesis",
+        "branch_export_identity": proposal_mod.base_identity(branch_backup),
+        "canon_before": canon_before,
+        "canon_after": canon_after,
+        "archive_branch": archive_branch,
+    }
+    text, record_hash = succession_mod.serialize_record(record)
+    round_dir = proposal_mod.proposals_dir(base_dir) / record_hash[:12]
+    try:
+        export_mod.write_export(dumped, proposal_mod.export_dir(base_dir))
+        round_dir.mkdir(parents=True, exist_ok=True)
+        (round_dir / succession_mod.ADOPTION_FILE).write_text(
+            text, encoding="utf-8")
+        if proposal_mod.next_log_sequence(base_dir) != sequence:
+            raise RuntimeError(
+                "the event log moved under the ceremony (the adoption "
+                f"was stamped for sequence {sequence}) — the stamped "
+                "version and the log would disagree")
+        chain = proposal_mod.append_applied_log(
+            base_dir, record_hash, canon_before, canon_after)
+        succession_mod.adoption_marker_path(base_dir, branch).write_text(
+            text, encoding="utf-8")
+    except Exception as exc:
+        print("Adoption failed PAST the point of no return: "
+              f"{exc}. Live canon and graph/export may already hold the "
+              "adopted line; the pre-ceremony canon survives at "
+              f"graph/branches/{archive_branch} (rehydrate with python "
+              f"-m graph restore --from graph/branches/{archive_branch}"
+              f"/export --database {archive_branch} to walk back). If "
+              f"the branch home carries no {succession_mod.ADOPTION_MARKER} "
+              "marker, the adoption entry may be missing from canon's "
+              "event log — re-run the ceremony with --archive-as "
+              "<unused name> to finish with a complete record.",
+              file=sys.stderr)
+        return 1
+    print(f"Adoption recorded: sequence {sequence}, ruled by {ruled_by} "
+          f"at {ruled_at} — branch '{branch}' "
+          f"(chain tip {record['branch_chain_tip'][:12]}, "
+          f"{len(branch_log)} rounds adopted).")
+    print(f"Live canon rebuilt: {summary['loaded_nodes']} nodes, "
+          f"{summary['loaded_edges']} edges now live; graph/export is the "
+          "adopted line, re-exported from the database.")
+    print(f"Superseded canon archived as branch '{archive_branch}' — "
+          "walk-back is a second ceremony: rehydrate with python -m graph "
+          f"restore --from graph/branches/{archive_branch}/export "
+          f"--database {archive_branch}, then succession --branch "
+          f"{archive_branch}.")
+    print(f"Event log: adoption entry chained ({chain[:12]}); record "
+          f"archived at {round_dir.relative_to(base_dir)}; the branch "
+          "home is provenance now (further rounds refuse).")
+    print("Ritual: pytest, commit graph/export, graph/branches/, and the "
+          "round archive.")
+    return 0
+
+
 def cmd_approve(base_dir, by, branch=None):
     """Record the diff-gate approval against the current proposal's
     content hash. Run by the submitter — or an agent on their behalf;
@@ -1014,6 +1325,13 @@ def cmd_approve(base_dir, by, branch=None):
     With --branch <name>: approves the branch's own current round."""
     from . import proposal as proposal_mod
 
+    if branch is not None:
+        from . import succession as succession_mod
+        adopted = succession_mod.adopted_branch_problem(
+            base_dir, branch, "an approval")
+        if adopted:
+            print(adopted, file=sys.stderr)
+            return 1
     current = proposal_mod.current_dir(base_dir, branch)
     delta_path = current / proposal_mod.DELTA_FILE
     if not delta_path.exists():
@@ -1027,15 +1345,7 @@ def cmd_approve(base_dir, by, branch=None):
     base_pin = current / proposal_mod.BASE_FILE
     base_hash = (proposal_mod.read_json(base_pin).get("base_hash")
                  if base_pin.exists() else None)
-    if not by:
-        import subprocess
-        try:
-            by = subprocess.run(
-                ["git", "config", "user.name"], cwd=base_dir,
-                capture_output=True, text=True, timeout=10,
-            ).stdout.strip() or "unknown"
-        except Exception:
-            by = "unknown"
+    by = _ruled_by(by, base_dir)
     proposal_mod.write_json(current / proposal_mod.APPROVAL_FILE,
                             {"delta_hash": delta_id, "base_hash": base_hash,
                              "by": by})
@@ -1621,6 +1931,25 @@ def main(argv=None):
         help="judge the WHOLE submitted artifact as one unit (the canon-attribution pass): "
              "procedure citations union across the roster, canon rows "
              "apply across every scope, one scorecard")
+    succession_parser = sub.add_parser(
+        "succession",
+        help="the owner's ceremony: a finished branch becomes canon — "
+             "dry-run verifies every gate; --apply archives the outgoing "
+             "canon, rebuilds live canon from the branch's line, and "
+             "chains the adoption entry")
+    succession_parser.add_argument(
+        "--branch", required=True,
+        help="the branch standing for succession")
+    succession_parser.add_argument(
+        "--apply", action="store_true",
+        help="adopt (default is the verify-only dry run)")
+    succession_parser.add_argument(
+        "--by", default=None,
+        help="who ruled the adoption (defaults to git user.name)")
+    succession_parser.add_argument(
+        "--archive-as", dest="archive_as", default=None,
+        help="branch name that archives the superseded canon "
+             "(default: superseded-<sequence>)")
     approve_parser = sub.add_parser(
         "approve",
         help="record the diff-gate approval against the current "
@@ -1700,6 +2029,9 @@ def main(argv=None):
     if args.command == "roundtrip":
         return cmd_roundtrip(base_dir, args.scope, args.draft,
                              book=args.book)
+    if args.command == "succession":
+        return cmd_succession(base_dir, args.branch, args.apply,
+                              by=args.by, archive_as=args.archive_as)
     if args.command == "approve":
         return cmd_approve(base_dir, args.by, branch=args.branch)
     if args.command == "comprehend":

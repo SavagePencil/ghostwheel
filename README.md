@@ -113,6 +113,8 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `delta --branch <name>` | Diff the branch's authoring copy (`<name>-scratch`) against the branch's own base. |
 | `approve --branch <name>` | Record the diff-gate approval for the branch's current round. |
 | `canonize --branch <name> --apply` | Apply the branch's approved changeset to the branch's own database, backup, and log — never live canon (a hard guard refuses if they collide). |
+| `succession --branch <name>` | Verify a branch's fitness to become canon (dry run, writes nothing): byte-identity drills on both lines, both event-log chains, roster at full strength, whole-line lint. |
+| `succession --branch <name> --apply` | The owner's adoption ceremony: archive the outgoing canon as a branch, rebuild live canon from the branch's line, re-export the backup, and chain the adoption entry naming who ruled, when, and which line was adopted. |
 
 The export in `graph/export/` is committed: it makes graph changes reviewable in
 diffs and is the baseline for the golden test (`pytest`). If a change alters the
@@ -161,6 +163,21 @@ the identical round ceremony — `delta`/`approve`/`canonize --apply`, each lear
 hard-isolated from live canon: a branch-scoped apply can **never** write to the
 canon database (the applier refuses by name if they collide). A branch never
 becomes canon by a flag; **succession is the owner's ceremony**.
+
+That ceremony is `succession --branch <name>`. The dry run verifies every gate
+— live canon still byte-matching its own backup, the branch database
+byte-matching the branch's backup, both event-log chains unbroken, the branch
+re-deriving clean with the roster census back at full strength, and the
+ground-facts lint clean over the branch's whole line — collated,
+verify-all-before-apply-any, writing nothing. `--apply` adopts capture-first:
+the outgoing canon is archived as a branch (default `superseded-<sequence>`)
+before anything is overwritten, the live canon database is rebuilt from the
+branch's line with the version anchor stamped to canon's next sequence, the
+backup re-exports from the database, and canon's chained log gains one
+adoption entry naming who ruled, when, and which line was adopted (the record
+pins the branch's chain tip and export identity). An adopted branch is
+provenance, not a working line — further rounds on it refuse by name — and
+walk-back is a second ceremony on the archived line.
 
 A *branch* is one line within one KB. It is not a *world*: a world is a future
 composition layer — a KB whose citizens mount other KBs — and a *Pocket
