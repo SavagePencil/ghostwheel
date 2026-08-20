@@ -34,6 +34,17 @@ def run(base_dir, ontology_path=None):
     ontology, findings = load_ontology(ontology_path, base_dir)
     if ontology is None:
         return None, None, findings
+    if any(f.severity == ERROR for f in findings):
+        # The severity contract above: an ERROR means the ontology or a
+        # source file is broken. Extracting anyway can only crash far
+        # from the cause — return the collated refusals instead, and say
+        # that later phases were skipped so their findings aren't a
+        # surprise on the re-run.
+        findings.append(Finding(
+            INFO, Category.ONTOLOGY, str(ontology_path), "-",
+            "extraction skipped — fix the load errors above, then re-run "
+            "to surface extraction and answer-key findings"))
+        return ontology, None, findings
     graph, extract_findings = extract(ontology)
     findings.extend(extract_findings)
     findings.extend(unmapped_artifacts(ontology))

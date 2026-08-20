@@ -1071,6 +1071,33 @@ def check_ontology(ontology):
                 if effect_label and effect_label not in ontology.nodes:
                     problem(ERROR, rloc,
                             f"effect_label '{effect_label}' is not a declared label")
+            if parser == RelParser.PREREQUISITES:
+                # A prerequisites rel must declare where its parsed clauses
+                # point (staged_to / named_to) — otherwise the extractor
+                # would emit edges to a None label, crashing far from the
+                # misdeclaration.
+                if not rel.get("column"):
+                    problem(ERROR, rloc,
+                            "prerequisites needs a 'column' to read "
+                            "clauses from")
+                for needed_key, clause_kind in (("staged_to", "staged"),
+                                                ("named_to", "named")):
+                    target = rel.get(needed_key)
+                    if not target:
+                        problem(ERROR, rloc,
+                                f"prerequisites needs '{needed_key}' — the "
+                                f"label its {clause_kind} clauses point at")
+                    elif target == ANY_LABEL:
+                        # same coherence rule as `to: any`: no label to
+                        # create a placeholder in
+                        if rel.get("on_missing",
+                                   ontology.default_on_missing) != OnMissing.REPORT:
+                            problem(ERROR, rloc,
+                                    f"{needed_key}: any requires "
+                                    f"on_missing: report")
+                    elif target not in ontology.nodes:
+                        problem(ERROR, rloc,
+                                f"unknown target label '{target}'")
             if rel.get("from_column"):
                 rel_header = []
                 if not rel.get("source"):

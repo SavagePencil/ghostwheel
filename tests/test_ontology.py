@@ -86,12 +86,84 @@ def test_unknown_target_label(make_repo):
                for f in errors_of(findings))
 
 
+def test_prerequisites_missing_targets_refused_by_name(make_repo):
+    # Omitting the clause targets used to crash extraction far from the
+    # misdeclaration; both must be refused where they were written.
+    bad = VALID_ONTOLOGY.replace(
+        "{ type: FRIENDS_WITH, to: Thing, column: Friends }",
+        "{ type: NEEDS, to: Thing, parser: prerequisites }")
+    base, path = make_repo(MINI_CSV, bad)
+    _, findings = load_ontology(path, base)
+    details = [f.detail for f in errors_of(findings)]
+    assert any("prerequisites needs 'staged_to'" in d for d in details)
+    assert any("prerequisites needs 'named_to'" in d for d in details)
+    assert any("prerequisites needs a 'column'" in d for d in details)
+
+
+def test_prerequisites_targets_must_be_declared_labels(make_repo):
+    bad = VALID_ONTOLOGY.replace(
+        "{ type: FRIENDS_WITH, to: Thing, column: Friends }",
+        "{ type: NEEDS, to: Thing, column: Friends, parser: prerequisites, "
+        "staged_to: Nobody, named_to: Thing }")
+    base, path = make_repo(MINI_CSV, bad)
+    _, findings = load_ontology(path, base)
+    assert any("unknown target label 'Nobody'" in f.detail
+               for f in errors_of(findings))
+
+
+def test_prerequisites_any_target_requires_report(make_repo):
+    # Mirrors the `to: any` rule: label-agnostic resolution has no label
+    # to create a placeholder in.
+    bad = VALID_ONTOLOGY.replace(
+        "{ type: FRIENDS_WITH, to: Thing, column: Friends }",
+        "{ type: NEEDS, to: Thing, column: Friends, parser: prerequisites, "
+        "staged_to: any, named_to: Thing }")
+    base, path = make_repo(MINI_CSV, bad)
+    _, findings = load_ontology(path, base)
+    assert any("staged_to: any requires on_missing: report" in f.detail
+               for f in errors_of(findings))
+
+
+def test_prerequisites_fully_declared_validates_clean(make_repo):
+    good = VALID_ONTOLOGY.replace(
+        "{ type: FRIENDS_WITH, to: Thing, column: Friends }",
+        "{ type: NEEDS, to: Thing, column: Friends, parser: prerequisites, "
+        "staged_to: Thing, named_to: Thing }")
+    base, path = make_repo(MINI_CSV, good)
+    ontology, findings = load_ontology(path, base)
+    assert ontology is not None
+    assert errors_of(findings) == []
+
+
 def test_bad_on_missing(make_repo):
     bad = VALID_ONTOLOGY.replace("on_missing: placeholder",
                                  "on_missing: explode")
     base, path = make_repo(MINI_CSV, bad)
     _, findings = load_ontology(path, base)
     assert any("on_missing" in f.detail for f in errors_of(findings))
+
+
+def test_validate_refuses_extraction_over_a_broken_ontology(make_repo):
+    # Extraction over a misdeclared ontology used to crash far from the
+    # cause; run() must return the collated refusals with no graph.
+    from graph.validate import run
+    bad = VALID_ONTOLOGY.replace(
+        "{ type: FRIENDS_WITH, to: Thing, column: Friends }",
+        "{ type: NEEDS, to: Thing, column: Friends, parser: prerequisites }")
+    base, path = make_repo(MINI_CSV, bad)
+    _, graph, findings = run(base, path)
+    assert graph is None
+    assert any("prerequisites needs 'staged_to'" in f.detail
+               for f in errors_of(findings))
+    assert any("extraction skipped" in f.detail for f in findings)
+
+
+def test_validate_extracts_when_the_ontology_is_clean(make_repo):
+    from graph.validate import run
+    base, path = make_repo(MINI_CSV, VALID_ONTOLOGY)
+    _, graph, findings = run(base, path)
+    assert graph is not None
+    assert errors_of(findings) == []
 
 
 def test_unmatched_property_must_be_in_catalog(make_repo):

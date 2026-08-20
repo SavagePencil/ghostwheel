@@ -63,6 +63,10 @@ def cmd_validate(base_dir, write_files=True):
     if validate_mod.has_errors(findings):
         print("ERRORS present — fix the ontology/source files above.",
               file=sys.stderr)
+        if graph is None:
+            print("Extraction was skipped: a broken ontology cannot be "
+                  "extracted. Fix the errors, then re-run to surface "
+                  "extraction and answer-key findings.", file=sys.stderr)
         return 1, graph
     return 0, graph
 

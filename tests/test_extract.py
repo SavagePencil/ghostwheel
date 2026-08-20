@@ -723,6 +723,7 @@ def test_prerequisites_stage_outside_declared_enum_warns(make_repo):
             column: Requires
             parser: prerequisites
             staged_to: Skill
+            named_to: Skill
             stage_enum: Mastery
     """
     base_dir, path = make_repo(files, ontology_src)
