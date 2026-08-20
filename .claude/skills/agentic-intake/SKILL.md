@@ -142,9 +142,9 @@ query your own work, fix, iterate.
   a citizen belonging to two catalogs keeps its roster label and
   carries the other catalog's fields. This is an engine constraint,
   NOT settled doctrine — the owner wants per-citizen multi-membership
-  eventually; the open design dialogue is the "Can one citizen be an
-  example of several Concepts" Question. Check that Question's status
-  before modeling a new overlap.
+  eventually; the open design dialogue is the engine's per-citizen
+  multi-membership charter in its tracker. Check its status before
+  modeling a new overlap.
 - A concept Archetype born by THIS round's schema edit does not exist
   in scratch (scratch is cut pre-schema from the backup) — anchor
   Judgment ABOUT edges for brand-new labels to value citizens instead.
