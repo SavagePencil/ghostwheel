@@ -124,6 +124,17 @@ def test_prerequisites_any_target_requires_report(make_repo):
                for f in errors_of(findings))
 
 
+def test_prerequisites_named_any_target_requires_report(make_repo):
+    bad = VALID_ONTOLOGY.replace(
+        "{ type: FRIENDS_WITH, to: Thing, column: Friends }",
+        "{ type: NEEDS, to: Thing, column: Friends, parser: prerequisites, "
+        "staged_to: Thing, named_to: any }")
+    base, path = make_repo(MINI_CSV, bad)
+    _, findings = load_ontology(path, base)
+    assert any("named_to: any requires on_missing: report" in f.detail
+               for f in errors_of(findings))
+
+
 def test_prerequisites_fully_declared_validates_clean(make_repo):
     good = VALID_ONTOLOGY.replace(
         "{ type: FRIENDS_WITH, to: Thing, column: Friends }",
