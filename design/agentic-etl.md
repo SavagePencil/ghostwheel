@@ -460,6 +460,39 @@ atom; a *world* (a KB that mounts other KBs) and a *Pocket Universe* (a
 correlation of branches across KBs at one collated gate) are the future
 composition layer above it, not a branch.
 
+**Succession — the ceremony itself.** `succession --branch <name>` is
+the one sanctioned crossing of the branch/canon boundary. The dry run
+walks every verify gate and writes nothing; the apply run walks the
+same gates, then adopts. The verify phase collates, verify-all-before-apply-any: live
+canon must still byte-match its own committed backup (nothing moved
+outside the delta path), the branch database must byte-match the
+branch's backup, both chained event logs must verify unbroken, the
+branch must re-derive clean with the roster census at full strength
+(the advisory era ends at this gate), the ground-facts lint must be
+clean over the branch's whole line (its ground diffed from its own
+schema stratum, so the round lint judges the entire line at once), and
+the version anchor must ride the branch. On any failure the refusals
+collate and nothing is written. Adoption proceeds capture-first: the
+outgoing canon is archived as a branch (`--archive-as`, default
+`superseded-<sequence>` — export, event log, and archived rounds copied
+into a new branch home) BEFORE anything is overwritten; the branch's
+graph is stamped with canon's next event-log sequence, so the version a
+fresh connection reads keeps climbing through the ceremony; the live
+canon database is rebuilt from it and the backup re-exported FROM the
+database; and canon's chained log gains ONE adoption entry whose
+payload slot carries the adoption record's content hash. The record —
+archived with canon's rounds and doubled as the `adopted.json` marker
+in the branch home — names who ruled, when, the adopted branch, its
+chain tip and export identity, the canon identities before and after,
+and the archive branch. Canon's chain therefore continues unbroken
+across the ceremony while the branch's own fine-grained log survives in
+its archived home: lineage is cryptographic, not conventional (owner
+rulings, 2026-08-20). An adopted branch is provenance, not a working
+line — further rounds on it refuse by name. Walk-back is a second
+ceremony: rehydrate the archive branch's database (`restore --from
+graph/branches/<archived>/export --database <archived>`), then run
+succession on it.
+
 **Findings are rows**: the parity harness files every judged
 difference as a structured row — archived as `findings.jsonl` beside
 the artifact's reading, and landed in the workspace room as
