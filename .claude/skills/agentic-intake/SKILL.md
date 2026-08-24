@@ -136,15 +136,19 @@ query your own work, fix, iterate.
 - NEVER write derived edge types (INSTANCE_OF, projections, MENTIONS,
   lift edges, KNOWN_AT…) or machine labels (Archetype/Step/Outcome) —
   the delta lint rejects them with the reason.
-- **The node model is currently single-label** (delta/export key each
-  citizen by one roster label), so an overlap ruling is realized TODAY
-  as shared catalog vocabulary + Decision rows, one label per citizen —
-  a citizen belonging to two catalogs keeps its roster label and
-  carries the other catalog's fields. This is an engine constraint,
-  NOT settled doctrine — the owner wants per-citizen multi-membership
-  eventually; the open design dialogue is the engine's per-citizen
-  multi-membership charter in its tracker. Check its status before
-  modeling a new overlap.
+- **Identity stays single-label; membership is multi.** Each citizen is
+  keyed and exported by exactly one roster label — its home, its
+  catalog, its source — and that never changes. But a citizen may be
+  declared a member of more than one concept: author a ground
+  `DECLARED_MEMBER_OF` edge FROM the citizen TO a Concept Archetype,
+  carrying a required `basis` rationale, and derivation folds it into
+  the citizen's `INSTANCE_OF`. So a gem its roster makes a Treasure can
+  ALSO be declared a Tool while a sibling gem on the same roster is not
+  — an overlap no longer needs the shared-catalog-vocabulary workaround.
+  The edge only ADDS membership and never re-homes the citizen: its
+  target must be a subject-matter Concept (never a Facet, never another
+  label's Archetype), and `INSTANCE_OF` itself stays never-authored —
+  the fold computes it.
 - A concept Archetype born by THIS round's schema edit does not exist
   in scratch (scratch is cut pre-schema from the backup) — anchor
   Judgment ABOUT edges for brand-new labels to value citizens instead.

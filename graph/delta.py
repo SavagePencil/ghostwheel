@@ -14,10 +14,10 @@ read_graph touches the neo4j driver.
 from dataclasses import dataclass, field
 
 from .extract import GraphData, make_edge
-from .ontology import (ARCHETYPE_LABEL, MACHINE_LABELS, SCHEMA_EDGE_TYPES,
-                       SCHEMA_LABELS, STRATIFIED_EDGE_TYPES,
+from .ontology import (ARCHETYPE_LABEL, MACHINE_LABELS, MEMBERSHIP_EDGE_TYPE,
+                       SCHEMA_EDGE_TYPES, SCHEMA_LABELS, STRATIFIED_EDGE_TYPES,
                        UNAUTHORABLE_EDGE_TYPES, UNAUTHORABLE_LABELS,
-                       is_derived_edge)
+                       is_concept_archetype, is_derived_edge)
 
 
 def _is_schema_edge(edge):
@@ -349,6 +349,44 @@ def lint(delta, base=None):
                 "related', that's an owner question — raise it at the "
                 "plan gate. To undo: MATCH the relationship in scratch "
                 "and DELETE it, or reset scratch.")
+        elif edge.type == MEMBERSHIP_EDGE_TYPE:
+            # The declared-membership pattern: an authored ground edge, not
+            # schema (_is_schema_edge does not match it) and not derived —
+            # so it falls through to here, where its SHAPE is guarded.
+            # Collate every fault on the edge.
+            prefix = (f"Attempted to author membership ({edge.from_name})-"
+                      f"[:{MEMBERSHIP_EDGE_TYPE}]->({edge.to_name}). Failed "
+                      "due to: ")
+            if edge.from_label == ARCHETYPE_LABEL:
+                violations.append(
+                    prefix + "the edge runs FROM an Archetype, which is the "
+                    "tower/roster shape, not an authored membership — a "
+                    "declared membership is written FROM a citizen. To undo: "
+                    "point the edge from the citizen, or MATCH it in scratch "
+                    "and DELETE it.")
+            if base is None:
+                violations.append(
+                    prefix + "the target cannot be verified without the "
+                    "base graph — run the round through the delta pipeline "
+                    "(python -m graph delta) so the membership target is "
+                    "checked against canon.")
+            elif not is_concept_archetype(base, edge.to_name):
+                violations.append(
+                    prefix + f"'{edge.to_name}' is not an existing "
+                    "Concept-rooted Archetype — authored membership "
+                    "classifies a citizen against subject-matter Concepts "
+                    "only (never a Facet, a label's Archetype, or a missing "
+                    "node), and it never re-homes the citizen. To undo: "
+                    "point the edge at a Concept Archetype, or DELETE it "
+                    "from scratch.")
+            basis = dict(edge.props).get("basis")
+            if not (basis and str(basis).strip()):
+                violations.append(
+                    prefix + "the edge carries no `basis` rationale — a "
+                    "declared membership is a hand assertion with no source "
+                    "table behind it, so its reason is the audit record and "
+                    "is required. To undo: add a `basis` property naming why "
+                    "the citizen belongs, or DELETE the edge from scratch.")
         if edge.from_name is None or edge.to_name is None:
             violations.append(
                 f"a {edge.type} connection touches an unnamed node — "
@@ -369,6 +407,18 @@ def lint(delta, base=None):
                 f"{edge.type}). If the underlying fact is wrong, change "
                 "the fact; the link follows. To undo: restore the "
                 "relationship's properties in scratch, or reset scratch.")
+        elif edge.type == MEMBERSHIP_EDGE_TYPE:
+            # An edit must not strip the audit record the add-side lint
+            # required: the basis survives every edit.
+            basis = dict(edge.props).get("basis")
+            if not (basis and str(basis).strip()):
+                violations.append(
+                    f"Attempted to edit the membership ({edge.from_name})-"
+                    f"[:{MEMBERSHIP_EDGE_TYPE}]->({edge.to_name}). Failed "
+                    "due to: the edit leaves it with no `basis` rationale — "
+                    "a declared membership's reason is the audit record and "
+                    "is required. To undo: restore or rewrite the `basis` "
+                    "property in scratch.")
     return violations
 
 
