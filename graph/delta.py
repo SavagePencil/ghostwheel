@@ -13,11 +13,13 @@ read_graph touches the neo4j driver.
 
 from dataclasses import dataclass, field
 
+from . import report as report_mod
 from .extract import GraphData, make_edge
 from .ontology import (ARCHETYPE_LABEL, MACHINE_LABELS, MEMBERSHIP_EDGE_TYPE,
                        SCHEMA_EDGE_TYPES, SCHEMA_LABELS, STRATIFIED_EDGE_TYPES,
                        UNAUTHORABLE_EDGE_TYPES, UNAUTHORABLE_LABELS,
                        is_concept_archetype, is_derived_edge)
+from .report import CeremonyItem, NodeRef, Verdict, edge_ref
 
 
 def _is_schema_edge(edge):
@@ -163,9 +165,9 @@ _OUT_OF_CLASS = (
     "Propose the change to the owner at the plan gate instead.")
 
 
-def ceremony_classify(delta, base=None):
+def ceremony_records(delta, base=None):
     """Split the delta's schema-stratum changes into the ceremony's
-    permitted classes and out-of-class violations.
+    permitted classes and out-of-class violations — as records.
 
     Permitted, itemized for the diff gate (the owner's approval of the
     round IS the ceremony ruling):
@@ -178,8 +180,9 @@ def ceremony_classify(delta, base=None):
       base=None refuses removals outright.
 
     Returns (items, violations, permitted_node_keys, permitted_edge_ids):
-    items are human lines for the report's ceremony section; the permitted
-    sets tell lint() which schema rows to skip its freeze refusals for.
+    items are CeremonyItem records for the report's ceremony section,
+    violations are Verdict records; the permitted sets tell
+    lint_verdicts() which schema rows to skip its freeze refusals for.
     """
     items, violations = [], []
     permitted_nodes, permitted_edges = set(), set()
@@ -189,9 +192,14 @@ def ceremony_classify(delta, base=None):
         if label not in SCHEMA_LABELS:
             continue
         if "spec_json" in (props or {}):
-            violations.append(
-                f"Attempted to author '{name}' as a new {label} LABEL "
-                f"(it carries spec_json). Failed due to: {_OUT_OF_CLASS}")
+            violations.append(Verdict(
+                code="schema-label-row-authored",
+                subject=NodeRef(label, name),
+                message=(
+                    f"Attempted to author '{name}' as a new {label} LABEL "
+                    f"(it carries spec_json). Failed due to: {_OUT_OF_CLASS}"),
+                remedy="Propose the change to the owner at the plan gate "
+                       "instead."))
         else:
             added_concepts[(label, name)] = props or {}
     declared = {}
@@ -202,26 +210,39 @@ def ceremony_classify(delta, base=None):
     for key, props in added_concepts.items():
         label, name = key
         if key not in declared:
-            violations.append(
-                f"Attempted to author '{name}' as a new {label} concept "
-                "without declaring it. Failed due to: a ceremony concept "
-                "arrives WITH its DECLARED_IN edge (and usually an "
-                "INSTANCE_OF into its parent concept) in the same round "
-                "— an undeclared schema row would be invisible to the "
-                "schema readers. Add the declaration in scratch, or "
-                "delete the node.")
+            violations.append(Verdict(
+                code="schema-concept-undeclared",
+                subject=NodeRef(label, name),
+                message=(
+                    f"Attempted to author '{name}' as a new {label} concept "
+                    "without declaring it. Failed due to: a ceremony concept "
+                    "arrives WITH its DECLARED_IN edge (and usually an "
+                    "INSTANCE_OF into its parent concept) in the same round "
+                    "— an undeclared schema row would be invisible to the "
+                    "schema readers. Add the declaration in scratch, or "
+                    "delete the node."),
+                remedy="Add the declaration in scratch, or delete the node."))
             continue
         permitted_nodes.add(key)
         parents = [e.to_name for e in delta.edges_added
                    if e.type == "INSTANCE_OF"
                    and (e.from_label, e.from_name) == key]
         doc = str(props.get("doc", ""))
-        items.append(
-            f"NEW CONCEPT '{name}' — declared in {declared[key]}"
-            + (f", an instance of {', '.join(map(str, parents))}"
-               if parents else "")
-            + (f'; doc: "{doc[:160]}{"…" if len(doc) > 160 else ""}"'
-               if doc else "; no doc text"))
+        item_data = {"declared_in": declared[key]}
+        if parents:
+            item_data["instance_of"] = [str(p) for p in parents]
+        if doc:
+            item_data["doc"] = doc
+        items.append(CeremonyItem(
+            code="new-concept",
+            subject=NodeRef(label, name),
+            message=(
+                f"NEW CONCEPT '{name}' — declared in {declared[key]}"
+                + (f", an instance of {', '.join(map(str, parents))}"
+                   if parents else "")
+                + (f'; doc: "{doc[:160]}{"…" if len(doc) > 160 else ""}"'
+                   if doc else "; no doc text")),
+            data=item_data))
         for edge in delta.edges_added:
             if (edge.from_label, edge.from_name) == key \
                     and edge.type in ("DECLARED_IN", "INSTANCE_OF"):
@@ -232,10 +253,16 @@ def ceremony_classify(delta, base=None):
             continue
         out_of_class = sorted(set(changes) - CEREMONY_DOC_PROPS)
         if out_of_class:
-            violations.append(
-                f"Attempted to modify '{name}' ({label}) beyond its doc "
-                f"text ({', '.join(out_of_class)}). Failed due to: "
-                + _OUT_OF_CLASS)
+            violations.append(Verdict(
+                code="schema-edit-out-of-class",
+                subject=NodeRef(label, name),
+                message=(
+                    f"Attempted to modify '{name}' ({label}) beyond its doc "
+                    f"text ({', '.join(out_of_class)}). Failed due to: "
+                    + _OUT_OF_CLASS),
+                remedy="Propose the change to the owner at the plan gate "
+                       "instead.",
+                data={"properties": out_of_class}))
             continue
         permitted_nodes.add((label, name))
         for prop, (before, after) in changes.items():
@@ -243,24 +270,37 @@ def ceremony_classify(delta, base=None):
                 if len(str(before)) > 110 else f'"{before}"'
             a = "(none)" if after is None else f'"{str(after)[:110]}…"' \
                 if len(str(after)) > 110 else f'"{after}"'
-            items.append(f"DOC EDIT on '{name}' — {prop}: {b} → {a}")
+            items.append(CeremonyItem(
+                code="doc-edit",
+                subject=NodeRef(label, name),
+                message=f"DOC EDIT on '{name}' — {prop}: {b} → {a}",
+                data={"property": prop, "before": before, "after": after}))
 
     for label, name, props in delta.nodes_removed:
         if label not in SCHEMA_LABELS:
             continue
         key = (label, name)
         if "spec_json" in (props or {}):
-            violations.append(
-                f"Attempted to remove '{name}' ({label}), a LABEL row "
-                f"(it carries spec_json). Failed due to: {_OUT_OF_CLASS}")
+            violations.append(Verdict(
+                code="schema-label-row-removed",
+                subject=NodeRef(label, name),
+                message=(
+                    f"Attempted to remove '{name}' ({label}), a LABEL row "
+                    f"(it carries spec_json). Failed due to: {_OUT_OF_CLASS}"),
+                remedy="Propose the change to the owner at the plan gate "
+                       "instead."))
             continue
         if base is None:
-            violations.append(
-                f"Attempted to remove '{name}' ({label}) without the "
-                "base graph in view. Failed due to: a schema removal is "
-                "permitted only when nothing references the row, and "
-                "that can only be verified against the base — run the "
-                "removal through the delta pipeline.")
+            violations.append(Verdict(
+                code="schema-removal-unverified",
+                subject=NodeRef(label, name),
+                message=(
+                    f"Attempted to remove '{name}' ({label}) without the "
+                    "base graph in view. Failed due to: a schema removal is "
+                    "permitted only when nothing references the row, and "
+                    "that can only be verified against the base — run the "
+                    "removal through the delta pipeline."),
+                remedy="Run the removal through the delta pipeline."))
             continue
         inbound = [e for e in base.edges
                    if (e.to_label, str(e.to_name)) == (label, str(name))]
@@ -269,18 +309,28 @@ def ceremony_classify(delta, base=None):
                  and e.type not in ("DECLARED_IN", "INSTANCE_OF")]
         if inbound or stray:
             kinds = sorted({e.type for e in inbound + stray})
-            violations.append(
-                f"Attempted to remove '{name}' ({label}). Failed due "
-                f"to: the row is still referenced in the base "
-                f"({len(inbound) + len(stray)} connections: "
-                f"{', '.join(kinds)}) — a referenced schema row cannot "
-                "be ceremonially removed; re-point or retire its "
-                "references first, or propose a migration.")
+            violations.append(Verdict(
+                code="schema-row-referenced",
+                subject=NodeRef(label, name),
+                message=(
+                    f"Attempted to remove '{name}' ({label}). Failed due "
+                    f"to: the row is still referenced in the base "
+                    f"({len(inbound) + len(stray)} connections: "
+                    f"{', '.join(kinds)}) — a referenced schema row cannot "
+                    "be ceremonially removed; re-point or retire its "
+                    "references first, or propose a migration."),
+                remedy="Re-point or retire its references first, or "
+                       "propose a migration.",
+                data={"connections": len(inbound) + len(stray),
+                      "kinds": kinds}))
             continue
         permitted_nodes.add(key)
-        items.append(f"REMOVED CONCEPT '{name}' — unreferenced in the "
+        items.append(CeremonyItem(
+            code="removed-concept",
+            subject=NodeRef(label, name),
+            message=(f"REMOVED CONCEPT '{name}' — unreferenced in the "
                      "base (no members, no anchors); its declaration "
-                     "goes with it")
+                     "goes with it")))
         for edge in delta.edges_removed:
             if (edge.from_label, edge.from_name) == key \
                     and edge.type in ("DECLARED_IN", "INSTANCE_OF"):
@@ -289,66 +339,110 @@ def ceremony_classify(delta, base=None):
     return items, violations, permitted_nodes, permitted_edges
 
 
-def lint(delta, base=None):
-    """Ground-facts violations: machine labels or derived edge types among
-    the ADDITIONS (the machine's own base-side layers are fine — the lint
-    guards what the author wrote, not what the derivation computed).
-    Schema-stratum changes route through ceremony_classify: the permitted
-    classes itemize for the gate instead of refusing; everything else on
-    the stratum still refuses by name."""
+def ceremony_classify(delta, base=None):
+    """The ceremony's verdicts as prose lines — a rendering of
+    ceremony_records() for callers that read sentences. The records are
+    the truth; these are their str() forms."""
+    items, violations, permitted_nodes, permitted_edges = \
+        ceremony_records(delta, base)
+    return ([str(item) for item in items],
+            [str(verdict) for verdict in violations],
+            permitted_nodes, permitted_edges)
+
+
+def _changes_data(changes):
+    """A changed edge's per-property (before, after) pairs, as verdict
+    particulars."""
+    return {"changes": {prop: [before, after]
+                        for prop, (before, after) in sorted(changes.items())}}
+
+
+def lint_verdicts(delta, base=None):
+    """Ground-facts violations as Verdict records: machine labels or
+    derived edge types among the ADDITIONS (the machine's own base-side
+    layers are fine — the lint guards what the author wrote, not what the
+    derivation computed). Schema-stratum changes route through
+    ceremony_records: the permitted classes itemize for the gate instead
+    of refusing; everything else on the stratum still refuses by name."""
     (_, violations, ceremony_nodes,
-     ceremony_edges) = ceremony_classify(delta, base)
+     ceremony_edges) = ceremony_records(delta, base)
     for label, name, _ in delta.nodes_added:
         if label in SCHEMA_LABELS:
-            # Schema adds are fully adjudicated by ceremony_classify:
+            # Schema adds are fully adjudicated by ceremony_records:
             # permitted concepts itemize, everything else already refused.
             pass
         elif label in UNAUTHORABLE_LABELS:
-            violations.append(
-                f"'{name}' can't be created as a {label} — nodes of that "
-                "kind are built automatically by the system, never by "
-                "hand (machine label). If you meant to propose a new "
-                "concept or step, say so in the plan and the owner "
-                "will place it. To undo: delete the node from scratch, "
-                "or reset scratch entirely (python -m graph load "
-                "--database scratch).")
+            violations.append(Verdict(
+                code="machine-label-authored",
+                subject=NodeRef(label, name),
+                message=(
+                    f"'{name}' can't be created as a {label} — nodes of that "
+                    "kind are built automatically by the system, never by "
+                    "hand (machine label). If you meant to propose a new "
+                    "concept or step, say so in the plan and the owner "
+                    "will place it. To undo: delete the node from scratch, "
+                    "or reset scratch entirely (python -m graph load "
+                    "--database scratch)."),
+                remedy="Delete the node from scratch, or reset scratch "
+                       "entirely (python -m graph load --database "
+                       "scratch)."))
         if name is None:
-            violations.append(
-                f"a {label} node was created without a name — every "
-                "citizen needs one. Give it a name property or delete it "
-                "from scratch.")
+            violations.append(Verdict(
+                code="node-unnamed",
+                subject=NodeRef(label, None),
+                message=(
+                    f"a {label} node was created without a name — every "
+                    "citizen needs one. Give it a name property or delete it "
+                    "from scratch."),
+                remedy="Give it a name property or delete it from scratch."))
     # Schema node edits and removals are fully adjudicated by
-    # ceremony_classify above — permitted classes itemize for the gate,
+    # ceremony_records above — permitted classes itemize for the gate,
     # everything else is already refused by name. Schema EDGES outside a
     # permitted concept's own declaration still refuse here.
     for edge in delta.edges_removed:
         if _is_schema_edge(edge) and id(edge) not in ceremony_edges:
-            violations.append(
-                f"Attempted to remove the connection ({edge.from_name})-"
-                f"[:{edge.type}]->({edge.to_name}). Failed due to: "
-                f"{edge.type} links are part of the graph's own schema, "
-                f"and {_OUT_OF_CLASS} To undo: reset scratch entirely "
-                "(python -m graph load --database scratch).")
+            violations.append(Verdict(
+                code="schema-edge-removed",
+                subject=edge_ref(edge),
+                message=(
+                    f"Attempted to remove the connection ({edge.from_name})-"
+                    f"[:{edge.type}]->({edge.to_name}). Failed due to: "
+                    f"{edge.type} links are part of the graph's own schema, "
+                    f"and {_OUT_OF_CLASS} To undo: reset scratch entirely "
+                    "(python -m graph load --database scratch)."),
+                remedy="Reset scratch entirely (python -m graph load "
+                       "--database scratch)."))
     for edge in delta.edges_added:
         if _is_schema_edge(edge):
             if id(edge) in ceremony_edges:
                 continue
-            violations.append(
-                f"Attempted to author the connection ({edge.from_name})-"
-                f"[:{edge.type}]->({edge.to_name}). Failed due to: "
-                f"{edge.type} links are part of the graph's own schema, "
-                f"and {_OUT_OF_CLASS} To undo: MATCH the "
-                "relationship in scratch and DELETE it, or reset scratch.")
+            violations.append(Verdict(
+                code="schema-edge-authored",
+                subject=edge_ref(edge),
+                message=(
+                    f"Attempted to author the connection ({edge.from_name})-"
+                    f"[:{edge.type}]->({edge.to_name}). Failed due to: "
+                    f"{edge.type} links are part of the graph's own schema, "
+                    f"and {_OUT_OF_CLASS} To undo: MATCH the "
+                    "relationship in scratch and DELETE it, or reset "
+                    "scratch."),
+                remedy="MATCH the relationship in scratch and DELETE it, "
+                       "or reset scratch."))
         elif edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
-            violations.append(
-                f"the connection ({edge.from_name}) → ({edge.to_name}) "
-                f"can't be added by hand — {edge.type} links are computed "
-                "automatically from the facts, so a manual one would go "
-                "stale the moment the facts change (derived type "
-                f"{edge.type}). If the intent is 'these two should be "
-                "related', that's an owner question — raise it at the "
-                "plan gate. To undo: MATCH the relationship in scratch "
-                "and DELETE it, or reset scratch.")
+            violations.append(Verdict(
+                code="derived-edge-authored",
+                subject=edge_ref(edge),
+                message=(
+                    f"the connection ({edge.from_name}) → ({edge.to_name}) "
+                    f"can't be added by hand — {edge.type} links are computed "
+                    "automatically from the facts, so a manual one would go "
+                    "stale the moment the facts change (derived type "
+                    f"{edge.type}). If the intent is 'these two should be "
+                    "related', that's an owner question — raise it at the "
+                    "plan gate. To undo: MATCH the relationship in scratch "
+                    "and DELETE it, or reset scratch."),
+                remedy="MATCH the relationship in scratch and DELETE it, "
+                       "or reset scratch."))
         elif edge.type == MEMBERSHIP_EDGE_TYPE:
             # The declared-membership pattern: an authored ground edge, not
             # schema (_is_schema_edge does not match it) and not derived —
@@ -358,71 +452,123 @@ def lint(delta, base=None):
                       f"[:{MEMBERSHIP_EDGE_TYPE}]->({edge.to_name}). Failed "
                       "due to: ")
             if edge.from_label == ARCHETYPE_LABEL:
-                violations.append(
-                    prefix + "the edge runs FROM an Archetype, which is the "
-                    "tower/roster shape, not an authored membership — a "
-                    "declared membership is written FROM a citizen. To undo: "
-                    "point the edge from the citizen, or MATCH it in scratch "
-                    "and DELETE it.")
+                violations.append(Verdict(
+                    code="membership-from-archetype",
+                    subject=edge_ref(edge),
+                    message=(
+                        prefix + "the edge runs FROM an Archetype, which is "
+                        "the tower/roster shape, not an authored membership "
+                        "— a declared membership is written FROM a citizen. "
+                        "To undo: point the edge from the citizen, or MATCH "
+                        "it in scratch and DELETE it."),
+                    remedy="Point the edge from the citizen, or MATCH it "
+                           "in scratch and DELETE it."))
             if base is None:
-                violations.append(
-                    prefix + "the target cannot be verified without the "
-                    "base graph — run the round through the delta pipeline "
-                    "(python -m graph delta) so the membership target is "
-                    "checked against canon.")
+                violations.append(Verdict(
+                    code="membership-unverified",
+                    subject=edge_ref(edge),
+                    message=(
+                        prefix + "the target cannot be verified without the "
+                        "base graph — run the round through the delta "
+                        "pipeline (python -m graph delta) so the membership "
+                        "target is checked against canon."),
+                    remedy="Run the round through the delta pipeline "
+                           "(python -m graph delta)."))
             elif not is_concept_archetype(base, edge.to_name):
-                violations.append(
-                    prefix + f"'{edge.to_name}' is not an existing "
-                    "Concept-rooted Archetype — authored membership "
-                    "classifies a citizen against subject-matter Concepts "
-                    "only (never a Facet, a label's Archetype, or a missing "
-                    "node), and it never re-homes the citizen. To undo: "
-                    "point the edge at a Concept Archetype, or DELETE it "
-                    "from scratch.")
+                violations.append(Verdict(
+                    code="membership-target-not-concept",
+                    subject=edge_ref(edge),
+                    message=(
+                        prefix + f"'{edge.to_name}' is not an existing "
+                        "Concept-rooted Archetype — authored membership "
+                        "classifies a citizen against subject-matter "
+                        "Concepts only (never a Facet, a label's Archetype, "
+                        "or a missing node), and it never re-homes the "
+                        "citizen. To undo: point the edge at a Concept "
+                        "Archetype, or DELETE it from scratch."),
+                    remedy="Point the edge at a Concept Archetype, or "
+                           "DELETE it from scratch."))
             basis = dict(edge.props).get("basis")
             if not (basis and str(basis).strip()):
-                violations.append(
-                    prefix + "the edge carries no `basis` rationale — a "
-                    "declared membership is a hand assertion with no source "
-                    "table behind it, so its reason is the audit record and "
-                    "is required. To undo: add a `basis` property naming why "
-                    "the citizen belongs, or DELETE the edge from scratch.")
+                violations.append(Verdict(
+                    code="membership-basis-missing",
+                    subject=edge_ref(edge),
+                    message=(
+                        prefix + "the edge carries no `basis` rationale — a "
+                        "declared membership is a hand assertion with no "
+                        "source table behind it, so its reason is the audit "
+                        "record and is required. To undo: add a `basis` "
+                        "property naming why the citizen belongs, or DELETE "
+                        "the edge from scratch."),
+                    remedy="Add a `basis` property naming why the citizen "
+                           "belongs, or DELETE the edge from scratch."))
         if edge.from_name is None or edge.to_name is None:
-            violations.append(
-                f"a {edge.type} connection touches an unnamed node — "
-                "name the node or remove the connection.")
-    for edge, _ in delta.edges_changed:
+            violations.append(Verdict(
+                code="edge-endpoint-unnamed",
+                subject=edge_ref(edge),
+                message=(
+                    f"a {edge.type} connection touches an unnamed node — "
+                    "name the node or remove the connection."),
+                remedy="Name the node or remove the connection."))
+    for edge, changes in delta.edges_changed:
         if _is_schema_edge(edge):
-            violations.append(
-                f"Attempted to modify the connection ({edge.from_name})-"
-                f"[:{edge.type}]->({edge.to_name}). Failed due to: "
-                f"{edge.type} links are part of the graph's own schema, "
-                f"and {_OUT_OF_CLASS} To undo: restore the "
-                "relationship's properties in scratch, or reset scratch.")
+            violations.append(Verdict(
+                code="schema-edge-modified",
+                subject=edge_ref(edge),
+                message=(
+                    f"Attempted to modify the connection ({edge.from_name})-"
+                    f"[:{edge.type}]->({edge.to_name}). Failed due to: "
+                    f"{edge.type} links are part of the graph's own schema, "
+                    f"and {_OUT_OF_CLASS} To undo: restore the "
+                    "relationship's properties in scratch, or reset "
+                    "scratch."),
+                remedy="Restore the relationship's properties in scratch, "
+                       "or reset scratch.",
+                data=_changes_data(changes)))
         elif edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
-            violations.append(
-                f"the connection ({edge.from_name}) → ({edge.to_name}) "
-                f"can't be modified by hand — {edge.type} links are "
-                "computed automatically from the facts (derived type "
-                f"{edge.type}). If the underlying fact is wrong, change "
-                "the fact; the link follows. To undo: restore the "
-                "relationship's properties in scratch, or reset scratch.")
+            violations.append(Verdict(
+                code="derived-edge-modified",
+                subject=edge_ref(edge),
+                message=(
+                    f"the connection ({edge.from_name}) → ({edge.to_name}) "
+                    f"can't be modified by hand — {edge.type} links are "
+                    "computed automatically from the facts (derived type "
+                    f"{edge.type}). If the underlying fact is wrong, change "
+                    "the fact; the link follows. To undo: restore the "
+                    "relationship's properties in scratch, or reset "
+                    "scratch."),
+                remedy="Restore the relationship's properties in scratch, "
+                       "or reset scratch.",
+                data=_changes_data(changes)))
         elif edge.type == MEMBERSHIP_EDGE_TYPE:
             # An edit must not strip the audit record the add-side lint
             # required: the basis survives every edit.
             basis = dict(edge.props).get("basis")
             if not (basis and str(basis).strip()):
-                violations.append(
-                    f"Attempted to edit the membership ({edge.from_name})-"
-                    f"[:{MEMBERSHIP_EDGE_TYPE}]->({edge.to_name}). Failed "
-                    "due to: the edit leaves it with no `basis` rationale — "
-                    "a declared membership's reason is the audit record and "
-                    "is required. To undo: restore or rewrite the `basis` "
-                    "property in scratch.")
+                violations.append(Verdict(
+                    code="membership-basis-blanked",
+                    subject=edge_ref(edge),
+                    message=(
+                        f"Attempted to edit the membership ({edge.from_name})-"
+                        f"[:{MEMBERSHIP_EDGE_TYPE}]->({edge.to_name}). Failed "
+                        "due to: the edit leaves it with no `basis` rationale "
+                        "— a declared membership's reason is the audit record "
+                        "and is required. To undo: restore or rewrite the "
+                        "`basis` property in scratch."),
+                    remedy="Restore or rewrite the `basis` property in "
+                           "scratch.",
+                    data=_changes_data(changes)))
     return violations
 
 
-def lint_stitch(delta, scratch):
+def lint(delta, base=None):
+    """The lint's verdicts as prose lines — a rendering of
+    lint_verdicts() for callers that read sentences. The records are the
+    truth; these are their str() forms."""
+    return [str(verdict) for verdict in lint_verdicts(delta, base)]
+
+
+def stitch_verdicts(delta, scratch):
     """The stitch mechanism: the stitch carries ground edges whose endpoint is born by
     this round's schema edit — they cannot be authored in scratch (the
     endpoint does not exist there to point at), so they ride the
@@ -432,132 +578,97 @@ def lint_stitch(delta, scratch):
     violations = []
     for edge in delta.stitch:
         if _is_schema_edge(edge):
-            violations.append(
-                f"Attempted to author the stitch connection "
-                f"({edge.from_name})-[:{edge.type}]->({edge.to_name}). "
-                f"Failed due to: {edge.type} links are part of the "
-                "graph's own schema, and the stitch never carries "
-                "schema — a ceremony concept authors its declaration "
-                "directly in scratch, in the same round. "
-                "Remove it from the stitch file.")
+            violations.append(Verdict(
+                code="stitch-schema-edge",
+                subject=edge_ref(edge),
+                message=(
+                    f"Attempted to author the stitch connection "
+                    f"({edge.from_name})-[:{edge.type}]->({edge.to_name}). "
+                    f"Failed due to: {edge.type} links are part of the "
+                    "graph's own schema, and the stitch never carries "
+                    "schema — a ceremony concept authors its declaration "
+                    "directly in scratch, in the same round. "
+                    "Remove it from the stitch file."),
+                remedy="Remove it from the stitch file."))
             continue
         if edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
-            violations.append(
-                f"the stitch connection ({edge.from_name}) → "
-                f"({edge.to_name}) can't be authored — {edge.type} links "
-                "are computed automatically from the facts (derived type "
-                f"{edge.type}); the stitch carries ground facts only. "
-                "Remove it from the stitch file.")
+            violations.append(Verdict(
+                code="stitch-derived-edge",
+                subject=edge_ref(edge),
+                message=(
+                    f"the stitch connection ({edge.from_name}) → "
+                    f"({edge.to_name}) can't be authored — {edge.type} links "
+                    "are computed automatically from the facts (derived type "
+                    f"{edge.type}); the stitch carries ground facts only. "
+                    "Remove it from the stitch file."),
+                remedy="Remove it from the stitch file."))
             continue
         if edge.from_name is None or edge.to_name is None:
-            violations.append(
-                f"a stitch {edge.type} connection touches an unnamed "
-                "node — name both endpoints in the stitch file.")
+            violations.append(Verdict(
+                code="stitch-endpoint-unnamed",
+                subject=edge_ref(edge),
+                message=(
+                    f"a stitch {edge.type} connection touches an unnamed "
+                    "node — name both endpoints in the stitch file."),
+                remedy="Name both endpoints in the stitch file."))
             continue
         if (edge.from_label, edge.from_name) in scratch.nodes and \
                 (edge.to_label, edge.to_name) in scratch.nodes:
-            violations.append(
-                f"the stitch connection ({edge.from_name})-"
-                f"[:{edge.type}]->({edge.to_name}) doesn't need the "
-                "stitch — both ends already exist in scratch. Author it "
-                "there like any other ground fact and it will ride the "
-                "main changeset.")
+            violations.append(Verdict(
+                code="stitch-unneeded",
+                subject=edge_ref(edge),
+                message=(
+                    f"the stitch connection ({edge.from_name})-"
+                    f"[:{edge.type}]->({edge.to_name}) doesn't need the "
+                    "stitch — both ends already exist in scratch. Author it "
+                    "there like any other ground fact and it will ride the "
+                    "main changeset."),
+                remedy="Author it in scratch like any other ground fact."))
     return violations
 
 
+def lint_stitch(delta, scratch):
+    """The stitch lint's verdicts as prose lines — a rendering of
+    stitch_verdicts(). The records are the truth; these are their str()
+    forms."""
+    return [str(verdict) for verdict in stitch_verdicts(delta, scratch)]
+
+
+def build_report(delta, verdicts=None, ceremony=None, advisories=None):
+    """The delta gate's report model. Accepts records or plain strings
+    (strings are wrapped as unclassified records, so long-standing
+    callers keep working); both renderers in graph.report read only the
+    model this returns."""
+    def as_verdict(v, severity=report_mod.REFUSAL):
+        if isinstance(v, Verdict):
+            return v
+        return Verdict(code="unclassified", message=str(v),
+                       severity=severity)
+
+    def as_item(item):
+        if isinstance(item, CeremonyItem):
+            return item
+        return CeremonyItem(code="unclassified", message=str(item))
+
+    return report_mod.DeltaReport(
+        delta=delta,
+        verdicts=[as_verdict(v) for v in (verdicts or [])],
+        ceremony=[as_item(i) for i in (ceremony or [])],
+        advisories=[as_verdict(a, report_mod.ADVISORY)
+                    for a in (advisories or [])])
+
+
 def render_report(delta, violations, ceremony=None):
-    """Human-readable delta report (markdown). Lint verdicts first; when
+    """Human-readable delta report (markdown) — a rendering of the
+    report model over the given verdicts. Lint verdicts first; when
     the round carries schema-stratum changes within the ceremony's
     classes, they get their own marked section — the owner's approval of
     a round whose report carries that section IS the schema ceremony."""
-    lines = ["# Delta report — scratch vs source-derived base", ""]
-    if delta.empty:
-        lines += ["Scratch matches the base exactly — no proposal present.",
-                  ""]
-        return "\n".join(lines)
-    lines += [f"**Summary:** {len(delta.nodes_added)} nodes added · "
-              f"{len(delta.nodes_changed)} changed · "
-              f"{len(delta.nodes_removed)} removed · "
-              f"{len(delta.edges_added)} edges added · "
-              f"{len(delta.edges_changed)} changed · "
-              f"{len(delta.edges_removed)} removed"
-              + (f" · {len(delta.stitch)} stitched"
-                 if delta.stitch else ""), ""]
-    lines += ["## Ground-facts lint", ""]
-    if violations:
-        lines += ["The items below cannot become canon as written — each "
-                  "says why, and what to do instead. Nothing canonizes "
-                  "until they are resolved.", ""]
-        lines += [f"- ⚠ {violation}" for violation in violations] + [""]
-    else:
-        lines += ["Clean — every addition is a ground fact.", ""]
-    if ceremony:
-        lines += ["## Schema changes — the ceremony", "",
-                  "The rows below change the graph's OWN SCHEMA. They "
-                  "are within the ceremony's permitted classes (new "
-                  "declared concepts, doc edits, unreferenced removals); "
-                  "approving this round is the ceremony ruling that "
-                  "makes them schema.", ""]
-        lines += [f"- ⚑ {item}" for item in ceremony] + [""]
-    if delta.nodes_added:
-        lines += ["## Nodes added", ""]
-        for label, name, props in delta.nodes_added:
-            detail = ", ".join(f"{k}: {v!r}" for k, v in sorted(props.items()))
-            lines.append(f"- ({label}) **{name}**"
-                         + (f" — {detail}" if detail else ""))
-        lines.append("")
-    if delta.nodes_changed:
-        lines += ["## Nodes changed (before → after)", ""]
-        for label, name, changes in delta.nodes_changed:
-            edits = "; ".join(f"{prop}: {b!r} → {a!r}"
-                              for prop, (b, a) in sorted(changes.items()))
-            lines.append(f"- ({label}) **{name}** — {edits}")
-        lines.append("")
-    if delta.nodes_removed:
-        lines += ["## Nodes removed (with what they held)", ""]
-        for label, name, props in delta.nodes_removed:
-            detail = ", ".join(f"{k}: {v!r}" for k, v in sorted(props.items()))
-            lines.append(f"- ({label}) **{name}**"
-                         + (f" — held {detail}" if detail else ""))
-        lines.append("")
-    if delta.edges_added:
-        lines += ["## Edges added", ""]
-        for e in delta.edges_added:
-            props = ", ".join(f"{k}: {v!r}" for k, v in e.props)
-            lines.append(f"- ({e.from_name})-[:{e.type}"
-                         + (f" {{{props}}}" if props else "")
-                         + f"]->({e.to_name})")
-        lines.append("")
-    if delta.edges_changed:
-        lines += ["## Edges changed (before → after)", ""]
-        for e, changes in delta.edges_changed:
-            edits = "; ".join(f"{prop}: {b!r} → {a!r}"
-                              for prop, (b, a) in sorted(changes.items()))
-            lines.append(f"- ({e.from_name})-[:{e.type}]->({e.to_name}) "
-                         f"— {edits}")
-        lines.append("")
-    if delta.edges_removed:
-        lines += ["## Edges removed", ""]
-        lines += [f"- ({e.from_name})-[:{e.type}]->({e.to_name})"
-                  for e in delta.edges_removed] + [""]
-    if delta.stitch:
-        lines += ["## Stitch — lands after re-derivation", "",
-                  "These connections point at citizens born by this "
-                  "round's schema edit, so they cannot exist in scratch "
-                  "yet. They ride this same approval and land in the "
-                  "same apply — verified in memory after re-derivation "
-                  "births their endpoints, before anything is written.",
-                  ""]
-        for e in delta.stitch:
-            props = ", ".join(f"{k}: {v!r}" for k, v in e.props)
-            lines.append(f"- ({e.from_name})-[:{e.type}"
-                         + (f" {{{props}}}" if props else "")
-                         + f"]->({e.to_name})")
-        lines.append("")
-    return "\n".join(lines)
+    return report_mod.render_markdown(build_report(delta, violations,
+                                                   ceremony))
 
 
-def body_sync_violations(scratch, base_dir):
+def body_sync_verdicts(scratch, base_dir):
     """Program-body carriage: every node carrying an approved program (body + source_path)
     must match its file byte-for-byte. The WHOLE scratch graph is
     scanned, not just the changeset — the classic failure is editing the
@@ -574,18 +685,36 @@ def body_sync_violations(scratch, base_dir):
         try:
             file_text = path.read_text(encoding="utf-8")
         except OSError as exc:
-            violations.append(
-                f"'{name}' cites {source_path} as its approved program, "
-                f"but the file is not readable ({exc}) — restore the "
-                "file or fix the node's source_path.")
+            violations.append(Verdict(
+                code="body-file-unreadable",
+                subject=NodeRef(label, name),
+                message=(
+                    f"'{name}' cites {source_path} as its approved program, "
+                    f"but the file is not readable ({exc}) — restore the "
+                    "file or fix the node's source_path."),
+                remedy="Restore the file or fix the node's source_path.",
+                data={"source_path": source_path}))
             continue
         if file_text != body:
-            violations.append(
-                f"'{name}' carries a program body out of sync with "
-                f"{source_path}. The approved file is the truth — run "
-                "python -m graph delta --sync-bodies to update the "
-                "graph copy from the file.")
+            violations.append(Verdict(
+                code="body-out-of-sync",
+                subject=NodeRef(label, name),
+                message=(
+                    f"'{name}' carries a program body out of sync with "
+                    f"{source_path}. The approved file is the truth — run "
+                    "python -m graph delta --sync-bodies to update the "
+                    "graph copy from the file."),
+                remedy="Run python -m graph delta --sync-bodies to update "
+                       "the graph copy from the file.",
+                data={"source_path": source_path}))
     return violations
+
+
+def body_sync_violations(scratch, base_dir):
+    """The body-sync verdicts as prose lines — a rendering of
+    body_sync_verdicts(). The records are the truth; these are their
+    str() forms."""
+    return [str(verdict) for verdict in body_sync_verdicts(scratch, base_dir)]
 
 
 def sync_bodies(config, base_dir):

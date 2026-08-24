@@ -501,6 +501,21 @@ escalated → ruled). Identity is content-derived, so a re-judge MERGEs
 onto the same rows: worked statuses survive re-runs, findings that no
 longer red are swept. The prose scorecard is a rendering of the rows.
 
+**Verdicts are records** (the delta gate's half of the same doctrine):
+every lint refusal, ceremony item, and advisory is born as a typed
+record — a stable code, the subject citizen or connection as a
+`{label, name}` ref, the human sentence, the standalone remedy, and the
+structured particulars — and the report surfaces are renderers over the
+model (`graph/report.py`). The markdown the approver reads and
+`graph/reports/delta-report.json` are the SAME facts rendered twice, so
+a downstream voice can re-say a verdict from its code, subject, and
+remedy without parsing prose. The JSON report is a rendering, not a
+frozen artifact: verdicts derive deterministically from the pinned
+changeset and base, which is where tamper-evidence already lives. The
+string surfaces (`lint`, `ceremony_classify`, `render_report`) remain
+as renderings of the records, byte-for-byte what they always said —
+golden parity tests hold them to it.
+
 **The event log is real.** Every applied round now writes: its
 **inverse** (computed mechanically from the before-images — the undo
 record made executable), a **chained entry** in
