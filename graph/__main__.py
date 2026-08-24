@@ -669,21 +669,28 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         print("Has the scratch database been created/loaded? "
               "(python -m graph load --database scratch)", file=sys.stderr)
         return 1
+    from . import report as report_mod
+
     changes = delta_mod.diff(base, scratch)
     stitch_problem = None
     try:
         changes.stitch = proposal_mod.read_stitch(base_dir, branch)
     except (ValueError, KeyError) as exc:
-        stitch_problem = (
-            "Attempted to read the round's stitch file "
-            f"({proposal_mod.current_dir(base_dir, branch).relative_to(base_dir)}"
-            f"/{proposal_mod.STITCH_FILE}). Failed due to: {exc}")
-    violations = delta_mod.lint(changes, base)
-    ceremony_items = delta_mod.ceremony_classify(changes, base)[0]
+        stitch_rel = proposal_mod.current_dir(base_dir,
+                                              branch).relative_to(base_dir)
+        stitch_problem = report_mod.Verdict(
+            code="stitch-file-unreadable",
+            message=(
+                "Attempted to read the round's stitch file "
+                f"({stitch_rel}/{proposal_mod.STITCH_FILE}). "
+                f"Failed due to: {exc}"),
+            remedy="Fix or remove the stitch file, then re-run the delta.")
+    violations = delta_mod.lint_verdicts(changes, base)
+    ceremony_items = delta_mod.ceremony_records(changes, base)[0]
     if stitch_problem:
         violations.append(stitch_problem)
-    violations += delta_mod.lint_stitch(changes, scratch)
-    violations += delta_mod.body_sync_violations(scratch, base_dir)
+    violations += delta_mod.stitch_verdicts(changes, scratch)
+    violations += delta_mod.body_sync_verdicts(scratch, base_dir)
     # The orphan-procedure check: a registered procedure file with no citizen in scratch is
     # invisible to the body-sync scan (which walks existing nodes) — the
     # roster check names it before the round reaches canonize.
@@ -694,16 +701,20 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     ontology = ontology_from_graph(base, base_dir)
     roster_advisories = []
     if ontology is not None:
-        roster_details = [f.detail
-                          for f in procedure_roster_findings(ontology,
-                                                             scratch)]
-        if branch:
+        advisory = bool(branch)
+        roster_verdicts = [
+            report_mod.Verdict(
+                code="roster-gap", message=f.detail,
+                severity=(report_mod.ADVISORY if advisory
+                          else report_mod.REFUSAL))
+            for f in procedure_roster_findings(ontology, scratch)]
+        if advisory:
             # A branch mid-rebuild is incomplete by design: the roster
             # census blocks only a finished line. Advisory here; full
             # strength again when the branch stands for succession.
-            roster_advisories = roster_details
+            roster_advisories = roster_verdicts
         else:
-            violations += roster_details
+            violations += roster_verdicts
     # The stitch mechanism: preview the stitch's landing against the graph this round
     # will actually produce (changeset applied, machine layers
     # re-derived) — the diff gate must never approve a connection that
@@ -713,31 +724,39 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         preview = strip_derived(base)
         if not proposal_mod.apply_delta(preview, changes):
             derived_preview, _ = derive(ontology, preview)
-            violations += proposal_mod.apply_stitch(derived_preview,
-                                                    changes.stitch)
-    report = delta_mod.render_report(changes, violations, ceremony_items)
-    if roster_advisories:
-        report += (
-            "\n## Advisories — the branch's roster, for the record\n\n"
-            "These registered program files have no citizen on this "
-            "branch yet. A branch mid-rebuild is incomplete by design, "
-            "so these do not block its rounds — the roster check "
-            "returns to full strength when the branch stands for "
-            "succession.\n\n")
-        report += "".join(f"- {detail}\n" for detail in roster_advisories)
-    report_path = base_dir / "graph" / "reports" / "delta.md"
-    report_path.parent.mkdir(parents=True, exist_ok=True)
+            violations += [
+                report_mod.Verdict(code="stitch-landing", message=problem)
+                for problem in proposal_mod.apply_stitch(derived_preview,
+                                                         changes.stitch)]
+    # one report model, two renderings: the markdown the approver reads
+    # and the same facts as records (verdict codes, subject refs,
+    # remedies) for machine consumers. The JSON is a rendering, not a
+    # frozen artifact — re-derivable from the pinned changeset and base.
+    # The markdown lands FIRST: if the changeset later refuses to
+    # serialize, the report that names the offending row is already on
+    # disk and on screen.
+    report_model = delta_mod.build_report(changes, violations,
+                                          ceremony_items, roster_advisories)
+    report = report_mod.render_markdown(report_model)
+    reports_dir = base_dir / "graph" / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    report_path = reports_dir / "delta.md"
     report_path.write_text(report, encoding="utf-8")
     print(report)
     print(f"Report: {report_path.relative_to(base_dir)}")
     # the proposal document: the machine-readable changeset whose hash
     # IS the proposal's id — what `approve` freezes and apply replays
     delta_text = proposal_mod.serialize_delta(changes)
+    delta_id = proposal_mod.content_hash(delta_text)
+    json_path = reports_dir / "delta-report.json"
+    json_path.write_text(
+        report_mod.render_json(report_model, proposal_id=delta_id),
+        encoding="utf-8")
+    print(f"Report records: {json_path.relative_to(base_dir)}")
     delta_path = proposal_mod.current_dir(base_dir, branch) \
         / proposal_mod.DELTA_FILE
     delta_path.parent.mkdir(parents=True, exist_ok=True)
     delta_path.write_text(delta_text, encoding="utf-8")
-    delta_id = proposal_mod.content_hash(delta_text)
     print(f"Proposal id: {delta_id[:12]} "
           f"({delta_path.relative_to(base_dir)})")
     base_pin = proposal_mod.current_dir(base_dir, branch) \

@@ -137,7 +137,10 @@ moments — the **plan gate** and the **diff gate**:
 3. **Delta.** `delta` diffs scratch against the base and emits the itemized
    changeset — every node and edge to create, edit, or delete, each with its
    inverse and receipt — linted so no derived edge can be authored. Its sha256 is
-   the proposal's id.
+   the proposal's id. Every lint verdict and ceremony item is born as a typed
+   record (code, subject ref, message, remedy); the markdown report and
+   `graph/reports/delta-report.json` are two renderings of the same facts, so
+   downstream tools read verdicts without parsing prose.
 4. **Diff gate.** The owner reviews the delta: an implications narrative in plain
    prose, each claim beside its evidence, the derived consequences summarized, and
    a walkable view of just the new and changed elements. `approve` records the
