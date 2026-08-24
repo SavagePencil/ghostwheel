@@ -277,6 +277,17 @@ UNAUTHORABLE_LABELS = MACHINE_LABELS | SCHEMA_LABELS
 UNAUTHORABLE_EDGE_TYPES = (DERIVED_EDGE_TYPES | SCHEMA_EDGE_TYPES
                            | STRATIFIED_EDGE_TYPES)
 
+# The declared-membership pattern: an AUTHORED ground edge from a citizen
+# to a Concept-rooted Archetype, carrying a required `basis` rationale,
+# that derivation folds into the citizen's INSTANCE_OF. It is deliberately
+# absent from every UNAUTHORABLE / DERIVED / SCHEMA / STRATIFIED set above
+# — that omission is the point: this is the one metamodel-touching edge a
+# designer writes by hand. It is plain ground: strip_derived keeps it,
+# is_derived_edge returns False for it, and the lint permits it (guarding
+# only its shape). The INSTANCE_OF it induces is the derived shadow that
+# re-derives; the DECLARED_MEMBER_OF edge itself never does.
+MEMBERSHIP_EDGE_TYPE = "DECLARED_MEMBER_OF"
+
 
 def is_derived_edge(edge):
     """Machine-derived edge? Plain derived types and the ASSIGNS_ family
@@ -288,6 +299,43 @@ def is_derived_edge(edge):
         return True
     if edge.type in STRATIFIED_EDGE_TYPES:
         return edge.from_label != ARCHETYPE_LABEL
+    return False
+
+
+def is_concept_archetype(graph, name):
+    """True iff `name` is an existing Concept-rooted subject-matter
+    Archetype — the only legal target of an authored membership
+    (DECLARED_MEMBER_OF). Shared by the derivation fold (extract.py) and
+    the delta lint (delta.py) so both judge a target the same way.
+
+    A missing node fails. A LABEL Archetype fails: it carries its embedded
+    roster spec (spec_json) — it is a home with a catalog, not a subject to
+    classify against, and authored membership never re-homes. A Facet
+    (rooted at Facet), a Judgment/Provenance anchor — anything whose
+    INSTANCE_OF tower does not terminate at the Concept root — fails. Only a
+    genuine domain concept passes."""
+    node = graph.nodes.get((ARCHETYPE_LABEL, name))
+    if node is None:
+        return False
+    if node.get("spec_json") is not None:
+        return False
+    # Walk the INSTANCE_OF tower upward (Archetype -> Archetype only); the
+    # target is Concept-rooted iff any path reaches the Concept root.
+    seen = set()
+    frontier = [name]
+    while frontier:
+        current = frontier.pop()
+        if current == CONCEPT_ROOT:
+            return True
+        if current in seen:
+            continue
+        seen.add(current)
+        for edge in graph.edges:
+            if (edge.type == "INSTANCE_OF"
+                    and edge.from_label == ARCHETYPE_LABEL
+                    and edge.from_name == current
+                    and edge.to_label == ARCHETYPE_LABEL):
+                frontier.append(edge.to_name)
     return False
 
 

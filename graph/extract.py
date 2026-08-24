@@ -17,10 +17,10 @@ import yaml
 
 from . import grammars, parsers, procedures
 from .ontology import (ANY_LABEL, ARCHETYPE_LABEL, ENUM_TYPE_PREFIX, ERROR,
-                       WARNING, INFO, Category, Finding, OnMissing,
-                       ORDERED_CONCEPT, OUTCOME_LABEL, PropType, Reader,
-                       RelParser, STEP_LABEL, concept_bindings, node_reader,
-                       source_files_of)
+                       WARNING, INFO, Category, Finding, MEMBERSHIP_EDGE_TYPE,
+                       OnMissing, ORDERED_CONCEPT, OUTCOME_LABEL, PropType,
+                       Reader, RelParser, STEP_LABEL, concept_bindings,
+                       is_concept_archetype, node_reader, source_files_of)
 
 
 @dataclass(frozen=True)
@@ -1324,8 +1324,12 @@ class Extractor:
                         ARCHETYPE_LABEL, label))
             if spec.get("ordered"):
                 instance_edge(ARCHETYPE_LABEL, label, ORDERED_CONCEPT)
-        self.derive_instance_metamodel()
+        # Embed BEFORE the instance rows fold declared memberships: the
+        # concept-vs-label discriminator (is_concept_archetype) reads
+        # spec_json, which this embed sets — the fold must never run on a
+        # schema stratum that has not been embedded yet.
         embed_schema_stratum(self.ontology, self.graph)
+        self.derive_instance_metamodel()
 
     def derive_instance_metamodel(self):
         """The instance-level metamodel rows — the only metamodel
@@ -1350,6 +1354,83 @@ class Extractor:
                         "PRECEDES", label, lower, label, higher))
                     self.graph.edges.append(make_edge(
                         "FOLLOWS", label, higher, label, lower))
+        self.fold_declared_memberships()
+
+    def fold_declared_memberships(self):
+        """Fold each authored DECLARED_MEMBER_OF ground edge into the
+        citizen's derived INSTANCE_OF — the declared-membership pattern's
+        second input to membership (a citizen's final membership is the
+        UNION of its roster binding and its authored declarations). Runs
+        after the roster rows above, and identically in extract() (a
+        from-sources build carries no such edges — a no-op) and derive()
+        (over canon, where authored memberships live), so the two stay a
+        fixpoint.
+
+        Per authored edge (citizen -> target Archetype):
+        - target missing or not a Concept-rooted Archetype: DROP with a
+          WARNING (second belt behind the delta lint — a canon that
+          drifted, or a from-sources build whose target is not yet born);
+        - target already roster-reachable from the citizen's label through
+          the tower: SKIP with an INFO naming the redundancy (the tower
+          stays the single home for roster-implied membership);
+        - otherwise EMIT (citizen)-[:INSTANCE_OF]->(target). Dedup is
+          automatic (edges are hashable, deduped at load/export)."""
+        authored = [edge for edge in self.graph.edges
+                    if edge.type == MEMBERSHIP_EDGE_TYPE]
+        for edge in authored:
+            citizen, target = edge.from_name, edge.to_name
+            if edge.from_label == ARCHETYPE_LABEL:
+                # Second belt behind the lint: an Archetype-sourced edge
+                # would induce an Archetype->Archetype INSTANCE_OF, which
+                # classifies as schema GROUND — a fabricated tower edge
+                # that survives the strip and corrupts the fixpoint.
+                self.note(
+                    WARNING, Category.DANGLING_REF, str(self.ontology.path),
+                    f"{citizen} -[:{MEMBERSHIP_EDGE_TYPE}]-> {target}",
+                    f"a {MEMBERSHIP_EDGE_TYPE} edge runs FROM the Archetype "
+                    f"'{citizen}' — that is the tower/roster shape, not an "
+                    "authored membership; the edge is ignored and no "
+                    "INSTANCE_OF is derived from it.")
+                continue
+            if not is_concept_archetype(self.graph, target):
+                self.note(
+                    WARNING, Category.DANGLING_REF, str(self.ontology.path),
+                    f"{citizen} -[:{MEMBERSHIP_EDGE_TYPE}]-> {target}",
+                    f"{citizen} declares membership in {target}, which is "
+                    "not an existing Concept-rooted Archetype; the "
+                    "membership edge is dropped and no INSTANCE_OF is "
+                    "derived from it.")
+                continue
+            if target in self.tower_reachable(edge.from_label):
+                self.note(
+                    INFO, Category.ONTOLOGY, str(self.ontology.path),
+                    f"{citizen} -[:{MEMBERSHIP_EDGE_TYPE}]-> {target}",
+                    f"{citizen} is already an instance of {target} through "
+                    f"its {edge.from_label} binding; the declared membership "
+                    "is redundant and adds no INSTANCE_OF.")
+                continue
+            self.graph.edges.append(make_edge(
+                "INSTANCE_OF", edge.from_label, citizen,
+                ARCHETYPE_LABEL, target))
+
+    def tower_reachable(self, label):
+        """Every Archetype name reachable from `label`'s Archetype through
+        the INSTANCE_OF tower (Archetype -> Archetype) — the concepts a
+        citizen of `label` is roster-implied to be an instance of. Empty
+        when `label` is not a concept-bound label (no Archetype, no tower)."""
+        reachable = set()
+        frontier = [label]
+        while frontier:
+            current = frontier.pop()
+            for edge in self.graph.edges:
+                if (edge.type == "INSTANCE_OF"
+                        and edge.from_label == ARCHETYPE_LABEL
+                        and edge.from_name == current
+                        and edge.to_label == ARCHETYPE_LABEL
+                        and edge.to_name not in reachable):
+                    reachable.add(edge.to_name)
+                    frontier.append(edge.to_name)
+        return reachable
 
 
 def extract(ontology):

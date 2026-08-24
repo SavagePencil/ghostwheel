@@ -54,7 +54,21 @@
 #                   instance tower; declared via `subtypes:` on a concept
 #                   entry naming the citizens that are its KINDS, derived
 #                   at every rebuild, never authored; first activated at
-#                   a project's kernel ceremony). TRANSITIONS_TO {trigger} is the
+#                   a project's kernel ceremony). DECLARED_MEMBER_OF (the
+#                   declared-membership pattern): an AUTHORED ground edge, a
+#                   citizen -> a Concept-rooted Archetype, carrying a
+#                   required `basis` rationale — the one metamodel-touching
+#                   edge a designer may write by hand. It says "this one
+#                   citizen is ALSO an instance of that concept" (the golden
+#                   key that is a Treasure by its roster and ALSO a Tool),
+#                   and derivation FOLDS it into the citizen's INSTANCE_OF at
+#                   every rebuild. Distinct from both neighbours: unlike the
+#                   never-authored SUBTYPE_OF taxonomy it classifies a single
+#                   citizen, not a KIND; unlike the machine-derived
+#                   INSTANCE_OF tower it is ground the strip preserves, never
+#                   a computed shadow. It only ever ADDS membership — it
+#                   never re-homes a citizen (its roster label, catalog, and
+#                   source stay its own). TRANSITIONS_TO {trigger} is the
 #                   Stateful facet's edge vocabulary. HAS_DISCIPLINE /
 #                   HAS_AUDIENCE route Judgment rows to the project's
 #                   Discipline / Audience citizens (one system, shared
@@ -72,7 +86,12 @@
 # own repository, an agnostic graph engine versioned and released
 # independently of any consuming project. No vocabulary change; the
 # metaontology simply moves to its own home.
-version: "0.12.0"
+# Ledger — 0.13.0 (the declared-membership pattern): the kernel gains the
+# DECLARED_MEMBER_OF relation — an authored ground edge, citizen ->
+# Concept-rooted Archetype, folded into INSTANCE_OF at derivation — so a
+# designer can declare that one citizen is an instance of several concepts
+# at once. Additive vocabulary only; MINOR bump.
+version: "0.13.0"
 
 roots:
   Concept: >-
