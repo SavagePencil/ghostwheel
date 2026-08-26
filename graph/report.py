@@ -24,6 +24,58 @@ from dataclasses import dataclass, field
 REFUSAL = "refusal"
 ADVISORY = "advisory"
 
+# The reference-number keys (front-door tenet T10): every verdict code
+# maps to the quiet plain-English key a designer sees in an item's
+# ⟨subject · ref⟩ reference number. Several codes may share a key —
+# the code stays the forensic identity; the key names the problem kind
+# in designer-safe words (no machinery vocabulary, ever). Unmapped
+# codes fall back to themselves so a ref always exists.
+REF_KEYS = {
+    # the schema ceremony
+    "schema-label-row-authored": "structure-change",
+    "schema-edit-out-of-class": "structure-change",
+    "schema-label-row-removed": "structure-change",
+    "schema-concept-undeclared": "undeclared-concept",
+    "schema-removal-unverified": "unverified-removal",
+    "schema-row-referenced": "still-referenced",
+    "schema-edge-authored": "structure-change",
+    "schema-edge-removed": "structure-change",
+    "schema-edge-modified": "structure-change",
+    # ground facts
+    "machine-label-authored": "machine-made-kind",
+    "node-unnamed": "unnamed",
+    "edge-endpoint-unnamed": "unnamed",
+    "derived-edge-authored": "machine-managed-link",
+    "derived-edge-modified": "machine-managed-link",
+    # declared membership
+    "membership-from-archetype": "reversed-membership",
+    "membership-unverified": "unverified-membership",
+    "membership-target-not-concept": "wrong-membership-target",
+    "membership-basis-missing": "missing-reason",
+    "membership-basis-blanked": "reason-removed",
+    # the stitch
+    "stitch-schema-edge": "structure-change",
+    "stitch-derived-edge": "machine-managed-link",
+    "stitch-endpoint-unnamed": "unnamed",
+    "stitch-unneeded": "unneeded",
+    "stitch-file-unreadable": "unreadable-file",
+    "stitch-landing": "connection-failed",
+    # program bodies and the roster
+    "body-file-unreadable": "unreadable-file",
+    "body-out-of-sync": "out-of-sync",
+    "roster-gap": "missing-entry",
+    # ceremony items
+    "new-concept": "new-concept",
+    "doc-edit": "description-edit",
+    "removed-concept": "removed-concept",
+}
+
+
+def ref_key(code):
+    """The designer-facing reference number for a verdict code — falls
+    back to the code itself so a ref always exists."""
+    return REF_KEYS.get(code, code)
+
 
 @dataclass(frozen=True)
 class NodeRef:
@@ -66,15 +118,16 @@ class Verdict:
     message: str
     severity: str = REFUSAL
     remedy: str = ""
-    subject: object = None            # NodeRef | EdgeRef | None
+    subject: "NodeRef | EdgeRef | None" = None
     data: dict = field(default_factory=dict)
 
     def __str__(self):
         return self.message
 
     def row(self):
-        doc = {"code": self.code, "severity": self.severity,
-               "message": self.message}
+        doc: dict = {"code": self.code, "severity": self.severity,
+                     "ref": ref_key(self.code),
+                     "message": self.message}
         if self.remedy:
             doc["remedy"] = self.remedy
         if self.subject is not None:
@@ -90,14 +143,16 @@ class CeremonyItem:
     the round carrying these IS the ceremony ruling."""
     code: str
     message: str
-    subject: object = None            # NodeRef
+    subject: "NodeRef | None" = None
     data: dict = field(default_factory=dict)
 
     def __str__(self):
         return self.message
 
     def row(self):
-        doc = {"code": self.code, "message": self.message}
+        doc: dict = {"code": self.code,
+                     "ref": ref_key(self.code),
+                     "message": self.message}
         if self.subject is not None:
             doc["subject"] = self.subject.row()
         if self.data:

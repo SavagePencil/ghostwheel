@@ -254,6 +254,20 @@ gate and the diff gate. The architecture is in
 [design/agentic-etl.md](design/agentic-etl.md); the philosophy in
 [design/agentic-approach.md](design/agentic-approach.md).
 
+## The front door
+
+When the human in the room is the world's **designer** rather than an
+engineer, a separate conduct layer — the front door (`front-door` skill)
+— owns the conversation. It invokes the jobs (query, intake, generation)
+underneath and renders everything the designer sees in the designer's own
+language, learned live from canon: no machinery words on any surface, every
+pending item rulable from itself alone, every answer cited, every item
+carrying a plain-English reference number (`ref` on every verdict and
+ceremony record, mapped from its code) that traces to the raw machine
+record for forensics.
+Its constitution is fifteen owner-ruled tenets:
+[design/front-door-tenets.md](design/front-door-tenets.md).
+
 ## MCP
 
 Ghostwheel is designed to be driven by an MCP-connected agent over two

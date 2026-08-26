@@ -277,6 +277,50 @@ def test_body_sync_verdicts_name_their_codes(tmp_path):
     assert body_sync_verdicts(scratch, tmp_path) == []
 
 
+def test_every_produced_code_has_a_designer_safe_ref_key():
+    # the front-door tenets: reference numbers are plain-English keys with no
+    # machinery vocabulary. The coverage set is derived from the
+    # producers' SOURCE, not hand-copied — a new code constructed
+    # anywhere without a mapping fails here, because the fallback
+    # would put the raw code (machinery words and all) on the
+    # designer's surface.
+    import inspect
+    import re
+
+    import graph.__main__ as main_module
+    import graph.delta as delta_module
+    from graph.report import REF_KEYS, ref_key
+    source = inspect.getsource(delta_module) + inspect.getsource(main_module)
+    produced = set(re.findall(r'code="([a-z0-9-]+)"', source))
+    assert len(produced) >= 30, produced
+    # "unclassified" is the documented wrapper fallback for legacy
+    # plain-string violations; its own name is designer-tolerable.
+    assert produced - set(REF_KEYS) == {"unclassified"}, \
+        sorted(produced - set(REF_KEYS))
+    machinery = ("stitch", "schema", "archetype", "derived", "lint",
+                 "delta", "scratch", "roster", "node", "edge", "label",
+                 "database", "graph", "round", "book")
+    for key in list(REF_KEYS.values()) + [ref_key("unclassified")]:
+        for word in machinery:
+            assert word not in key, (key, word)
+
+
+def test_ref_key_falls_back_to_the_code():
+    from graph.report import ref_key
+    assert ref_key("membership-basis-missing") == "missing-reason"
+    assert ref_key("some-future-code") == "some-future-code"
+
+
+def test_rows_carry_their_refs(tmp_path):
+    doc = json.loads(render_json(rich_report(tmp_path)))
+    by_code = {v["code"]: v for v in doc["verdicts"]}
+    assert by_code["membership-basis-missing"]["ref"] == "missing-reason"
+    assert by_code["machine-label-authored"]["ref"] == \
+        "machine-made-kind"
+    items = {i["code"]: i for i in doc["ceremony"]}
+    assert items["doc-edit"]["ref"] == "description-edit"
+
+
 def test_lint_wrapper_matches_its_records(tmp_path):
     base, _, changes, _ = fx.rich_materials(tmp_path)
     assert lint(changes, base) == \
