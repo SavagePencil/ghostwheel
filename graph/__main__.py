@@ -684,7 +684,8 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                 "Attempted to read the round's stitch file "
                 f"({stitch_rel}/{proposal_mod.STITCH_FILE}). "
                 f"Failed due to: {exc}"),
-            remedy="Fix or remove the stitch file, then re-run the delta.")
+            remedy="Fix or remove the stitch file, then re-run the delta.",
+            data={"path": f"{stitch_rel}/{proposal_mod.STITCH_FILE}"})
     violations = delta_mod.lint_verdicts(changes, base)
     ceremony_items = delta_mod.ceremony_records(changes, base)[0]
     if stitch_problem:
@@ -706,7 +707,8 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
             report_mod.Verdict(
                 code="roster-gap", message=f.detail,
                 severity=(report_mod.ADVISORY if advisory
-                          else report_mod.REFUSAL))
+                          else report_mod.REFUSAL),
+                data={"file": f.file, "location": f.location})
             for f in procedure_roster_findings(ontology, scratch)]
         if advisory:
             # A branch mid-rebuild is incomplete by design: the roster
