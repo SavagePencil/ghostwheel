@@ -70,6 +70,10 @@ def rich_materials(tmp_path):
     and every lint/ceremony verdict family — the raw materials, so tests
     can drive either the record path or the legacy string path."""
     _, base = build_base(tmp_path)
+    # A ground row already under "Rune", so the scratch's Rune LABEL row
+    # below refuses toward the migration charter (a birth needs nothing
+    # underneath — that path is covered in test_schema_ceremony).
+    base.ensure_node("Rune", "Ancient Mark")
     scratch = _copy(base)
 
     # -- plain listings ---------------------------------------------------

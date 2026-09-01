@@ -161,9 +161,9 @@ CEREMONY_DOC_PROPS = frozenset({"doc"})
 
 _OUT_OF_CLASS = (
     "this schema change is outside the ceremony's classes (new declared "
-    "concepts, doc edits, added aliases, removal of unreferenced rows) — "
-    "label and spec changes move data underneath them and ride the "
-    "migration charter. "
+    "concepts, label births, doc edits, added aliases, removal of "
+    "unreferenced rows) — changes to an EXISTING label or spec move data "
+    "underneath them and ride the migration charter. "
     "Propose the change to the owner at the plan gate instead.")
 
 
@@ -212,6 +212,12 @@ def ceremony_records(delta, base=None):
     round IS the ceremony ruling):
     - a new CONCEPT row: an Archetype without spec_json, arriving WITH its
       DECLARED_IN edge (and optionally INSTANCE_OF into a parent concept);
+    - a LABEL BIRTH: a new Archetype WITH spec_json, arriving WITH its
+      DECLARED_IN edge, when the base holds no ground rows under that
+      label — nothing moves underneath, so the migration charter's
+      rationale does not bite (changes to an existing label still refuse
+      toward the charter; base=None refuses births outright, like
+      removals, since emptiness-underneath can't be verified);
     - a DOC EDIT: a schema row change touching only CEREMONY_DOC_PROPS;
     - an ADDED ALIAS: a spec_json change whose parsed before/after differ
       only by new entries under aliases — each new surface spelling reads
@@ -231,25 +237,113 @@ def ceremony_records(delta, base=None):
     permitted_nodes, permitted_edges = set(), set()
 
     added_concepts = {}
+    added_labels = {}
     for label, name, props in delta.nodes_added:
         if label not in SCHEMA_LABELS:
             continue
         if "spec_json" in (props or {}):
-            violations.append(Verdict(
-                code="schema-label-row-authored",
-                subject=NodeRef(label, name),
-                message=(
-                    f"Attempted to author '{name}' as a new {label} LABEL "
-                    f"(it carries spec_json). Failed due to: {_OUT_OF_CLASS}"),
-                remedy="Propose the change to the owner at the plan gate "
-                       "instead."))
+            ground_rows = [] if base is None else sorted(
+                str(row_name) for (row_label, row_name) in base.nodes
+                if row_label == name)
+            if base is None:
+                violations.append(Verdict(
+                    code="schema-label-row-authored",
+                    subject=NodeRef(label, name),
+                    message=(
+                        f"Attempted to birth '{name}' as a new {label} "
+                        "LABEL with no base graph to verify against. "
+                        "Failed due to: a label birth is permitted only "
+                        "when the base holds no ground rows under that "
+                        "label, which cannot be checked without the base."),
+                    remedy="Re-run with the base graph available."))
+            elif ground_rows:
+                shown = ", ".join(ground_rows[:5]) \
+                    + ("…" if len(ground_rows) > 5 else "")
+                violations.append(Verdict(
+                    code="schema-label-row-authored",
+                    subject=NodeRef(label, name),
+                    message=(
+                        f"Attempted to birth '{name}' as a new {label} "
+                        f"LABEL, but the base already holds "
+                        f"{len(ground_rows)} ground row"
+                        f"{'s' if len(ground_rows) != 1 else ''} under "
+                        f"that label ({shown}). Failed due to: "
+                        + _OUT_OF_CLASS),
+                    remedy="Propose the change to the owner at the plan "
+                           "gate instead."))
+            else:
+                added_labels[(label, name)] = props or {}
         else:
             added_concepts[(label, name)] = props or {}
     declared = {}
     for edge in delta.edges_added:
         if edge.type == "DECLARED_IN" \
-                and (edge.from_label, edge.from_name) in added_concepts:
+                and (edge.from_label, edge.from_name) in (
+                    added_concepts.keys() | added_labels.keys()):
             declared[(edge.from_label, edge.from_name)] = edge.to_name
+    for key, props in added_labels.items():
+        label, name = key
+        if key not in declared:
+            violations.append(Verdict(
+                code="schema-label-undeclared",
+                subject=NodeRef(label, name),
+                message=(
+                    f"Attempted to birth '{name}' as a new {label} LABEL "
+                    "without declaring it. Failed due to: a born label "
+                    "arrives WITH its DECLARED_IN edge in the same round "
+                    "— an undeclared schema row would be invisible to the "
+                    "schema readers. Add the declaration in scratch, or "
+                    "delete the node."),
+                remedy="Add the declaration in scratch, or delete the "
+                       "node."))
+            continue
+        try:
+            spec = json.loads(props.get("spec_json") or "{}")
+            bindings = [str(c) for c in
+                        (spec.get("concept") or [])] \
+                if isinstance(spec.get("concept"), list) \
+                else ([str(spec["concept"])] if spec.get("concept") else [])
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            violations.append(Verdict(
+                code="schema-label-spec-unreadable",
+                subject=NodeRef(label, name),
+                message=(
+                    f"Attempted to birth '{name}' as a new {label} LABEL, "
+                    "but its spec_json does not parse as a mapping. "
+                    "Failed due to: the born label's embedded spec is "
+                    "what the schema readers reconstruct from — it must "
+                    "be valid JSON. Fix the spec_json in scratch."),
+                remedy="Fix the spec_json in scratch."))
+            continue
+        permitted_nodes.add(key)
+        parents = [e.to_name for e in delta.edges_added
+                   if e.type == "INSTANCE_OF"
+                   and (e.from_label, e.from_name) == key]
+        doc = str(props.get("doc", ""))
+        item_data = {"declared_in": declared[key]}
+        if bindings:
+            item_data["concept"] = bindings
+        if parents:
+            item_data["instance_of"] = [str(p) for p in parents]
+        if doc:
+            item_data["doc"] = doc
+        items.append(CeremonyItem(
+            code="new-label",
+            subject=NodeRef(label, name),
+            message=(
+                f"NEW LABEL '{name}' (born empty) — declared in "
+                f"{declared[key]}"
+                + (f", binding concept {', '.join(bindings)}"
+                   if bindings else "")
+                + (f", an instance of {', '.join(map(str, parents))}"
+                   if parents else "")
+                + (f'; doc: "{doc[:160]}{"…" if len(doc) > 160 else ""}"'
+                   if doc else "; no doc text")),
+            data=item_data))
+        for edge in delta.edges_added:
+            if (edge.from_label, edge.from_name) == key \
+                    and edge.type in ("DECLARED_IN", "INSTANCE_OF"):
+                permitted_edges.add(id(edge))
     for key, props in added_concepts.items():
         label, name = key
         if key not in declared:
