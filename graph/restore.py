@@ -78,7 +78,8 @@ def dump_db(config):
                     record["type"], record["from_label"],
                     record["from_name"], record["to_label"],
                     record["to_name"], dict(record["props"])))
-    return graph
+    from .workspace import strip as strip_workspace
+    return strip_workspace(graph)
 
 
 def verify_against_backup(dumped, export_dir):

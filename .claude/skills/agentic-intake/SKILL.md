@@ -134,8 +134,10 @@ divergence. A doc edit on a LABEL row alone needs no mirror; that doc
 lives on the row.
 
 ### 4. Scratch authoring (agent + machine)
-Reset scratch first (`python -m graph restore --database scratch`) — stale
-scratch produces phantom diffs. **The standing first authoring move is
+Reset scratch first (`python -m graph restore --database scratch`, using
+the KB's own working-copy name if its settings declare one) — stale
+scratch produces phantom diffs, and the round machinery refuses a copy
+whose in-band identity does not match the round. **The standing first authoring move is
 clearing the previous round's debts**: stamp that round's shipped PR
 link onto its Judgment rows, and land any edges it deferred under
 marker rows whose endpoints now exist in canon. A round that skips the

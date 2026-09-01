@@ -76,7 +76,8 @@ def read_graph(config):
             graph.edges.append(make_edge(
                 record["t"], record["fl"], record["fn"],
                 record["tl"], record["tn"], dict(record["props"])))
-    return graph
+    from .workspace import strip as strip_workspace
+    return strip_workspace(graph)
 
 
 def diff(base, scratch):

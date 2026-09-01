@@ -321,13 +321,39 @@ class FakeDBMS:
                 "nodes_by_label": {}, "edges_by_type": {}}
 
     def dump_db(self, config):
+        from graph.workspace import strip
         name = config["NEO4J_DATABASE"]
         if name not in self.databases:
             raise RuntimeError(f"no such database '{name}'")
-        return clone(self.databases[name])
+        return strip(clone(self.databases[name]))
 
     def read_graph(self, config):
         return self.dump_db(config)
+
+    # the workspace-identity entry points: the stamp rides the named
+    # database like the real one, invisible to dump/read (they strip)
+    def stamp(self, config, role, base_hash, git_ref="unknown",
+              branch=None):
+        from graph.workspace import WORKSPACE_LABEL
+        name = config["NEO4J_DATABASE"]
+        graph = self.databases.setdefault(name, GraphData())
+        graph.nodes = {key: props for key, props in graph.nodes.items()
+                       if key[0] != WORKSPACE_LABEL}
+        props = {"role": role, "base_hash": base_hash, "git_ref": git_ref,
+                 "database": name}
+        if branch is not None:
+            props["branch"] = branch
+        graph.ensure_node(WORKSPACE_LABEL, "This database", **props)
+
+    def read_stamp(self, config):
+        from graph.workspace import WORKSPACE_LABEL
+        name = config["NEO4J_DATABASE"]
+        if name not in self.databases:
+            raise RuntimeError(f"no such database '{name}'")
+        for (label, _), props in self.databases[name].nodes.items():
+            if label == WORKSPACE_LABEL:
+                return dict(props)
+        return None
 
 
 @pytest.fixture
@@ -344,6 +370,8 @@ def driven_kb(tmp_path, monkeypatch):
     monkeypatch.setattr("graph.load.load", fake.load)
     monkeypatch.setattr("graph.restore.dump_db", fake.dump_db)
     monkeypatch.setattr("graph.delta.read_graph", fake.read_graph)
+    monkeypatch.setattr("graph.workspace.stamp", fake.stamp)
+    monkeypatch.setattr("graph.workspace.read_stamp", fake.read_stamp)
 
     def canon_snapshot():
         # the default LINE's durable artifacts only — export + proposals +
