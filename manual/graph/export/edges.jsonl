@@ -24,6 +24,7 @@
 {"from": {"label": "Archetype", "name": "Visibility Class"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "Visibility Group"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Boundary Rule]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Conduct Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Design Record]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
@@ -63,6 +64,7 @@
 {"from": {"label": "Archetype", "name": "Visibility Class"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Visibility Group"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Boundary Rule]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Conduct Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Design Record]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
@@ -75,6 +77,9 @@
 {"from": {"label": "[Boundary Rule]", "name": "New roots are the most ceremonial change"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Prefer graph citizens over prose"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Canon changes (full flow: the agentic-intake skill)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Failure triage"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
@@ -101,6 +106,7 @@
 {"from": {"label": "[Tenet]", "name": "The editor's desk"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "The item's anatomy: rulable from itself alone"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "Threads end in a record"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Procedure", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "[Boundary Rule]", "name": "Intake only proposes against the engine layer"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Kernel names cannot be redeclared"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "New domain vocabulary goes in the project layer"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
@@ -108,6 +114,9 @@
 {"from": {"label": "[Boundary Rule]", "name": "New roots are the most ceremonial change"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Prefer graph citizens over prose"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Canon changes (full flow: the agentic-intake skill)"}, "properties": {}, "to": {"label": "Procedure", "name": "The maintenance loop"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Failure triage"}, "properties": {}, "to": {"label": "Procedure", "name": "The maintenance loop"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "Procedure", "name": "The maintenance loop"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
@@ -132,3 +141,6 @@
 {"from": {"label": "[Tenet]", "name": "The editor's desk"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "The item's anatomy: rulable from itself alone"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "Threads end in a record"}, "properties": {}, "to": {"label": "[Section]", "name": "Conduct"}, "type": "PART_OF"}
+{"from": {"label": "Procedure", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Canon changes (full flow: the agentic-intake skill)"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Failure triage"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "type": "SPECIFIED_IN"}

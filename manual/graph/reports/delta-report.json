@@ -4,30 +4,30 @@
       "code": "new-label",
       "data": {
         "concept": [
-          "[Tenet]"
+          "[Conduct Section]"
         ],
         "declared_in": "Ontology",
-        "doc": "A front-door conduct tenet — one numbered claim of how the door speaks, holds trust, and conducts itself; held verbatim.",
+        "doc": "A run of a conduct record's text — the verbatim body at one heading, ordered within the Procedure it specifies.",
         "instance_of": [
-          "Concept"
+          "Provenance"
         ]
       },
-      "message": "NEW LABEL '[Tenet]' (born empty) — declared in Ontology, binding concept [Tenet], an instance of Concept; doc: \"A front-door conduct tenet — one numbered claim of how the door speaks, holds trust, and conducts itself; held verbatim.\"",
+      "message": "NEW LABEL '[Conduct Section]' (born empty) — declared in Ontology, binding concept [Conduct Section], an instance of Provenance; doc: \"A run of a conduct record's text — the verbatim body at one heading, ordered within the Procedure it specifies.\"",
       "ref": "new-catalog",
       "subject": {
         "kind": "node",
         "label": "Archetype",
-        "name": "[Tenet]"
+        "name": "[Conduct Section]"
       }
     }
   ],
   "kind": "delta-report",
-  "proposal_id": "b677806c06ff3dbdb91b3fb53c5f9ae416c6cef3972b7b5837711ce94b8bb22a",
+  "proposal_id": "2686d6428dec4f43d603abe6f8e1ef4b6aae3b0ce1d5618cfb0cb79cba9eb3a0",
   "summary": {
-    "edges_added": 3,
+    "edges_added": 2,
     "edges_changed": 0,
     "edges_removed": 0,
-    "nodes_added": 24,
+    "nodes_added": 5,
     "nodes_changed": 0,
     "nodes_removed": 0
   }
