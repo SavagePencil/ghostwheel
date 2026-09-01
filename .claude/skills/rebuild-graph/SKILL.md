@@ -5,7 +5,7 @@ description: Restore, re-derive, validate, and verify the canon Neo4j graph. Use
 
 # The maintenance loop
 
-Boundary context: @../../../design/ontology-doctrine.md
+Boundary context: `python -m graph docs ontology-doctrine`
 
 The graph is canon (the flip); `graph/export/` is its committed backup,
 written FROM the database. Source files (CSVs, overlays) are bootstrap

@@ -5,7 +5,7 @@ description: Answer questions about the corpus's values, rules, and structure by
 
 # Querying the rules graph
 
-Boundary context: @../../../design/ontology-doctrine.md
+Boundary context: `python -m graph docs ontology-doctrine`
 
 ## Posture
 

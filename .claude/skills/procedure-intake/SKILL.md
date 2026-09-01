@@ -9,7 +9,7 @@ Scope note: when a procedure-shaped source arrives as part of a broader
 intake, the **agentic-intake** skill drives the overall flow and this
 skill governs the procedure content at its plan gate (step 2).
 
-Boundary context: @../../../design/ontology-doctrine.md — Procedure, the
+Boundary context: `python -m graph docs ontology-doctrine` — Procedure, the
 Completeness vocabulary, Step, and Outcome are ENGINE machinery
 (graph/metaontology.yaml); the procedures themselves are project artifacts
 (data/procedures/*.yaml). Program vocabulary grows by owner approval, never by

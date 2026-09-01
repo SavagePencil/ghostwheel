@@ -9,7 +9,7 @@ The end-to-end workflow over the intake pipeline (design:
 the engine's agentic-etl design record (design/ in the engine repo; graph/engine_docs/design/ inside an installed engine package)). The human appears exactly
 twice — the **plan gate** and the **diff gate** — and everything between
 is agent + machine loops. Boundary doctrine applies throughout:
-@../../../design/ontology-doctrine.md.
+`python -m graph docs ontology-doctrine`.
 
 **The invariant:** you author artifacts; only approved artifacts touch
 canon; derived layers are never authored by anyone. Your write access is
