@@ -28,6 +28,8 @@
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Tenet]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Question", "name": "Does severity draw the frame?"}, "properties": {}, "to": {"label": "[Tenet]", "name": "Severity draws the frame"}, "type": "DISCUSSES"}
 {"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DISCUSSES"}
 {"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DISCUSSES"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "DISCUSSES"}
@@ -65,6 +67,7 @@
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Tenet]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Intake only proposes against the engine layer"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Kernel names cannot be redeclared"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "New domain vocabulary goes in the project layer"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
@@ -72,10 +75,32 @@
 {"from": {"label": "[Boundary Rule]", "name": "New roots are the most ceremonial change"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Prefer graph citizens over prose"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Design Record]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Trust"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Voice"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "A reference number on every item"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Absence is information, plus an offer"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Any artifact; its content and meaning"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Canon's names for canon's acts"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Every answer cites"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Every effect names its world"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Inferences confirm by pattern"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Only blockers interrupt"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Only what needs you"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Severity draws the frame"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "The designer's language, learned live from canon"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "The door holds no opinions"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "The editor's desk"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "The item's anatomy: rulable from itself alone"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Tenet]", "name": "Threads end in a record"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Intake only proposes against the engine layer"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Kernel names cannot be redeclared"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "New domain vocabulary goes in the project layer"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
@@ -84,5 +109,26 @@
 {"from": {"label": "[Boundary Rule]", "name": "Prefer graph citizens over prose"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Trust"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Voice"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "A reference number on every item"}, "properties": {}, "to": {"label": "[Section]", "name": "Trust"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Absence is information, plus an offer"}, "properties": {}, "to": {"label": "[Section]", "name": "Conduct"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Any artifact; its content and meaning"}, "properties": {}, "to": {"label": "[Section]", "name": "Language"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Canon's names for canon's acts"}, "properties": {}, "to": {"label": "[Section]", "name": "Language"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Every answer cites"}, "properties": {}, "to": {"label": "[Section]", "name": "Trust"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Every effect names its world"}, "properties": {}, "to": {"label": "[Section]", "name": "Language"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Inferences confirm by pattern"}, "properties": {}, "to": {"label": "[Section]", "name": "Trust"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Only blockers interrupt"}, "properties": {}, "to": {"label": "[Section]", "name": "Conduct"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Only what needs you"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Severity draws the frame"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "The designer's language, learned live from canon"}, "properties": {}, "to": {"label": "[Section]", "name": "Language"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "The door holds no opinions"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "The editor's desk"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "The item's anatomy: rulable from itself alone"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
+{"from": {"label": "[Tenet]", "name": "Threads end in a record"}, "properties": {}, "to": {"label": "[Section]", "name": "Conduct"}, "type": "PART_OF"}
