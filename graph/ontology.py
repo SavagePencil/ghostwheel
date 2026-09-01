@@ -220,12 +220,16 @@ def _referenced_tables(obj):
 
 
 def node_reader(spec):
-    """Resolve a node spec's reader: explicit `reader:` wins, else inferred
-    from the first source file's extension. None if unresolvable."""
-    if not isinstance(spec, dict) or not spec.get("source"):
+    """Resolve a node spec's reader: explicit `reader:` wins (with or
+    without a `source:` — a graph-native prose label has no source file;
+    its bodies live on the nodes), else inferred from the first source
+    file's extension. None if unresolvable."""
+    if not isinstance(spec, dict):
         return None
     if spec.get("reader"):
         return spec["reader"]
+    if not spec.get("source"):
+        return None
     files = source_files_of(spec)
     if files and isinstance(files[0], str):
         return READER_BY_EXTENSION.get(Path(files[0]).suffix.lower())

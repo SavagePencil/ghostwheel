@@ -225,8 +225,8 @@ def render_markdown(report):
         lines += ["## Schema changes — the ceremony", "",
                   "The rows below change the graph's OWN SCHEMA. They "
                   "are within the ceremony's permitted classes (new "
-                  "declared concepts, doc edits, added aliases, "
-                  "unreferenced removals); "
+                  "declared concepts, label births, doc edits, added "
+                  "aliases, unreferenced removals); "
                   "approving this round is the ceremony ruling that "
                   "makes them schema.", ""]
         lines += [f"- ⚑ {item}" for item in report.ceremony] + [""]
