@@ -23,8 +23,17 @@
 {"from": {"label": "Archetype", "name": "Transcribed"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "Visibility Class"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "Visibility Group"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Boundary Rule]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Design Record]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DISCUSSES"}
+{"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DISCUSSES"}
+{"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "DISCUSSES"}
+{"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "DISCUSSES"}
+{"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "DISCUSSES"}
+{"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "DISCUSSES"}
 {"from": {"label": "Archetype", "name": "Answer"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Approved Omission"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Completeness"}, "type": "INSTANCE_OF"}
@@ -51,5 +60,29 @@
 {"from": {"label": "Archetype", "name": "Transcribed"}, "properties": {}, "to": {"label": "Archetype", "name": "Completeness"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Visibility Class"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Visibility Group"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Boundary Rule]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Design Record]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "Intake only proposes against the engine layer"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "Kernel names cannot be redeclared"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "New domain vocabulary goes in the project layer"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "New facets are born project-specific"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "New roots are the most ceremonial change"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "Prefer graph citizens over prose"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "Intake only proposes against the engine layer"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "Kernel names cannot be redeclared"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "New domain vocabulary goes in the project layer"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "New facets are born project-specific"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "New roots are the most ceremonial change"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "Prefer graph citizens over prose"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
