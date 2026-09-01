@@ -1,0 +1,13 @@
+{
+  "name": "ghostwheel",
+  "owner": {
+    "name": "SavagePencil"
+  },
+  "plugins": [
+    {
+      "name": "ghostwheel",
+      "source": "./",
+      "description": "Ghostwheel's conduct layer (trigger stubs; content rides the pip package)"
+    }
+  ]
+}

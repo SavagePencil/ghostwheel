@@ -4,7 +4,7 @@ stage 1). The command opens no knowledge base and no database — it must
 answer from anywhere, including a bare directory with no base in sight.
 """
 
-from graph.__main__ import ENGINE_DOCS_DIR, main
+from graph.__main__ import ENGINE_DOCS_DIR, ENGINE_SKILLS_DIR, main
 
 
 def _no_base_anywhere(monkeypatch, tmp_path):
@@ -31,6 +31,21 @@ def test_bare_docs_lists_every_packaged_record(capsys, tmp_path,
     assert packaged, "the package must ship design records"
     for name in packaged:
         assert name in out
+    conduct = sorted(d.name for d in ENGINE_SKILLS_DIR.iterdir()
+                     if (d / "SKILL.md").is_file())
+    assert conduct, "the package must ship conduct records"
+    for name in conduct:
+        assert name in out
+
+
+def test_conduct_record_prints_the_packaged_skill(capsys, tmp_path,
+                                                  monkeypatch):
+    _no_base_anywhere(monkeypatch, tmp_path)
+    assert main(["docs", "agentic-intake"]) == 0
+    out = capsys.readouterr().out
+    packaged = (ENGINE_SKILLS_DIR / "agentic-intake" / "SKILL.md") \
+        .read_text(encoding="utf-8")
+    assert out == packaged
 
 
 def test_unknown_record_refuses_naming_the_available(capsys, tmp_path,
