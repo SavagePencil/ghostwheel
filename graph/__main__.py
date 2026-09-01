@@ -1719,24 +1719,41 @@ def canon_term_index(base_dir):
 
 
 ENGINE_DOCS_DIR = Path(__file__).resolve().parent / "engine_docs" / "design"
+ENGINE_SKILLS_DIR = Path(__file__).resolve().parent / "engine_docs" / "skills"
+
+
+def _conduct_records():
+    if not ENGINE_SKILLS_DIR.is_dir():
+        return []
+    return sorted(d.name for d in ENGINE_SKILLS_DIR.iterdir()
+                  if (d / "SKILL.md").is_file())
 
 
 def cmd_docs(record=None):
-    """Print a packaged engine design record. The doctrine and its
-    siblings live once, in the engine — a knowledge base points here
-    instead of vendoring a copy (the copy-retirement, stage 1). No base,
-    no database: the command answers from anywhere."""
-    records = sorted(p.stem for p in ENGINE_DOCS_DIR.glob("*.md"))
+    """Print a packaged engine record — a design record or a conduct
+    record (a skill's full procedure). They live once, in the engine —
+    a knowledge base points here instead of vendoring a copy (the copy
+    retirement), and the plugin's trigger stubs point here for their
+    instructions (the stub model). No base, no database: the command
+    answers from anywhere."""
+    designs = sorted(p.stem for p in ENGINE_DOCS_DIR.glob("*.md"))
+    conduct = _conduct_records()
     if not record:
         print("Engine design records (python -m graph docs <record>):")
-        for name in records:
+        for name in designs:
+            print(f"  {name}")
+        print("Conduct records — the skills' full procedures:")
+        for name in conduct:
             print(f"  {name}")
         return 0
     path = ENGINE_DOCS_DIR / f"{record}.md"
     if not path.is_file():
-        print(f"Attempted to read the engine design record '{record}'. "
+        path = ENGINE_SKILLS_DIR / record / "SKILL.md"
+    if not path.is_file():
+        print(f"Attempted to read the engine record '{record}'. "
               "Failed due to: no packaged record carries that name. "
-              "Available: " + ", ".join(records), file=sys.stderr)
+              "Available: " + ", ".join(designs + conduct),
+              file=sys.stderr)
         return 2
     sys.stdout.write(path.read_text(encoding="utf-8"))
     return 0
@@ -1922,12 +1939,14 @@ def main(argv=None):
                         "cannot resolve (owner consolidation list)")
     docs_parser = sub.add_parser(
         "docs",
-        help="print a packaged engine design record (the doctrine and its "
-             "siblings) — no knowledge base needed; bare `docs` lists "
-             "the records")
+        help="print a packaged engine record — design records (the "
+             "doctrine and its siblings) and conduct records (the "
+             "skills' full procedures) — no knowledge base needed; "
+             "bare `docs` lists them")
     docs_parser.add_argument(
         "record", nargs="?", default=None,
-        help="record name, e.g. 'ontology-doctrine'; omit to list")
+        help="record name, e.g. 'ontology-doctrine' or 'agentic-intake'; "
+             "omit to list")
     sub.add_parser(
         "corpus",
         help="re-check every owner-blessed floor (the regression corpus): each guard "

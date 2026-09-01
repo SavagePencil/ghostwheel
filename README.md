@@ -106,7 +106,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `canonize --apply` | Apply the pinned changeset to the graph, re-derive the machine layers, re-export the backup, and chain the event log. |
 | `corpus` | Re-check every owner-blessed floor; reds name the blessing they break. |
 | `terms` | List the knowledge base's own domain terms — every citizen's doc, read from the graph. |
-| `docs [<record>]` | Print a packaged engine design record (`ontology-doctrine`, `agentic-etl`, …); bare `docs` lists them. Needs no knowledge base — the records live once, in the engine, and are pulled, never vendored. |
+| `docs [<record>]` | Print a packaged engine record — design records (`ontology-doctrine`, `agentic-etl`, …) and conduct records (the skills' full procedures, e.g. `agentic-intake`); bare `docs` lists them. Needs no knowledge base — the records live once, in the engine, and are pulled, never vendored. |
 | `generate "<name>"` | Render a citizen (e.g. a procedure) back into prose from the graph — measured against the authored text, never a replacement. |
 | `export --mask judgment --out dist/runtime` | Lens-scoped export: ship a runtime graph with the design-time stratum stripped. |
 | `restore --from dist/runtime --database scratch` | Inspect any export in a workspace database (never live canon; no round cut). |
@@ -120,6 +120,27 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 The export in `graph/export/` is committed: it makes graph changes reviewable in
 diffs and is the baseline for the golden test (`pytest`). If a change alters the
 graph, regenerate the export in the same commit.
+
+## The conduct plugin
+
+The engine's skills reach a consuming world as a Claude Code plugin of
+**trigger stubs** — each stub carries only the skill's name and its
+when-to-use description, and pulls its full instructions from the installed
+engine (`python -m graph docs <name>`). Content therefore has exactly one
+channel, the pip package: procedure and machinery always arrive together at
+the same tag, and nothing is ever vendored or copied into a world's repo.
+
+Install, pinned to the same tag as the pip requirement:
+
+```
+/plugin marketplace add https://github.com/SavagePencil/ghostwheel#vX.Y.Z
+/plugin install ghostwheel@ghostwheel
+```
+
+A world commits `enabledPlugins` in its `.claude/settings.json` so cloning
+prompts the install. Plugin skills are namespaced (`ghostwheel:front-door`),
+leaving the world's own `.claude/skills/` entirely to the world. The
+plugin's version is locked to the package's by test.
 
 ## How canon changes: a round
 
