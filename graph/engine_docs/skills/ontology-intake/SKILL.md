@@ -10,7 +10,7 @@ it powers the plan gate. For a full end-to-end intake (scratch authoring
 via MCP, delta review, canonize, drain to zero) use the **agentic-intake**
 skill, which invokes this one at its step 2.
 
-Boundary context: @../../../design/ontology-doctrine.md — **intake grows the
+Boundary context: `python -m graph docs ontology-doctrine` — **intake grows the
 PROJECT layer only.** If the artifact demands something kernel-shaped (a new
 root, a new common facet), that is a Judgment moment: raise it as a Question
 for design dialogue; never resolve it inline.
