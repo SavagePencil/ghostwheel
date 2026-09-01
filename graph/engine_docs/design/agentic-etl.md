@@ -595,7 +595,7 @@ preserved by the strip and never rebuilt by derivation; post-bootstrap
 commands read the schema from the graph (`ontology_from_graph`), the
 anchor's version auto-stamps from the event-log sequence, and
 ontology.yaml is bootstrap provenance for the from-sources path only.
-Schema changes ride the SCHEMA CEREMONY: an ordinary owner-gated round may add a new declared concept, edit a schema row's doc text, or remove an unreferenced schema row — itemized under the delta report's marked ceremony section, whose approval IS the ceremony ruling. Label and spec changes move data underneath them and stay refused: they ride the migration charter.
+Schema changes ride the SCHEMA CEREMONY: an ordinary owner-gated round may add a new declared concept, edit a schema row's doc text, add an alias to a label's spec (a new surface spelling reading as an existing citizen — additions only), or remove an unreferenced schema row — itemized under the delta report's marked ceremony section, whose approval IS the ceremony ruling. Label and other spec changes move data underneath them and stay refused: they ride the migration charter.
 
 ## Invariants (the non-negotiables)
 

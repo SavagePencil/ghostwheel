@@ -38,6 +38,7 @@ REF_KEYS = {
     "schema-concept-undeclared": "undeclared-concept",
     "schema-removal-unverified": "unverified-removal",
     "schema-row-referenced": "still-referenced",
+    "alias-target-missing": "spelling-target-missing",
     "schema-edge-authored": "structure-change",
     "schema-edge-removed": "structure-change",
     "schema-edge-modified": "structure-change",
@@ -67,6 +68,7 @@ REF_KEYS = {
     # ceremony items
     "new-concept": "new-concept",
     "doc-edit": "description-edit",
+    "alias-added": "spelling-added",
     "removed-concept": "removed-concept",
 }
 
@@ -220,7 +222,8 @@ def render_markdown(report):
         lines += ["## Schema changes — the ceremony", "",
                   "The rows below change the graph's OWN SCHEMA. They "
                   "are within the ceremony's permitted classes (new "
-                  "declared concepts, doc edits, unreferenced removals); "
+                  "declared concepts, doc edits, added aliases, "
+                  "unreferenced removals); "
                   "approving this round is the ceremony ruling that "
                   "makes them schema.", ""]
         lines += [f"- ⚑ {item}" for item in report.ceremony] + [""]

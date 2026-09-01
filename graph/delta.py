@@ -11,6 +11,7 @@ Pure logic (diff/lint/report) is driver-free and unit-tested; only
 read_graph touches the neo4j driver.
 """
 
+import json
 from dataclasses import dataclass, field
 
 from . import report as report_mod
@@ -160,9 +161,47 @@ CEREMONY_DOC_PROPS = frozenset({"doc"})
 
 _OUT_OF_CLASS = (
     "this schema change is outside the ceremony's classes (new declared "
-    "concepts, doc edits, removal of unreferenced rows) — label and spec "
-    "changes move data underneath them and ride the migration charter. "
+    "concepts, doc edits, added aliases, removal of unreferenced rows) — "
+    "label and spec changes move data underneath them and ride the "
+    "migration charter. "
     "Propose the change to the owner at the plan gate instead.")
+
+
+def _alias_additions(before, after):
+    """The added-alias diff of a spec_json change, or None when the change
+    is anything else. Returns the {alias: target} of the NEW alias entries
+    when before and after parse as JSON objects differing ONLY by
+    additions under ``aliases`` — every existing alias untouched, every
+    other spec field identical. Anything else (a removed or retargeted
+    alias, any other spec difference, spec_json appearing or vanishing,
+    unparseable JSON) returns None and stays out of class."""
+    if not isinstance(before, str) or not isinstance(after, str):
+        return None
+    try:
+        b, a = json.loads(before), json.loads(after)
+    except ValueError:
+        return None
+    if not isinstance(b, dict) or not isinstance(a, dict):
+        return None
+    b_aliases = b.pop("aliases", None) or {}
+    a_aliases = a.pop("aliases", None) or {}
+    if b != a:
+        return None
+    if any(alias not in a_aliases or a_aliases[alias] != target
+           for alias, target in b_aliases.items()):
+        return None
+    added = {alias: target for alias, target in a_aliases.items()
+             if alias not in b_aliases}
+    return added or None
+
+
+def _alias_target_exists(row_name, target, delta, base):
+    """Does the target citizen exist under the row's label — in the base,
+    or born by this same round?"""
+    if base is not None and (row_name, target) in base.nodes:
+        return True
+    return any(label == row_name and name == target
+               for label, name, _ in delta.nodes_added)
 
 
 def ceremony_records(delta, base=None):
@@ -174,6 +213,10 @@ def ceremony_records(delta, base=None):
     - a new CONCEPT row: an Archetype without spec_json, arriving WITH its
       DECLARED_IN edge (and optionally INSTANCE_OF into a parent concept);
     - a DOC EDIT: a schema row change touching only CEREMONY_DOC_PROPS;
+    - an ADDED ALIAS: a spec_json change whose parsed before/after differ
+      only by new entries under aliases — each new surface spelling reads
+      as a citizen of that label that exists in the base or is born by
+      the same round;
     - an UNREFERENCED REMOVAL: a concept row with no spec_json and, in the
       base, no inbound edges (no members, no anchors) and no outbound
       edges beyond its own declaration — verified against the base, so
@@ -251,7 +294,11 @@ def ceremony_records(delta, base=None):
     for label, name, changes in delta.nodes_changed:
         if label not in SCHEMA_LABELS:
             continue
-        out_of_class = sorted(set(changes) - CEREMONY_DOC_PROPS)
+        alias_added = _alias_additions(*changes["spec_json"]) \
+            if "spec_json" in changes else None
+        permitted_props = CEREMONY_DOC_PROPS \
+            | ({"spec_json"} if alias_added else set())
+        out_of_class = sorted(set(changes) - permitted_props)
         if out_of_class:
             violations.append(Verdict(
                 code="schema-edit-out-of-class",
@@ -264,8 +311,35 @@ def ceremony_records(delta, base=None):
                        "instead.",
                 data={"properties": out_of_class}))
             continue
+        if alias_added:
+            missing = {}
+            for alias, target in sorted(alias_added.items()):
+                targets = target if isinstance(target, list) else [target]
+                absent = [t for t in targets
+                          if not _alias_target_exists(name, t, delta, base)]
+                if absent:
+                    missing[alias] = absent
+            if missing:
+                for alias, absent in sorted(missing.items()):
+                    violations.append(Verdict(
+                        code="alias-target-missing",
+                        subject=NodeRef(label, name),
+                        message=(
+                            f"Attempted to add the alias '{alias}' on "
+                            f"'{name}' ({label}). Failed due to: no "
+                            + ", ".join(f"'{t}'" for t in absent)
+                            + f" citizen exists under '{name}' in the base "
+                            "or this round — an alias must read as a "
+                            "citizen that exists. Add the citizen in the "
+                            "same round, or fix the target."),
+                        remedy="Add the target citizen in the same round, "
+                               "or fix the alias's target.",
+                        data={"alias": alias, "missing": absent}))
+                continue
         permitted_nodes.add((label, name))
         for prop, (before, after) in changes.items():
+            if prop == "spec_json" and alias_added:
+                continue
             b = "(none)" if before is None else f'"{str(before)[:110]}…"' \
                 if len(str(before)) > 110 else f'"{before}"'
             a = "(none)" if after is None else f'"{str(after)[:110]}…"' \
@@ -275,6 +349,17 @@ def ceremony_records(delta, base=None):
                 subject=NodeRef(label, name),
                 message=f"DOC EDIT on '{name}' — {prop}: {b} → {a}",
                 data={"property": prop, "before": before, "after": after}))
+        for alias, target in sorted((alias_added or {}).items()):
+            reads_as = (", ".join(f"'{t}'" for t in target)
+                        if isinstance(target, list) else f"'{target}'")
+            plural = "s" if isinstance(target, list) and len(target) > 1 \
+                else ""
+            items.append(CeremonyItem(
+                code="alias-added",
+                subject=NodeRef(label, name),
+                message=(f"ALIAS ADDED on '{name}' — '{alias}' reads as "
+                         f"the {reads_as} citizen{plural}"),
+                data={"alias": alias, "target": target}))
 
     for label, name, props in delta.nodes_removed:
         if label not in SCHEMA_LABELS:
