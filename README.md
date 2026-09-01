@@ -130,12 +130,17 @@ engine (`python -m graph docs <name>`). Content therefore has exactly one
 channel, the pip package: procedure and machinery always arrive together at
 the same tag, and nothing is ever vendored or copied into a world's repo.
 
-Install, pinned to the same tag as the pip requirement:
+Install, pinned to the same tag as the pip requirement — from any terminal
+(not every environment carries the `/plugin` slash command; the CLI works
+everywhere):
 
 ```
-/plugin marketplace add https://github.com/SavagePencil/ghostwheel#vX.Y.Z
-/plugin install ghostwheel@ghostwheel
+claude plugin marketplace add https://github.com/SavagePencil/ghostwheel#vX.Y.Z
+claude plugin install ghostwheel@ghostwheel
 ```
+
+(Inside an interactive Claude Code session, `/plugin marketplace add …` and
+`/plugin install …` are the same operations, where available.)
 
 A world commits `enabledPlugins` in its `.claude/settings.json` so cloning
 prompts the install. Plugin skills are namespaced (`ghostwheel:front-door`),
