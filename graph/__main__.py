@@ -1718,6 +1718,30 @@ def canon_term_index(base_dir):
     return extractor, None
 
 
+ENGINE_DOCS_DIR = Path(__file__).resolve().parent / "engine_docs" / "design"
+
+
+def cmd_docs(record=None):
+    """Print a packaged engine design record. The doctrine and its
+    siblings live once, in the engine — a knowledge base points here
+    instead of vendoring a copy (the copy-retirement, stage 1). No base,
+    no database: the command answers from anywhere."""
+    records = sorted(p.stem for p in ENGINE_DOCS_DIR.glob("*.md"))
+    if not record:
+        print("Engine design records (python -m graph docs <record>):")
+        for name in records:
+            print(f"  {name}")
+        return 0
+    path = ENGINE_DOCS_DIR / f"{record}.md"
+    if not path.is_file():
+        print(f"Attempted to read the engine design record '{record}'. "
+              "Failed due to: no packaged record carries that name. "
+              "Available: " + ", ".join(records), file=sys.stderr)
+        return 2
+    sys.stdout.write(path.read_text(encoding="utf-8"))
+    return 0
+
+
 def cmd_terms(base_dir):
     """The glossary sweep: scan every declared prose section body for
     capitalized terms the term index cannot resolve, and print a
@@ -1896,6 +1920,14 @@ def main(argv=None):
     sub.add_parser("terms",
                    help="scan all docs for capitalized terms the glossary "
                         "cannot resolve (owner consolidation list)")
+    docs_parser = sub.add_parser(
+        "docs",
+        help="print a packaged engine design record (the doctrine and its "
+             "siblings) — no knowledge base needed; bare `docs` lists "
+             "the records")
+    docs_parser.add_argument(
+        "record", nargs="?", default=None,
+        help="record name, e.g. 'ontology-doctrine'; omit to list")
     sub.add_parser(
         "corpus",
         help="re-check every owner-blessed floor (the regression corpus): each guard "
@@ -1997,6 +2029,11 @@ def main(argv=None):
         "--dispose", action="store_true",
         help="wipe the live reading room (the archives are the record)")
     args = parser.parse_args(argv)
+
+    if args.command == "docs":
+        # The one command that opens no knowledge base: it reads the
+        # installed engine's own records, from anywhere.
+        return cmd_docs(args.record)
 
     base_dir = find_base_dir()
     load_corpus_grammars(base_dir)

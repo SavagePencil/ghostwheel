@@ -106,6 +106,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `canonize --apply` | Apply the pinned changeset to the graph, re-derive the machine layers, re-export the backup, and chain the event log. |
 | `corpus` | Re-check every owner-blessed floor; reds name the blessing they break. |
 | `terms` | List the knowledge base's own domain terms — every citizen's doc, read from the graph. |
+| `docs [<record>]` | Print a packaged engine design record (`ontology-doctrine`, `agentic-etl`, …); bare `docs` lists them. Needs no knowledge base — the records live once, in the engine, and are pulled, never vendored. |
 | `generate "<name>"` | Render a citizen (e.g. a procedure) back into prose from the graph — measured against the authored text, never a replacement. |
 | `export --mask judgment --out dist/runtime` | Lens-scoped export: ship a runtime graph with the design-time stratum stripped. |
 | `restore --from dist/runtime --database scratch` | Inspect any export in a workspace database (never live canon; no round cut). |
