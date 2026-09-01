@@ -165,3 +165,11 @@ intake conduct before them. The machinery's own reports — the typed
 records and the technical rendering — are unchanged underneath; the
 door is a reader of records and canon, never a second source of
 truth.
+
+The tenets are the same everywhere; the door is not. Each world's
+door is expected to be **tailored to that world's experience**: the
+conduct trunk ships with the engine at whatever version the world
+pins, the voice is learned live from that world's canon (T1), and a
+world keeps its own local skills beside the engine's. Two worlds at
+different pins run different conduct on purpose — skew is a chosen
+consequence of pinning ([engine-as-corpus.md](engine-as-corpus.md)).

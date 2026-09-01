@@ -327,6 +327,10 @@ evidence appendix were untraceable to the record — confirmed]
   exists, promoted with **Opinion** and **Theme** at a kernel ceremony,
   so what remains for tenets is minting the rows, not
   the class) — "they'll get ingested and onto a graph someday" [owner].
+  The vehicle now exists: the engine's own corpus
+  ([engine-as-corpus.md](engine-as-corpus.md)) — the tenets record
+  enters that canon like every design record, and the rows mint at its
+  own gate.
 - ⏳ The margin/annotation UI (overlay on the artifact) — deferred to
   the UI era; the data model (§8) is built for it.
 - ⏳ First live validations owed: a brief-content review in front of

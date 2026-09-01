@@ -319,6 +319,10 @@ The `design/` directory holds the engine's design doctrine:
 - [lenses.md](design/lenses.md) — the visibility system.
 - [north-star-workflow.md](design/north-star-workflow.md) — the two-lane
   workflow and the full glossary (lay tier and working vocabulary).
+- [engine-as-corpus.md](design/engine-as-corpus.md) — the engine's own
+  knowledge base: a self-world versioned by the engine's semver, born
+  graph-native, with the parity flip criterion and world-tailored
+  conduct.
 
 ## The manual
 

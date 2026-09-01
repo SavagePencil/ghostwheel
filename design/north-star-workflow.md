@@ -18,7 +18,10 @@ the reconciliation is recorded once in [agentic-etl.md](agentic-etl.md)
 - **Knowledge Base ("KB")** — one body of knowledge as one graph: a
   game's rules could be one KB; a chip's instruction set another that
   someone else publishes and you simply use. Each KB keeps its own
-  facts, its own history, and its own approval gate.
+  facts, its own history, and its own approval gate — and its own
+  tailoring of the engine's conduct: the trunk ships with the engine
+  at the KB's pinned version, and each KB tunes the door's voice
+  (learned from its canon) and keeps its own local skills beside it.
 - **World** — a context you step INTO that gathers several KBs and
   knows how they relate — nothing is melted together; the world just
   knows which KBs it uses and how to navigate them. (A world is
@@ -107,13 +110,26 @@ Provenance, Judgment), Procedure, the Judgment family, the visibility
 vocabulary. Project-agnostic — the membership test is "would a kid's
 storybook project need it?" Semver'd; changes are **ceremonies**.
 
-**Project ontology** — everything THIS knowledge base derived
-(`graph/ontology.yaml`): its labels, catalogs, relationships.
-Owner-governed, versioned as a plain revision number.
+**Project ontology** — everything THIS knowledge base holds as its own
+schema: its labels, catalogs, relationships — living ON the graph as
+the Archetype stratum. Owner-governed, versioned as a plain revision
+number. `graph/ontology.yaml` is bootstrap provenance for a
+from-sources corpus; a corpus born graph-native never has one.
 
 **Ceremony** — the deliberate act of changing the kernel: explicit
 owner ruling, a Decision row naming it, the version bump and ledger
-line in the same change set. Never casual, never a side effect.
+line in the same change set. Never casual, never a side effect. The
+**schema ceremony** is its project-layer sibling: five permitted
+change classes riding an ordinary gated round, itemized in the delta
+report's marked section — approving that round IS the ruling.
+
+**Born graph-native** — a knowledge base seeded from the kernel alone
+(`python -m graph init`): no bootstrap files, no sources; its project
+layer starts empty and grows through gated rounds.
+
+**Label birth** — the schema-ceremony class that grows an empty
+project layer: a new spec-carrying label arriving with its
+declaration, permitted only while nothing yet sits underneath it.
 
 ### Rounds — how canon changes
 
@@ -128,7 +144,8 @@ canon moves mid-round, the apply refuses by name — no round lands on a
 base that shifted under it.
 
 **Branch** — an independent line of truth WITHIN a KB: born from a
-declared base (schema-only, or clone-of-canon), with its own authoring
+declared base (schema-only today; clone-of-canon is the designed
+future base), with its own authoring
 copy, ceremony, and chained log, physically unable to write the KB's
 live canon, adopted only by the owner's succession ceremony — never a
 flag. Pinned base + delta is the contract; the clone is an
