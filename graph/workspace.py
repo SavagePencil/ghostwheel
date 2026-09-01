@@ -49,7 +49,13 @@ def stamp(config, role, base_hash, git_ref="unknown", branch=None):
         auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))
     with driver, driver.session(
             database=config["NEO4J_DATABASE"]) as session:
-        session.run(f"MATCH (w:`{WORKSPACE_LABEL}`) DETACH DELETE w")
+        # The label rides a parameterized labels() check, never a label
+        # token: a MATCH on a label the database has not seen yet makes
+        # the server emit an unknown-label notification, and the driver
+        # prints it raw — internals reaching a designer-facing surface.
+        # CREATE below is what births the label, quietly.
+        session.run("MATCH (w) WHERE $label IN labels(w) DETACH DELETE w",
+                    label=WORKSPACE_LABEL)
         session.run(
             f"CREATE (w:`{WORKSPACE_LABEL}` {{name: $name}}) SET w += $props",
             name=STAMP_NAME, props=props)
@@ -65,9 +71,12 @@ def read_stamp(config):
         auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))
     with driver, driver.session(
             database=config["NEO4J_DATABASE"]) as session:
+        # parameterized labels() check — see stamp(): a label token for
+        # an unstamped database would spew a raw driver notification
         record = session.run(
-            f"MATCH (w:`{WORKSPACE_LABEL}`) "
-            "RETURN properties(w) AS props LIMIT 1").single()
+            "MATCH (w) WHERE $label IN labels(w) "
+            "RETURN properties(w) AS props LIMIT 1",
+            label=WORKSPACE_LABEL).single()
     return dict(record["props"]) if record else None
 
 
