@@ -105,15 +105,18 @@ graph, never from a schema file, and the schema anchor's version
 auto-stamps from the event-log sequence at apply. **Schema changes
 ride the schema ceremony**: an owner-gated round may add a new
 DECLARED concept (the Archetype arrives WITH its DECLARED_IN edge, and
-usually INSTANCE_OF into its parent), edit a schema row's doc text,
+usually INSTANCE_OF into its parent), birth a new LABEL (a
+spec-carrying row arriving WITH its DECLARED_IN edge, permitted only
+when the base holds no ground rows under it — nothing yet underneath,
+so nothing moves), edit a schema row's doc text,
 add an ALIAS to a label's spec (a new surface spelling reading as an
 existing citizen — additions only, each target existing in the base or
 born by the same round), or
 remove an UNREFERENCED schema row — the delta report itemizes these
 under its marked ceremony section, and the owner's approval of that
-round IS the ceremony ruling. Everything else on the stratum — new
-labels, other spec/catalog changes, renames, referenced removals —
-still
+round IS the ceremony ruling. Everything else on the stratum — changes
+to existing labels, other spec/catalog changes, renames, referenced
+removals — still
 refuses by name (data moves underneath those; they ride the migration
 charter) and PARKS as a Question at the plan gate for the owner to
 rule and sequence; it never blocks the fact-plane work that doesn't

@@ -36,6 +36,8 @@ REF_KEYS = {
     "schema-edit-out-of-class": "structure-change",
     "schema-label-row-removed": "structure-change",
     "schema-concept-undeclared": "undeclared-concept",
+    "schema-label-undeclared": "undeclared-catalog",
+    "schema-label-spec-unreadable": "unreadable-catalog-spec",
     "schema-removal-unverified": "unverified-removal",
     "schema-row-referenced": "still-referenced",
     "alias-target-missing": "spelling-target-missing",
@@ -67,6 +69,7 @@ REF_KEYS = {
     "roster-gap": "missing-entry",
     # ceremony items
     "new-concept": "new-concept",
+    "new-label": "new-catalog",
     "doc-edit": "description-edit",
     "alias-added": "spelling-added",
     "removed-concept": "removed-concept",

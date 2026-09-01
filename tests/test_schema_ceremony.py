@@ -1,13 +1,14 @@
 """The schema-delta ceremony: the owner-gated path through the freeze.
 
-Four permitted classes ride an ordinary round and itemize under the
-report's marked ceremony section — a new declared concept, a doc edit,
+Five permitted classes ride an ordinary round and itemize under the
+report's marked ceremony section — a new declared concept, a label
+birth (a spec-carrying row with nothing yet underneath it), a doc edit,
 an added alias (a new surface spelling reading as an existing citizen),
 and the removal of an unreferenced schema row. Everything else on the
-schema stratum still refuses by name (labels and specs move data
-underneath them and belong to the migration charter). The owner's
-approval of a round whose report carries the ceremony section IS the
-ceremony ruling.
+schema stratum still refuses by name (changes to existing labels and
+specs move data underneath them and belong to the migration charter).
+The owner's approval of a round whose report carries the ceremony
+section IS the ceremony ruling.
 """
 
 import json
@@ -112,12 +113,13 @@ def test_unreferenced_removal_lands_and_referenced_refuses():
 
 def test_label_rows_stay_frozen_both_directions():
     base = base_graph()
+    # An undeclared spec row is not a birth — it refuses (a clean birth
+    # arrives WITH its declaration; see the label-birth tests below).
     scratch = clone(base)
     scratch.ensure_node("Archetype", "Ledger",
                         spec_json=json.dumps({"key": "Ledger"}))
     d = diff(base, scratch)
-    assert any("new Archetype LABEL" in v and "migration charter" in v
-               for v in lint(d, base))
+    assert any("without declaring it" in v for v in lint(d, base))
     scratch = clone(base)
     del scratch.nodes[("Archetype", "Terrain")]
     d = diff(base, scratch)
@@ -285,3 +287,99 @@ def test_alias_codes_carry_designer_safe_refs():
     from graph.report import ref_key
     assert ref_key("alias-added") == "spelling-added"
     assert ref_key("alias-target-missing") == "spelling-target-missing"
+
+
+# ---------------------------------------------------------------------------
+# Label birth: the fifth permitted class. A born-graph-native project
+# layer starts with zero labels, so growing one through an owner-gated
+# round must be possible — the charter's data-movement rationale does
+# not bite a label with nothing yet underneath.
+# ---------------------------------------------------------------------------
+
+def _birth(scratch, name, spec=None, declare=True, parent=None):
+    scratch.ensure_node("Archetype", name,
+                        doc=f"{name.lower()}s of the manual",
+                        spec_json=json.dumps(
+                            spec if spec is not None
+                            else {"concept": name}))
+    if declare:
+        scratch.edges.append(make_edge("DECLARED_IN", "Archetype", name,
+                                       "Archetype", "Ontology"))
+    if parent:
+        scratch.edges.append(make_edge("INSTANCE_OF", "Archetype", name,
+                                       "Archetype", parent))
+
+
+def test_label_birth_is_ceremony_not_refusal():
+    base = base_graph()
+    scratch = clone(base)
+    _birth(scratch, "Night Rule", parent="Theme")
+    d = diff(base, scratch)
+    assert lint(d, base) == []
+    items, violations, nodes, edges = ceremony_classify(d, base)
+    assert violations == [] and ("Archetype", "Night Rule") in nodes
+    assert len(edges) == 2
+    [item] = items
+    assert "NEW LABEL 'Night Rule'" in item and "born empty" in item
+    assert "declared in Ontology" in item
+    assert "binding concept Night Rule" in item
+    assert "instance of Theme" in item
+    report = render_report(d, [], items)
+    assert "## Schema changes — the ceremony" in report
+
+
+def test_label_birth_with_rows_already_underneath_refuses():
+    base = base_graph()
+    # Degenerate base: ground rows exist under a label with no schema row.
+    base.ensure_node("Night Rule", "Hum Softly")
+    scratch = clone(base)
+    _birth(scratch, "Night Rule")
+    _, violations, nodes, _ = ceremony_classify(diff(base, scratch), base)
+    assert ("Archetype", "Night Rule") not in nodes
+    assert any("already holds 1 ground row" in v
+               and "Hum Softly" in v for v in violations)
+
+
+def test_label_birth_without_base_refuses():
+    base = base_graph()
+    scratch = clone(base)
+    _birth(scratch, "Night Rule")
+    _, violations, nodes, _ = ceremony_classify(diff(base, scratch), None)
+    assert ("Archetype", "Night Rule") not in nodes
+    assert any("no base graph to verify against" in v for v in violations)
+
+
+def test_label_birth_undeclared_refuses():
+    base = base_graph()
+    scratch = clone(base)
+    _birth(scratch, "Night Rule", declare=False)
+    _, violations, nodes, _ = ceremony_classify(diff(base, scratch), base)
+    assert ("Archetype", "Night Rule") not in nodes
+    assert any("without declaring it" in v for v in violations)
+
+
+def test_label_birth_with_unreadable_spec_refuses():
+    base = base_graph()
+    scratch = clone(base)
+    scratch.ensure_node("Archetype", "Night Rule", spec_json="not json{")
+    scratch.edges.append(make_edge("DECLARED_IN", "Archetype", "Night Rule",
+                                   "Archetype", "Ontology"))
+    _, violations, nodes, _ = ceremony_classify(diff(base, scratch), base)
+    assert ("Archetype", "Night Rule") not in nodes
+    assert any("does not parse" in v for v in violations)
+
+
+def test_label_birth_rides_a_round_end_to_end():
+    """The full path a born-graph-native round takes: birth the label,
+    author ground rows under it in the same delta, apply."""
+    base = base_graph()
+    scratch = clone(base)
+    _birth(scratch, "Night Rule", parent="Theme")
+    scratch.ensure_node("Night Rule", "Hum Softly", rank=0)
+    scratch.ensure_node("Night Rule", "Dim The Lanterns", rank=1)
+    d = diff(base, scratch)
+    assert lint(d, base) == []
+    assert apply_delta(base, d) == []  # applies in place, collates problems
+    assert ("Archetype", "Night Rule") in base.nodes
+    assert ("Night Rule", "Hum Softly") in base.nodes
+    assert ("Night Rule", "Dim The Lanterns") in base.nodes
