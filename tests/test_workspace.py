@@ -100,6 +100,21 @@ def test_authoring_database_branch_composes_with_the_kb_name():
         == "rebuild-manual-scratch"
 
 
+def test_stamp_queries_never_match_on_the_label_token():
+    """A MATCH on a label the database has never seen makes the server
+    emit an unknown-label notification, which the driver prints raw —
+    internals reaching a designer-facing surface. The stamp's MATCH
+    queries therefore carry the label as a parameterized labels()
+    check; only CREATE (which births the label, quietly) inlines it.
+    Proven by source inspection — the precedent for DB-bound wiring."""
+    import inspect
+
+    from graph import workspace
+
+    for fn in (workspace.stamp, workspace.read_stamp):
+        assert "MATCH (w:`" not in inspect.getsource(fn), fn.__name__
+
+
 # --- the round machinery trusts only the round's own copy (CLI flow) ----
 
 def test_the_rounds_own_copy_passes_the_identity_gate(driven_kb):
