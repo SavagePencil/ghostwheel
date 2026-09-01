@@ -244,6 +244,14 @@ no mentions index on canon (the room's assertions layer is the
 successor; until it lands, "which sections discuss X" is answered by
 text search).
 
+This thinning is the rule for a canon that is ABOUT a domain — where
+a dropped artifact is *evidence for* the knowledge, not the knowledge
+itself. A corpus whose prose IS the knowledge — its records carried as
+citizens, sections with verbatim bodies on the graph — inverts the
+rule by design: there the sections are canon, and once the prose lives
+on the graph there is no separate source left to anchor to
+([engine-as-corpus.md](engine-as-corpus.md)).
+
 **Identity rules.** An artifact's identity is the sha256 of its bytes —
 one collaborator's `Downloads` copy and another's `Temp` copy are the
 same artifact; paths and titles are display metadata. Sections carry
@@ -572,7 +580,7 @@ being a place and becomes an epistemic status.
 
 | Organ | Exists today? |
 |---|---|
-| copy-base-to-scratch | partially — `--database` scratch builds exist in rebuild form; copy-from-live is new. Scale path: relevant-subset copies (recon's neighborhood + boundary, fetch-on-demand), guarded by apply-time preconditions against full live |
+| copy-base-to-scratch | exists — `restore --database scratch` cuts the round from canon's committed backup (post-flip). Scale path: relevant-subset copies (recon's neighborhood + boundary, fetch-on-demand), guarded by apply-time preconditions against full live |
 | extract-delta | new (the committed export snapshot diff is its rebuild-era ancestor) |
 | apply-delta (+ precondition checks) | **new — the genuinely novel organ**, together with the event log |
 | derived post-pass | exists (metamodel, projections, term index) — needs re-rooting from "empty base" to "any base" |
