@@ -1,0 +1,70 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [
+  {
+   "from_label": "Archetype",
+   "from_name": "[Conduct Section]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Ontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Conduct Section]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  }
+ ],
+ "nodes_added": [],
+ "nodes_changed": [],
+ "nodes_removed": [
+  [
+   "Archetype",
+   "[Conduct Section]",
+   {
+    "doc": "A run of a conduct record's text — the verbatim body at one heading, ordered within the Procedure it specifies.",
+    "spec_json": "{\"concept\": \"[Conduct Section]\", \"reader\": \"markdown_sections\", \"relationships\": [{\"column\": \"procedure\", \"parser\": \"part_of\", \"to\": \"Procedure\", \"type\": \"PART_OF\"}]}"
+   }
+  ],
+  [
+   "Procedure",
+   "The maintenance loop",
+   {
+    "description": "Restore, re-derive, validate, and verify the canon Neo4j graph. Use after a schema-bootstrap edit, when a database looks stale or drifted, when the golden test fails, or when a human asks to reload/refresh/reset the graph.",
+    "known_at": "Attested",
+    "slug": "rebuild-graph"
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Canon changes (full flow: the agentic-intake skill)",
+   {
+    "body": "## Canon changes (full flow: the agentic-intake skill)\n\nCanon changes never happen here. Scratch authoring, `python -m graph\ndelta`, approval, and `python -m graph canonize --apply` (graph-native:\nverify-all-before-apply-any, re-derivation, backup re-export, chained\nevent log) are the agentic-intake skill's territory — this skill only\nkeeps the databases healthy around that flow. After an apply, the\nritual: pytest → commit the export + round archive + event-log line in\none change set → next round cuts scratch fresh.\n",
+    "procedure": "The maintenance loop",
+    "rank": 2
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Failure triage",
+   {
+    "body": "## Failure triage\n\n- `Connection refused` → Desktop DBMS not running.\n- `Unauthorized` → `.env` doesn't match the DBMS credentials (MCP reads\n  the same `.env` via its launcher; it needs a reconnect after\n  credential fixes). The live connection's user is read-only by design —\n  a write refusal on live is the boundary working, not a bug.\n- Validation errors naming the ontology → fix `graph/ontology.yaml` (or\n  stop and talk to the owner if the fix is semantic).\n- Apply refuses because the live database drifted from the backup →\n  `python -m graph restore`, then retry.\n- New warnings after a data edit → often the point: read them as\n  findings, file issues for genuine data problems (issue-first\n  convention).\n\n",
+    "procedure": "The maintenance loop",
+    "rank": 1
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "The maintenance loop",
+   {
+    "body": "---\nname: rebuild-graph\ndescription: Restore, re-derive, validate, and verify the canon Neo4j graph. Use after a schema-bootstrap edit, when a database looks stale or drifted, when the golden test fails, or when a human asks to reload/refresh/reset the graph.\n---\n\n# The maintenance loop\n\nBoundary context: `python -m graph docs ontology-doctrine`\n\nThe graph is canon (the flip); `graph/export/` is its committed backup,\nwritten FROM the database. Source files (CSVs, overlays) are bootstrap\nscaffolding and may legitimately lag canon. The verbs, by situation:\n\n1. `python -m graph restore` — rebuild the live database from the\n   committed backup alone (no sources involved). DRILL PASSED means the\n   database re-serializes byte-identical to the backup. This is the\n   reset for a stale or drifted live database, and the routine\n   reconcile step after a merge.\n2. `python -m graph restore --database scratch` — cut a fresh round:\n   scratch becomes a clone of canon with the base pinned. Run it before\n   any scratch authoring and after any schema edit.\n3. `make validate` — parse sources and schema against the ontology,\n   writing `graph/reports/validation.md`. **Errors** block (broken\n   ontology or file); **warnings/info** are data findings and never\n   block.\n4. `python -m graph rederive` — after a schema-bootstrap edit\n   (`graph/ontology.yaml`): re-derives the machine layers over the\n   unchanged ground facts and re-exports the backup. It refuses,\n   collated, if the schema has errors or if ground facts would change —\n   ground changes go through the delta path, never through derivation.\n5. **Backup coherence is enforced**: any change that alters the graph\n   must re-export the backup in the same change set — the golden test\n   (`tests/test_golden.py`) proves the backup's derived layers agree\n   with what `derive()` recomputes. A golden failure after an\n   intentional change isn't an error; it's the reminder.\n6. `make check` — canned consistency checks\n   (`graph/cypher/checks/*.cypher`) against the live DB. Two species:\n   checks headed `// expect: empty` are ASSERTIONS — rows mean an\n   integrity bug and the command exits non-zero. The rest are FINDING\n   REPORTS — rows are open data questions (candidate Judgments),\n   informational by design. A failed assertion blocks; findings never\n   do.\n7. Spot-verify via MCP (counts per label, a known query from the\n   cookbook).\n\n`make test` runs the full pytest suite. Bootstrap-era verbs (`load`,\n`export --from-sources`) survive only as scaffolding for building a\ngraph from sources before canon exists — never part of a normal round.\n\n",
+    "procedure": "The maintenance loop",
+    "rank": 0
+   }
+  ]
+ ]
+}
