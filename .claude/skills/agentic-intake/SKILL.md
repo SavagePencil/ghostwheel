@@ -105,16 +105,30 @@ graph, never from a schema file, and the schema anchor's version
 auto-stamps from the event-log sequence at apply. **Schema changes
 ride the schema ceremony**: an owner-gated round may add a new
 DECLARED concept (the Archetype arrives WITH its DECLARED_IN edge, and
-usually INSTANCE_OF into its parent), edit a schema row's doc text, or
+usually INSTANCE_OF into its parent), edit a schema row's doc text,
+add an ALIAS to a label's spec (a new surface spelling reading as an
+existing citizen — additions only, each target existing in the base or
+born by the same round), or
 remove an UNREFERENCED schema row — the delta report itemizes these
 under its marked ceremony section, and the owner's approval of that
 round IS the ceremony ruling. Everything else on the stratum — new
-labels, spec/catalog changes, renames, referenced removals — still
+labels, other spec/catalog changes, renames, referenced removals —
+still
 refuses by name (data moves underneath those; they ride the migration
 charter) and PARKS as a Question at the plan gate for the owner to
 rule and sequence; it never blocks the fact-plane work that doesn't
 need it, and it is never worked around with a lesser encoding. Facts
 whose schema doesn't exist yet wait with their Question.
+
+One mirror rides ceremony edits that change what the bootstrap file
+declares: when the corpus keeps a from-sources bootstrap file guarded
+by a round-trip parity suite, that file gains the same change in the
+same change set — a doc edit on a CONCEPT row (a schema row without an
+embedded spec) mirrors its doc text into the concept entry, and an
+ADDED ALIAS mirrors into the label entry's aliases map. The suite
+compares the loader's specs against the graph's and fails on the
+divergence. A doc edit on a LABEL row alone needs no mirror; that doc
+lives on the row.
 
 ### 4. Scratch authoring (agent + machine)
 Reset scratch first (`python -m graph restore --database scratch`) — stale
