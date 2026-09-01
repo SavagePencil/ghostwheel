@@ -95,6 +95,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 
 | Command | What it does |
 |---|---|
+| `init [<dir>]` | Seed a new knowledge base, **born graph-native**: write a committed backup holding the kernel's schema stratum alone into `<dir>/graph/export` — no `ontology.yaml`, no sources, no database. Everything else grows through gated rounds. Refuses a directory that already holds a knowledge base. |
 | `validate` | Parse the sources/schema against the ontology; write a consistency report to `graph/reports/validation.md`. No database needed. |
 | `export` | Write a deterministic snapshot of canon to `graph/export/`. Commit it alongside any graph change. No database needed. |
 | `restore` | Rebuild the database from `graph/export/` alone, then verify it re-serializes byte-identical. |
@@ -318,6 +319,15 @@ The `design/` directory holds the engine's design doctrine:
 - [lenses.md](design/lenses.md) — the visibility system.
 - [north-star-workflow.md](design/north-star-workflow.md) — the two-lane
   workflow and the full glossary (lay tier and working vocabulary).
+
+## The manual
+
+[`manual/`](manual/) is the engine's own knowledge base — the first one
+born graph-native (`python -m graph init manual`; kernel schema stratum
+alone, no `ontology.yaml`, no sources). The engine-as-corpus campaign
+grows it through gated rounds until the design and conduct records above
+live there as citizens and `docs` renders from that canon. Until that
+flip, the packaged markdown remains what `docs` serves.
 
 ## Development
 
