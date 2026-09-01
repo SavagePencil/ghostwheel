@@ -1,7 +1,8 @@
 """The schema-delta ceremony: the owner-gated path through the freeze.
 
-Three permitted classes ride an ordinary round and itemize under the
+Four permitted classes ride an ordinary round and itemize under the
 report's marked ceremony section — a new declared concept, a doc edit,
+an added alias (a new surface spelling reading as an existing citizen),
 and the removal of an unreferenced schema row. Everything else on the
 schema stratum still refuses by name (labels and specs move data
 underneath them and belong to the migration charter). The owner's
@@ -26,6 +27,7 @@ def base_graph():
     g.ensure_node("Archetype", "Theme", doc="a philosophy statement")
     g.ensure_node("Archetype", "Terrain",
                   spec_json=json.dumps({"key": "Terrain"}))
+    g.ensure_node("Terrain", "Mesa")
     g.ensure_node("Archetype", "Forgotten Motif", doc="never referenced")
     g.ensure_node("Archetype", "Anchored Motif", doc="carries a judgment")
     g.ensure_node("Decision", "Motifs stay moody")
@@ -156,3 +158,130 @@ def test_ceremony_round_end_to_end_over_the_storybook():
     assert "Lantern Nights" in rebuilt.concepts
     assert rebuilt.concepts["Lantern Nights"]["doc"] \
         == "the village gathers when the lanterns rise"
+
+
+# -- the added-alias class ---------------------------------------------------
+
+
+def _terrain_spec(aliases=None, **extra):
+    spec = {"key": "Terrain"}
+    if aliases is not None:
+        spec["aliases"] = aliases
+    spec.update(extra)
+    return json.dumps(spec, sort_keys=True)
+
+
+def test_alias_addition_is_ceremony_not_refusal():
+    from graph.delta import ceremony_records
+    base = base_graph()
+    scratch = clone(base)
+    scratch.nodes[("Archetype", "Terrain")]["spec_json"] = \
+        _terrain_spec({"Butte": "Mesa"})
+    d = diff(base, scratch)
+    assert lint(d, base) == []
+    items, violations, nodes, _ = ceremony_records(d, base)
+    assert violations == [] and ("Archetype", "Terrain") in nodes
+    [item] = items
+    assert item.code == "alias-added"
+    assert item.data == {"alias": "Butte", "target": "Mesa"}
+    assert "ALIAS ADDED on 'Terrain'" in str(item)
+    assert "'Butte' reads as the 'Mesa' citizen" in str(item)
+    report = render_report(d, [], [str(item)])
+    assert "## Schema changes — the ceremony" in report
+    assert "added aliases" in report
+
+
+def test_alias_addition_rides_with_a_doc_edit():
+    from graph.delta import ceremony_records
+    base = base_graph()
+    scratch = clone(base)
+    scratch.nodes[("Archetype", "Terrain")]["spec_json"] = \
+        _terrain_spec({"Butte": "Mesa"})
+    scratch.nodes[("Archetype", "Terrain")]["doc"] = "the lay of the land"
+    d = diff(base, scratch)
+    assert lint(d, base) == []
+    items, violations, nodes, _ = ceremony_records(d, base)
+    assert violations == [] and ("Archetype", "Terrain") in nodes
+    codes = sorted(i.code for i in items)
+    assert codes == ["alias-added", "doc-edit"]
+    # the spec_json change never renders as a doc edit
+    doc_items = [i for i in items if i.code == "doc-edit"]
+    assert all(i.data["property"] == "doc" for i in doc_items)
+
+
+def test_list_alias_targets_verify_each_including_in_round():
+    from graph.delta import ceremony_records
+    base = base_graph()
+    scratch = clone(base)
+    scratch.ensure_node("Terrain", "Ridge")  # target born by this round
+    scratch.nodes[("Archetype", "Terrain")]["spec_json"] = \
+        _terrain_spec({"Overlook": ["Mesa", "Ridge"]})
+    d = diff(base, scratch)
+    assert lint(d, base) == []
+    items, violations, nodes, _ = ceremony_records(d, base)
+    assert violations == [] and ("Archetype", "Terrain") in nodes
+    [item] = [i for i in items if i.code == "alias-added"]
+    assert item.data == {"alias": "Overlook", "target": ["Mesa", "Ridge"]}
+    assert "'Overlook' reads as the 'Mesa', 'Ridge' citizens" in str(item)
+
+
+def test_alias_to_missing_citizen_refuses_by_name():
+    from graph.delta import ceremony_records
+    base = base_graph()
+    scratch = clone(base)
+    scratch.nodes[("Archetype", "Terrain")]["spec_json"] = \
+        _terrain_spec({"Butte": "Nowhere"})
+    d = diff(base, scratch)
+    items, violations, nodes, _ = ceremony_records(d, base)
+    assert items == [] and ("Archetype", "Terrain") not in nodes
+    [violation] = violations
+    assert violation.code == "alias-target-missing"
+    assert violation.data == {"alias": "Butte", "missing": ["Nowhere"]}
+    assert "no 'Nowhere' citizen exists under 'Terrain'" in str(violation)
+    assert any("alias 'Butte'" in v for v in lint(d, base))
+
+
+def test_alias_without_base_refuses():
+    base = base_graph()
+    scratch = clone(base)
+    scratch.nodes[("Archetype", "Terrain")]["spec_json"] = \
+        _terrain_spec({"Butte": "Mesa"})
+    d = diff(base, scratch)
+    # no base in view: the target cannot be verified, so it refuses
+    assert any("alias 'Butte'" in v for v in lint(d))
+
+
+def test_alias_removal_and_retarget_refuse():
+    base = base_graph()
+    base.nodes[("Archetype", "Terrain")]["spec_json"] = \
+        _terrain_spec({"Butte": "Mesa"})
+    # removal
+    scratch = clone(base)
+    scratch.nodes[("Archetype", "Terrain")]["spec_json"] = _terrain_spec()
+    d = diff(base, scratch)
+    assert any("beyond its doc text" in v and "spec_json" in v
+               for v in lint(d, base))
+    # retarget
+    scratch = clone(base)
+    scratch.ensure_node("Terrain", "Ridge")
+    scratch.nodes[("Archetype", "Terrain")]["spec_json"] = \
+        _terrain_spec({"Butte": "Ridge"})
+    d = diff(base, scratch)
+    assert any("beyond its doc text" in v and "spec_json" in v
+               for v in lint(d, base))
+
+
+def test_alias_bundled_with_other_spec_change_refuses():
+    base = base_graph()
+    scratch = clone(base)
+    scratch.nodes[("Archetype", "Terrain")]["spec_json"] = \
+        _terrain_spec({"Butte": "Mesa"}, key="Landform")
+    d = diff(base, scratch)
+    assert any("beyond its doc text" in v and "spec_json" in v
+               and "migration charter" in v for v in lint(d, base))
+
+
+def test_alias_codes_carry_designer_safe_refs():
+    from graph.report import ref_key
+    assert ref_key("alias-added") == "spelling-added"
+    assert ref_key("alias-target-missing") == "spelling-target-missing"
