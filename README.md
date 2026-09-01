@@ -99,7 +99,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `validate` | Parse the sources/schema against the ontology; write a consistency report to `graph/reports/validation.md`. No database needed. |
 | `export` | Write a deterministic snapshot of canon to `graph/export/`. Commit it alongside any graph change. No database needed. |
 | `restore` | Rebuild the database from `graph/export/` alone, then verify it re-serializes byte-identical. |
-| `restore --database scratch` | Cut an authoring round: clone canon into a `scratch` database and pin the base. |
+| `restore --database scratch` | Cut an authoring round: clone canon into a working database and pin the base. `delta`/`canonize` read the same name by default — set `NEO4J_SCRATCH_DATABASE` in `.env` to give a KB its own working-copy name when several share one DBMS. |
 | `load` | **Bootstrap scaffolding**: validate, then wipe and reload the database from the source files. |
 | `delta` | Diff `scratch` against canon's backup: a linted, itemized changeset. Its content hash is the proposal's identity. |
 | `approve` | Record the diff-gate approval against the proposal's content hash. |
@@ -155,7 +155,13 @@ moments — the **plan gate** and the **diff gate**:
 
 1. **Cut scratch.** `restore --database scratch` clones canon into a private
    working database and pins canon's content identity as the base. Mistakes in
-   scratch cost nothing.
+   scratch cost nothing. Every database the engine creates carries a
+   **workspace-identity stamp** in-band — what it is (canon, working copy,
+   branch, inspection) and which base it was cut from — and the round
+   machinery checks it: a copy belonging to another knowledge base or to a
+   round that has since closed refuses plainly instead of diffing into a
+   surreal changeset. The stamp describes the database, never the canon it
+   holds — every read-back path strips it before diffing or exporting.
 2. **Author ground facts.** An author (a person or an agent holding
    scratch-only write credentials) creates the nodes and edges the source
    asserts — a Gem, a Beast, the edge that says this Beast guards that Gem — each

@@ -248,6 +248,13 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
         return 1
     print("DRILL PASSED — the database re-serializes byte-identical to "
           "the backup it was restored from.")
+    from . import proposal as proposal_mod
+    from . import workspace as workspace_mod
+    role = ("inspection" if from_dir
+            else "working-copy" if database else "canon")
+    workspace_mod.stamp(config, role,
+                        proposal_mod.base_identity(graph),
+                        git_ref(base_dir))
     if database and not from_dir:
         # a custom export is an inspection load, never a round cut
         pin_round(base_dir, graph, database)
@@ -344,12 +351,16 @@ def _restore_branch(base_dir, branch, base, database):
         return 1
     print("DRILL PASSED — the branch database re-serializes byte-identical "
           "to its freshly-written backup.")
+    from . import workspace as workspace_mod
+    workspace_mod.stamp(config, "branch",
+                        proposal_mod.base_identity(seed),
+                        git_ref(base_dir), branch=branch)
     pin_round(base_dir, seed, target, branch)
     print(f"Branch '{branch}' cut. Clone its authoring copy "
           f"(python -m graph restore --from "
           f"{branch_export.relative_to(base_dir)} --database "
-          f"{branch}-scratch), author there, then run the round with "
-          f"--branch {branch}.")
+          f"{_authoring_database(None, branch, config)}), author there, "
+          f"then run the round with --branch {branch}.")
     return 0
 
 
@@ -462,19 +473,25 @@ def cmd_rederive(base_dir):
     return 0
 
 
+def git_ref(base_dir):
+    """The repo's short HEAD ref, or 'unknown' outside a checkout —
+    provenance for pins and workspace stamps, never load-bearing."""
+    import subprocess
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=base_dir,
+            capture_output=True, text=True, timeout=10,
+        ).stdout.strip() or "unknown"
+    except Exception:
+        return "unknown"
+
+
 def pin_round(base_dir, graph, database, branch=None):
     """Cutting a working database starts a round: pin the base's content
     identity so drift under the round is detectable. A named branch pins
     into its own home (graph/branches/<name>/proposals/current)."""
     from . import proposal as proposal_mod
-    import subprocess
-    try:
-        ref = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=base_dir,
-            capture_output=True, text=True, timeout=10,
-        ).stdout.strip() or "unknown"
-    except Exception:
-        ref = "unknown"
+    ref = git_ref(base_dir)
     base_path = proposal_mod.current_dir(base_dir, branch) \
         / proposal_mod.BASE_FILE
     proposal_mod.write_json(
@@ -485,14 +502,41 @@ def pin_round(base_dir, graph, database, branch=None):
           f"({base_path.relative_to(base_dir)})")
 
 
-def _authoring_database(database, branch):
+def _authoring_database(database, branch, config=None):
     """The authoring copy a round reads. When --database is given it
-    wins; otherwise the default line reads 'scratch' and a branch reads
-    its own '<name>-scratch' — the branch's half of the canon/scratch
-    symmetry."""
+    wins; next the KB's own settings (NEO4J_SCRATCH_DATABASE — each KB
+    on a shared DBMS names its own working copy); otherwise the default
+    line reads 'scratch' and a branch reads its own '<name>-scratch' —
+    the branch's half of the canon/scratch symmetry."""
     if database is not None:
         return database
-    return "scratch" if branch is None else f"{branch}-scratch"
+    named = (config or {}).get("NEO4J_SCRATCH_DATABASE", "").strip()
+    default = named or "scratch"
+    return default if branch is None else f"{branch}-{default}"
+
+
+def _working_copy_check(base_dir, config, database, branch):
+    """The in-band identity gate: before a round trusts its authoring
+    copy, ask the database who it is (several KBs can share one DBMS).
+    Returns a refusal message or None; a pre-stamp database gets a note
+    and passes — only a mismatched identity refuses."""
+    from . import proposal as proposal_mod
+    from . import workspace as workspace_mod
+
+    base_pin = proposal_mod.current_dir(base_dir, branch) \
+        / proposal_mod.BASE_FILE
+    pinned_hash = proposal_mod.read_json(base_pin).get("base_hash") \
+        if base_pin.exists() else None
+    try:
+        found = workspace_mod.read_stamp(config)
+    except Exception:
+        return None  # an unreachable database surfaces at the read proper
+    if found is None:
+        print(f"note: database '{database}' carries no workspace identity "
+              "stamp (cut before stamps existed) — the next cut will "
+              "stamp it.")
+        return None
+    return workspace_mod.identity_problem(found, pinned_hash, database)
 
 
 def cmd_load(base_dir, database=None):
@@ -521,6 +565,11 @@ def cmd_load(base_dir, database=None):
     print("Edges by type: " + ", ".join(
         f"{rel}: {count}"
         for rel, count in summary["edges_by_type"].items()))
+    from . import proposal as proposal_mod
+    from . import workspace as workspace_mod
+    workspace_mod.stamp(config, "working-copy" if database else "canon",
+                        proposal_mod.base_identity(graph),
+                        git_ref(base_dir))
     if database:
         pin_round(base_dir, graph, database)
     return 0
@@ -629,13 +678,13 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
 
     from . import proposal as proposal_mod
 
-    database = _authoring_database(database, branch)
     try:
         base = canon_base(base_dir, branch)
     except FileNotFoundError as exc:
         print(exc, file=sys.stderr)
         return 1
     config = load_mod.read_config(base_dir)
+    database = _authoring_database(database, branch, config)
     # A branch may never read live canon as its authoring source, and an
     # adopted branch is provenance, not a working line.
     if branch is not None:
@@ -649,6 +698,10 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         if read_problem or adopted:
             return 1
     config["NEO4J_DATABASE"] = database
+    identity = _working_copy_check(base_dir, config, database, branch)
+    if identity:
+        print(identity, file=sys.stderr)
+        return 1
     if sync_bodies:
         try:
             synced, problems = delta_mod.sync_bodies(config, base_dir)
@@ -794,8 +847,8 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     from .ontology import ERROR as SEV_ERROR
     from .ontology import ontology_from_graph
 
-    database = _authoring_database(database, branch)
     config = load_mod.read_config(base_dir)
+    database = _authoring_database(database, branch, config)
     live_canon_database = config["NEO4J_DATABASE"]
     # The target line's canon database: live canon for the default line;
     # the branch's own database (= its name) for a branch. The hard guard
@@ -831,6 +884,11 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         return 1
     config = dict(config)
     config["NEO4J_DATABASE"] = database
+    identity = _working_copy_check(base_dir, config, database, branch)
+    if identity:
+        print(("--apply refused: " if apply else "REFUSED: ") + identity,
+              file=sys.stderr)
+        return 1
     try:
         scratch = delta_mod.read_graph(config)
     except Exception as exc:
@@ -1019,6 +1077,12 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     base_before = approval.get("base_hash") or \
         proposal_mod.base_identity(base)
     base_after = proposal_mod.base_identity(dumped)
+    # the apply wiped the target's old stamp with everything else;
+    # re-identify it at its new base
+    from . import workspace as workspace_mod
+    workspace_mod.stamp(target_config,
+                        "canon" if branch is None else "branch",
+                        base_after, git_ref(base_dir), branch=branch)
     chain = proposal_mod.append_applied_log(
         base_dir, approval["delta_hash"], base_before, base_after, branch)
     proposal_mod.write_json(current / proposal_mod.APPLIED_FILE,

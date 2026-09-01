@@ -15,6 +15,9 @@ DEFAULTS = {
     "NEO4J_USERNAME": "neo4j",
     "NEO4J_PASSWORD": "",
     "NEO4J_DATABASE": "neo4j",
+    # Empty = the engine-wide default working-copy name ("scratch").
+    # A KB sharing a DBMS with others names its own here.
+    "NEO4J_SCRATCH_DATABASE": "",
 }
 
 BATCH_SIZE = 500
