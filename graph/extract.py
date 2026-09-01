@@ -559,12 +559,16 @@ class Extractor:
                             target_label, hit))
 
     def rel_part_of(self, label, rel):
-        """(section)-[:PART_OF]->(artifact named by the section's file)."""
+        """(section)-[:PART_OF]->(container named by the section's linking
+        prop). The prop is the relationship's `column` (default `file`,
+        the from-sources shape); a graph-native prose label points at its
+        containing citizen through an ordinary ground prop instead."""
+        prop = rel.get("column", "file")
         for (node_label, name), props in list(self.graph.nodes.items()):
-            if node_label != label or "file" not in props:
+            if node_label != label or prop not in props:
                 continue
-            self.link(rel, label, name, rel["to"], props["file"],
-                      props["file"], name)
+            self.link(rel, label, name, rel["to"], props[prop],
+                      props[prop], name)
 
     def rel_mentions(self, label, rel):
         """(section)-[:MENTIONS]->(node) for every known node name appearing
