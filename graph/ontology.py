@@ -577,6 +577,30 @@ def load_ontology(path, base_dir, metaontology_path=None):
     return ontology, findings
 
 
+def kernel_ontology(base_dir, metaontology_path=None):
+    """The kernel layer alone, as an Ontology — the seed of a knowledge
+    base born graph-native: no project ontology.yaml, no sources, no
+    derive path. Its schema stratum is exactly what the metaontology
+    provides; the project layer grows later, on the graph, through
+    gated rounds. The Ontology anchor points at the conventional
+    bootstrap path, which a graph-native base never materializes.
+
+    Returns (Ontology | None, findings) — None only when the
+    metaontology itself is unreadable."""
+    kernel, meta, findings = load_metaontology(
+        metaontology_path or METAONTOLOGY_PATH)
+    if any(f.severity == ERROR for f in findings):
+        return None, findings
+    base_dir = Path(base_dir)
+    ontology = Ontology(path=base_dir / "graph" / "ontology.yaml",
+                        base_dir=base_dir, raw={},
+                        concepts=dict(kernel),
+                        kernel_names=set(kernel),
+                        meta=meta)
+    findings.extend(check_ontology(ontology))
+    return ontology, findings
+
+
 def ontology_from_graph(graph, base_dir):
     """Reconstruct an Ontology from a graph holding the migrated schema
     stratum (the schema inversion) — the graph alone, no ontology.yaml consulted. The

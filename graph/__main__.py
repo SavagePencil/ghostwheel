@@ -1759,6 +1759,56 @@ def cmd_docs(record=None):
     return 0
 
 
+def cmd_init(target):
+    """Seed a new knowledge base, born graph-native: no ontology.yaml,
+    no sources, no derive path. Writes a committed backup holding the
+    kernel's schema stratum alone into <target>/graph/export — the same
+    seed shape a schema-only branch cut is born from — so the delta path
+    can build everything else through gated rounds. No database needed:
+    the first `restore` there brings the DBMS into the story."""
+    from .extract import Extractor, schema_only
+    from .ontology import ERROR, kernel_ontology
+
+    target = Path(target).resolve()
+    existing = [marker for marker in
+                (target / "graph" / "export",
+                 target / "graph" / "ontology.yaml")
+                if marker.exists()]
+    if existing:
+        homes = ", ".join(str(p.relative_to(target)) for p in existing)
+        print(f"Attempted to seed a new knowledge base at {target}. "
+              f"Failed due to: a knowledge base already lives there "
+              f"({homes} exists). Seeding again would overwrite its "
+              "committed backup. Removing a knowledge base is the "
+              "owner's own act — do it deliberately, then re-run.",
+              file=sys.stderr)
+        return 1
+
+    ontology, findings = kernel_ontology(target)
+    problems = [f for f in findings if f.severity == ERROR]
+    if ontology is None or problems:
+        for f in problems:
+            print(f"{f.file} {f.location}: {f.detail}", file=sys.stderr)
+        print("Attempted to seed a new knowledge base from the engine "
+              "kernel. Failed due to: the packaged metaontology did not "
+              "load cleanly (above) — this is an engine defect, not a "
+              "problem with the target directory.", file=sys.stderr)
+        return 1
+
+    extractor = Extractor(ontology)
+    extractor.build_metamodel()
+    seed = schema_only(extractor.graph)
+    export_dir = target / "graph" / "export"
+    export_mod.write_export(seed, export_dir)
+    print(f"Knowledge base seeded at {target} from the engine kernel "
+          f"alone — {len(seed.nodes)} schema citizens, "
+          f"{len(seed.edges)} schema edges; no ground facts.")
+    print("Next: python -m graph restore (build its canon database from "
+          "the backup), then restore --database scratch to cut the "
+          "first authoring round.")
+    return 0
+
+
 def cmd_terms(base_dir):
     """The glossary sweep: scan every declared prose section body for
     capitalized terms the term index cannot resolve, and print a
@@ -1947,6 +1997,16 @@ def main(argv=None):
         "record", nargs="?", default=None,
         help="record name, e.g. 'ontology-doctrine' or 'agentic-intake'; "
              "omit to list")
+    init_parser = sub.add_parser(
+        "init",
+        help="seed a new knowledge base, born graph-native: write a "
+             "committed backup holding the kernel's schema stratum alone "
+             "into <target>/graph/export — no ontology.yaml, no sources; "
+             "everything else grows through gated rounds")
+    init_parser.add_argument(
+        "target", nargs="?", default=".",
+        help="directory to become the knowledge base root (default: the "
+             "current directory)")
     sub.add_parser(
         "corpus",
         help="re-check every owner-blessed floor (the regression corpus): each guard "
@@ -2050,9 +2110,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == "docs":
-        # The one command that opens no knowledge base: it reads the
-        # installed engine's own records, from anywhere.
+        # Opens no knowledge base: it reads the installed engine's own
+        # records, from anywhere.
         return cmd_docs(args.record)
+    if args.command == "init":
+        # Opens no knowledge base either — it births one where none
+        # exists, so base-dir discovery cannot precede it.
+        return cmd_init(args.target)
 
     base_dir = find_base_dir()
     load_corpus_grammars(base_dir)
