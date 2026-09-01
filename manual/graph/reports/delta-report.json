@@ -4,70 +4,30 @@
       "code": "new-label",
       "data": {
         "concept": [
-          "[Boundary Rule]"
+          "[Tenet]"
         ],
         "declared_in": "Ontology",
-        "doc": "A normative rule of the two-layer boundary doctrine — one numbered claim, held verbatim.",
+        "doc": "A front-door conduct tenet — one numbered claim of how the door speaks, holds trust, and conducts itself; held verbatim.",
         "instance_of": [
           "Concept"
         ]
       },
-      "message": "NEW LABEL '[Boundary Rule]' (born empty) — declared in Ontology, binding concept [Boundary Rule], an instance of Concept; doc: \"A normative rule of the two-layer boundary doctrine — one numbered claim, held verbatim.\"",
+      "message": "NEW LABEL '[Tenet]' (born empty) — declared in Ontology, binding concept [Tenet], an instance of Concept; doc: \"A front-door conduct tenet — one numbered claim of how the door speaks, holds trust, and conducts itself; held verbatim.\"",
       "ref": "new-catalog",
       "subject": {
         "kind": "node",
         "label": "Archetype",
-        "name": "[Boundary Rule]"
-      }
-    },
-    {
-      "code": "new-label",
-      "data": {
-        "concept": [
-          "[Design Record]"
-        ],
-        "declared_in": "Ontology",
-        "doc": "An engine design record — a doctrine or design document that is itself canon; the ordered container of its Sections.",
-        "instance_of": [
-          "Provenance"
-        ]
-      },
-      "message": "NEW LABEL '[Design Record]' (born empty) — declared in Ontology, binding concept [Design Record], an instance of Provenance; doc: \"An engine design record — a doctrine or design document that is itself canon; the ordered container of its Sections.\"",
-      "ref": "new-catalog",
-      "subject": {
-        "kind": "node",
-        "label": "Archetype",
-        "name": "[Design Record]"
-      }
-    },
-    {
-      "code": "new-label",
-      "data": {
-        "concept": [
-          "[Section]"
-        ],
-        "declared_in": "Ontology",
-        "doc": "A run of a record's text — the verbatim body at one heading, ordered within its record.",
-        "instance_of": [
-          "Provenance"
-        ]
-      },
-      "message": "NEW LABEL '[Section]' (born empty) — declared in Ontology, binding concept [Section], an instance of Provenance; doc: \"A run of a record's text — the verbatim body at one heading, ordered within its record.\"",
-      "ref": "new-catalog",
-      "subject": {
-        "kind": "node",
-        "label": "Archetype",
-        "name": "[Section]"
+        "name": "[Tenet]"
       }
     }
   ],
   "kind": "delta-report",
-  "proposal_id": "f4de0c58c5528fc2a427d5425f534495b6d8e6bf58b920b29711bac0804566b2",
+  "proposal_id": "b677806c06ff3dbdb91b3fb53c5f9ae416c6cef3972b7b5837711ce94b8bb22a",
   "summary": {
-    "edges_added": 12,
+    "edges_added": 3,
     "edges_changed": 0,
     "edges_removed": 0,
-    "nodes_added": 14,
+    "nodes_added": 24,
     "nodes_changed": 0,
     "nodes_removed": 0
   }
