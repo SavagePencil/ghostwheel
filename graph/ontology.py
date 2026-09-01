@@ -237,6 +237,9 @@ def node_reader(spec):
 ARCHETYPE_LABEL = "Archetype"
 STEP_LABEL = "Step"
 OUTCOME_LABEL = "Outcome"
+# The kernel's own concept label for procedures — ground citizens under
+# it may be graph-native (no source file; see link_native_procedures).
+KERNEL_PROCEDURE_LABEL = "Procedure"
 # Labels the engine materializes itself; projects may not declare them.
 RESERVED_LABELS = {ARCHETYPE_LABEL: "used by the metamodel concepts: section",
                    STEP_LABEL: "used by the procedure_yaml lift",

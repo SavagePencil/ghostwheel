@@ -17,7 +17,8 @@ import yaml
 
 from . import grammars, parsers, procedures
 from .ontology import (ANY_LABEL, ARCHETYPE_LABEL, ENUM_TYPE_PREFIX, ERROR,
-                       WARNING, INFO, Category, Finding, MEMBERSHIP_EDGE_TYPE,
+                       WARNING, INFO, Category, Finding, KERNEL_PROCEDURE_LABEL,
+                       MEMBERSHIP_EDGE_TYPE,
                        OnMissing, ORDERED_CONCEPT, OUTCOME_LABEL, PropType,
                        Reader, RelParser, STEP_LABEL, concept_bindings,
                        is_concept_archetype, node_reader, source_files_of)
@@ -780,6 +781,49 @@ class Extractor:
                 case procedures.Completeness.ATTESTED:
                     self.link_attested(label, proc_name, proc_spec, relpath)
                 # cited: the node, KNOWN_AT, and SPECIFIED_IN are all there is
+        self.link_native_procedures()
+
+    def link_native_procedures(self):
+        """The graph-native half of the procedure linkage: a Procedure
+        citizen with no registered source file declares its completeness
+        as a ground prop (known_at, naming a Completeness value) and
+        carries its body as prose citizens PART_OF it. Derivation turns
+        the declaration into the kernel edges — KNOWN_AT to the named
+        level, SPECIFIED_IN to each contained prose citizen (the
+        citation for a self-specified procedure). File-registered
+        procedures never enter here."""
+        filed = {str(spec["procedure"]).strip()
+                 for _, spec, _ in self.pending_procedures}
+        levels = {e.from_name for e in self.graph.edges
+                  if e.type == "INSTANCE_OF"
+                  and e.from_label == ARCHETYPE_LABEL
+                  and e.to_label == ARCHETYPE_LABEL
+                  and e.to_name == "Completeness"}
+        contained = {}
+        for edge in self.graph.edges:
+            if edge.type == "PART_OF":
+                contained.setdefault((edge.to_label, edge.to_name),
+                                     []).append(edge)
+        for (label, name), props in sorted(
+                self.graph.nodes.items(),
+                key=lambda item: (item[0][0], str(item[0][1]))):
+            if label != KERNEL_PROCEDURE_LABEL or name in filed:
+                continue
+            level = str(props.get("known_at", "")).strip()
+            if level:
+                if level in levels:
+                    self.graph.edges.append(make_edge(
+                        "KNOWN_AT", label, name, ARCHETYPE_LABEL, level))
+                else:
+                    self.note(
+                        WARNING, Category.DANGLING_REF, "graph",
+                        f"{label} '{name}'",
+                        f"known_at names '{level}', which is not a "
+                        "Completeness value; edge dropped")
+            for edge in contained.get((label, name), []):
+                self.graph.edges.append(make_edge(
+                    "SPECIFIED_IN", label, name,
+                    edge.from_label, edge.from_name))
 
     def build_term_index(self):
         """The glossary IS the graph (the glossary-is-the-graph ruling): one index
