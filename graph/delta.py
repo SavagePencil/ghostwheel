@@ -20,7 +20,8 @@ from .ontology import (ARCHETYPE_LABEL, MACHINE_LABELS, MEMBERSHIP_EDGE_TYPE,
                        SCHEMA_EDGE_TYPES, SCHEMA_LABELS, STRATIFIED_EDGE_TYPES,
                        UNAUTHORABLE_EDGE_TYPES, UNAUTHORABLE_LABELS,
                        is_concept_archetype, is_derived_edge)
-from .report import CeremonyItem, NodeRef, Verdict, edge_ref
+from .refs import KB_NAME_PROP, CitizenRef, ONTOLOGY_ANCHOR, connection_ref
+from .report import CeremonyItem, Verdict
 
 
 def _is_schema_edge(edge):
@@ -249,7 +250,7 @@ def ceremony_records(delta, base=None):
             if base is None:
                 violations.append(Verdict(
                     code="schema-label-row-authored",
-                    subject=NodeRef(label, name),
+                    subject=CitizenRef(label, name),
                     message=(
                         f"Attempted to birth '{name}' as a new {label} "
                         "LABEL with no base graph to verify against. "
@@ -262,7 +263,7 @@ def ceremony_records(delta, base=None):
                     + ("…" if len(ground_rows) > 5 else "")
                 violations.append(Verdict(
                     code="schema-label-row-authored",
-                    subject=NodeRef(label, name),
+                    subject=CitizenRef(label, name),
                     message=(
                         f"Attempted to birth '{name}' as a new {label} "
                         f"LABEL, but the base already holds "
@@ -287,7 +288,7 @@ def ceremony_records(delta, base=None):
         if key not in declared:
             violations.append(Verdict(
                 code="schema-label-undeclared",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"Attempted to birth '{name}' as a new {label} LABEL "
                     "without declaring it. Failed due to: a born label "
@@ -307,7 +308,7 @@ def ceremony_records(delta, base=None):
         except (json.JSONDecodeError, TypeError, AttributeError):
             violations.append(Verdict(
                 code="schema-label-spec-unreadable",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"Attempted to birth '{name}' as a new {label} LABEL, "
                     "but its spec_json does not parse as a mapping. "
@@ -330,7 +331,7 @@ def ceremony_records(delta, base=None):
             item_data["doc"] = doc
         items.append(CeremonyItem(
             code="new-label",
-            subject=NodeRef(label, name),
+            subject=CitizenRef(label, name),
             message=(
                 f"NEW LABEL '{name}' (born empty) — declared in "
                 f"{declared[key]}"
@@ -350,7 +351,7 @@ def ceremony_records(delta, base=None):
         if key not in declared:
             violations.append(Verdict(
                 code="schema-concept-undeclared",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"Attempted to author '{name}' as a new {label} concept "
                     "without declaring it. Failed due to: a ceremony concept "
@@ -373,7 +374,7 @@ def ceremony_records(delta, base=None):
             item_data["doc"] = doc
         items.append(CeremonyItem(
             code="new-concept",
-            subject=NodeRef(label, name),
+            subject=CitizenRef(label, name),
             message=(
                 f"NEW CONCEPT '{name}' — declared in {declared[key]}"
                 + (f", an instance of {', '.join(map(str, parents))}"
@@ -391,13 +392,21 @@ def ceremony_records(delta, base=None):
             continue
         alias_added = _alias_additions(*changes["spec_json"]) \
             if "spec_json" in changes else None
+        # KB-name adoption: the one non-doc property edit the ceremony
+        # admits, on exactly the Ontology anchor — a knowledge base
+        # declaring (or changing) its own name through a gated round.
+        # Blanking the name is not in the class: identity may change
+        # hands at a gate, never quietly vanish.
+        kb_named = ((label, name) == (ARCHETYPE_LABEL, ONTOLOGY_ANCHOR)
+                    and bool(changes.get(KB_NAME_PROP, ("", ""))[1]))
         permitted_props = CEREMONY_DOC_PROPS \
-            | ({"spec_json"} if alias_added else set())
+            | ({"spec_json"} if alias_added else set()) \
+            | ({KB_NAME_PROP} if kb_named else set())
         out_of_class = sorted(set(changes) - permitted_props)
         if out_of_class:
             violations.append(Verdict(
                 code="schema-edit-out-of-class",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"Attempted to modify '{name}' ({label}) beyond its doc "
                     f"text ({', '.join(out_of_class)}). Failed due to: "
@@ -418,7 +427,7 @@ def ceremony_records(delta, base=None):
                 for alias, absent in sorted(missing.items()):
                     violations.append(Verdict(
                         code="alias-target-missing",
-                        subject=NodeRef(label, name),
+                        subject=CitizenRef(label, name),
                         message=(
                             f"Attempted to add the alias '{alias}' on "
                             f"'{name}' ({label}). Failed due to: no "
@@ -435,13 +444,23 @@ def ceremony_records(delta, base=None):
         for prop, (before, after) in changes.items():
             if prop == "spec_json" and alias_added:
                 continue
+            if kb_named and prop == KB_NAME_PROP:
+                was = f"'{before}'" if before else "unnamed until now"
+                items.append(CeremonyItem(
+                    code="kb-named",
+                    subject=CitizenRef(label, name),
+                    message=(f"KB NAMED — this knowledge base declares "
+                             f"its name: '{after}' (was {was})"),
+                    data={"property": prop, "before": before,
+                          "after": after}))
+                continue
             b = "(none)" if before is None else f'"{str(before)[:110]}…"' \
                 if len(str(before)) > 110 else f'"{before}"'
             a = "(none)" if after is None else f'"{str(after)[:110]}…"' \
                 if len(str(after)) > 110 else f'"{after}"'
             items.append(CeremonyItem(
                 code="doc-edit",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=f"DOC EDIT on '{name}' — {prop}: {b} → {a}",
                 data={"property": prop, "before": before, "after": after}))
         for alias, target in sorted((alias_added or {}).items()):
@@ -451,7 +470,7 @@ def ceremony_records(delta, base=None):
                 else ""
             items.append(CeremonyItem(
                 code="alias-added",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(f"ALIAS ADDED on '{name}' — '{alias}' reads as "
                          f"the {reads_as} citizen{plural}"),
                 data={"alias": alias, "target": target}))
@@ -463,7 +482,7 @@ def ceremony_records(delta, base=None):
         if "spec_json" in (props or {}):
             violations.append(Verdict(
                 code="schema-label-row-removed",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"Attempted to remove '{name}' ({label}), a LABEL row "
                     f"(it carries spec_json). Failed due to: {_OUT_OF_CLASS}"),
@@ -473,7 +492,7 @@ def ceremony_records(delta, base=None):
         if base is None:
             violations.append(Verdict(
                 code="schema-removal-unverified",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"Attempted to remove '{name}' ({label}) without the "
                     "base graph in view. Failed due to: a schema removal is "
@@ -491,7 +510,7 @@ def ceremony_records(delta, base=None):
             kinds = sorted({e.type for e in inbound + stray})
             violations.append(Verdict(
                 code="schema-row-referenced",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"Attempted to remove '{name}' ({label}). Failed due "
                     f"to: the row is still referenced in the base "
@@ -507,7 +526,7 @@ def ceremony_records(delta, base=None):
         permitted_nodes.add(key)
         items.append(CeremonyItem(
             code="removed-concept",
-            subject=NodeRef(label, name),
+            subject=CitizenRef(label, name),
             message=(f"REMOVED CONCEPT '{name}' — unreferenced in the "
                      "base (no members, no anchors); its declaration "
                      "goes with it")))
@@ -554,7 +573,7 @@ def lint_verdicts(delta, base=None):
         elif label in UNAUTHORABLE_LABELS:
             violations.append(Verdict(
                 code="machine-label-authored",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"'{name}' can't be created as a {label} — nodes of that "
                     "kind are built automatically by the system, never by "
@@ -569,7 +588,7 @@ def lint_verdicts(delta, base=None):
         if name is None:
             violations.append(Verdict(
                 code="node-unnamed",
-                subject=NodeRef(label, None),
+                subject=CitizenRef(label, None),
                 message=(
                     f"a {label} node was created without a name — every "
                     "citizen needs one. Give it a name property or delete it "
@@ -583,7 +602,7 @@ def lint_verdicts(delta, base=None):
         if _is_schema_edge(edge) and id(edge) not in ceremony_edges:
             violations.append(Verdict(
                 code="schema-edge-removed",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"Attempted to remove the connection ({edge.from_name})-"
                     f"[:{edge.type}]->({edge.to_name}). Failed due to: "
@@ -598,7 +617,7 @@ def lint_verdicts(delta, base=None):
                 continue
             violations.append(Verdict(
                 code="schema-edge-authored",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"Attempted to author the connection ({edge.from_name})-"
                     f"[:{edge.type}]->({edge.to_name}). Failed due to: "
@@ -611,7 +630,7 @@ def lint_verdicts(delta, base=None):
         elif edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
             violations.append(Verdict(
                 code="derived-edge-authored",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"the connection ({edge.from_name}) → ({edge.to_name}) "
                     f"can't be added by hand — {edge.type} links are computed "
@@ -634,7 +653,7 @@ def lint_verdicts(delta, base=None):
             if edge.from_label == ARCHETYPE_LABEL:
                 violations.append(Verdict(
                     code="membership-from-archetype",
-                    subject=edge_ref(edge),
+                    subject=connection_ref(edge),
                     message=(
                         prefix + "the edge runs FROM an Archetype, which is "
                         "the tower/roster shape, not an authored membership "
@@ -646,7 +665,7 @@ def lint_verdicts(delta, base=None):
             if base is None:
                 violations.append(Verdict(
                     code="membership-unverified",
-                    subject=edge_ref(edge),
+                    subject=connection_ref(edge),
                     message=(
                         prefix + "the target cannot be verified without the "
                         "base graph — run the round through the delta "
@@ -657,7 +676,7 @@ def lint_verdicts(delta, base=None):
             elif not is_concept_archetype(base, edge.to_name):
                 violations.append(Verdict(
                     code="membership-target-not-concept",
-                    subject=edge_ref(edge),
+                    subject=connection_ref(edge),
                     message=(
                         prefix + f"'{edge.to_name}' is not an existing "
                         "Concept-rooted Archetype — authored membership "
@@ -672,7 +691,7 @@ def lint_verdicts(delta, base=None):
             if not (basis and str(basis).strip()):
                 violations.append(Verdict(
                     code="membership-basis-missing",
-                    subject=edge_ref(edge),
+                    subject=connection_ref(edge),
                     message=(
                         prefix + "the edge carries no `basis` rationale — a "
                         "declared membership is a hand assertion with no "
@@ -685,7 +704,7 @@ def lint_verdicts(delta, base=None):
         if edge.from_name is None or edge.to_name is None:
             violations.append(Verdict(
                 code="edge-endpoint-unnamed",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"a {edge.type} connection touches an unnamed node — "
                     "name the node or remove the connection."),
@@ -694,7 +713,7 @@ def lint_verdicts(delta, base=None):
         if _is_schema_edge(edge):
             violations.append(Verdict(
                 code="schema-edge-modified",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"Attempted to modify the connection ({edge.from_name})-"
                     f"[:{edge.type}]->({edge.to_name}). Failed due to: "
@@ -708,7 +727,7 @@ def lint_verdicts(delta, base=None):
         elif edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
             violations.append(Verdict(
                 code="derived-edge-modified",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"the connection ({edge.from_name}) → ({edge.to_name}) "
                     f"can't be modified by hand — {edge.type} links are "
@@ -727,7 +746,7 @@ def lint_verdicts(delta, base=None):
             if not (basis and str(basis).strip()):
                 violations.append(Verdict(
                     code="membership-basis-blanked",
-                    subject=edge_ref(edge),
+                    subject=connection_ref(edge),
                     message=(
                         f"Attempted to edit the membership ({edge.from_name})-"
                         f"[:{MEMBERSHIP_EDGE_TYPE}]->({edge.to_name}). Failed "
@@ -760,7 +779,7 @@ def stitch_verdicts(delta, scratch):
         if _is_schema_edge(edge):
             violations.append(Verdict(
                 code="stitch-schema-edge",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"Attempted to author the stitch connection "
                     f"({edge.from_name})-[:{edge.type}]->({edge.to_name}). "
@@ -774,7 +793,7 @@ def stitch_verdicts(delta, scratch):
         if edge.type in UNAUTHORABLE_EDGE_TYPES or edge.type.startswith("ASSIGNS_"):
             violations.append(Verdict(
                 code="stitch-derived-edge",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"the stitch connection ({edge.from_name}) → "
                     f"({edge.to_name}) can't be authored — {edge.type} links "
@@ -786,7 +805,7 @@ def stitch_verdicts(delta, scratch):
         if edge.from_name is None or edge.to_name is None:
             violations.append(Verdict(
                 code="stitch-endpoint-unnamed",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"a stitch {edge.type} connection touches an unnamed "
                     "node — name both endpoints in the stitch file."),
@@ -796,7 +815,7 @@ def stitch_verdicts(delta, scratch):
                 (edge.to_label, edge.to_name) in scratch.nodes:
             violations.append(Verdict(
                 code="stitch-unneeded",
-                subject=edge_ref(edge),
+                subject=connection_ref(edge),
                 message=(
                     f"the stitch connection ({edge.from_name})-"
                     f"[:{edge.type}]->({edge.to_name}) doesn't need the "
@@ -867,7 +886,7 @@ def body_sync_verdicts(scratch, base_dir):
         except OSError as exc:
             violations.append(Verdict(
                 code="body-file-unreadable",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"'{name}' cites {source_path} as its approved program, "
                     f"but the file is not readable ({exc}) — restore the "
@@ -878,7 +897,7 @@ def body_sync_verdicts(scratch, base_dir):
         if file_text != body:
             violations.append(Verdict(
                 code="body-out-of-sync",
-                subject=NodeRef(label, name),
+                subject=CitizenRef(label, name),
                 message=(
                     f"'{name}' carries a program body out of sync with "
                     f"{source_path}. The approved file is the truth — run "

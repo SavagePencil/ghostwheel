@@ -55,10 +55,13 @@ def test_the_seed_reconstructs_the_kernel_and_nothing_else(
 
 
 def test_init_is_deterministic(tmp_path, monkeypatch):
+    # Given the same declared name, the seed is byte-identical wherever
+    # it is born — the KB's name is the only location-flavored fact in
+    # the export (it defaults to the directory's basename).
     _no_base_anywhere(monkeypatch, tmp_path)
     first, second = tmp_path / "one", tmp_path / "two"
-    assert main(["init", str(first)]) == 0
-    assert main(["init", str(second)]) == 0
+    assert main(["init", str(first), "--name", "same-world"]) == 0
+    assert main(["init", str(second), "--name", "same-world"]) == 0
     assert _export_bytes(first) == _export_bytes(second)
 
 

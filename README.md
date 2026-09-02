@@ -95,7 +95,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 
 | Command | What it does |
 |---|---|
-| `init [<dir>]` | Seed a new knowledge base, **born graph-native**: write a committed backup holding the kernel's schema stratum alone into `<dir>/graph/export` — no `ontology.yaml`, no sources, no database. Everything else grows through gated rounds. Refuses a directory that already holds a knowledge base. |
+| `init [<dir>] [--name <kb>]` | Seed a new knowledge base, **born graph-native**: write a committed backup holding the kernel's schema stratum alone into `<dir>/graph/export` — no `ontology.yaml`, no sources, no database. `--name` declares the knowledge base's own name on its Ontology anchor (default: the directory's basename), so identity travels with the backup; an existing canon adopts a name through an ordinary gated round. Everything else grows through gated rounds. Refuses a directory that already holds a knowledge base. |
 | `validate` | Parse the sources/schema against the ontology; write a consistency report to `graph/reports/validation.md`. No database needed. |
 | `export` | Write a deterministic snapshot of canon to `graph/export/`. Commit it alongside any graph change. No database needed. |
 | `restore` | Rebuild the database from `graph/export/` alone, then verify it re-serializes byte-identical. |
@@ -176,7 +176,11 @@ moments — the **plan gate** and the **diff gate**:
    the proposal's id. Every lint verdict and ceremony item is born as a typed
    record (code, subject ref, message, remedy); the markdown report and
    `graph/reports/delta-report.json` are two renderings of the same facts, so
-   downstream tools read verdicts without parsing prose.
+   downstream tools read verdicts without parsing prose. Every serialized
+   citizen rides the one reference shape (`CitizenRef`: kind, label, name,
+   plus the knowledge base and branch naming the line of truth it was read
+   from) — identity is the (kb, label, name) composite, stable because
+   renames are refused under the migration charter.
 4. **Diff gate.** The owner reviews the delta: an implications narrative in plain
    prose, each claim beside its evidence, the derived consequences summarized, and
    a walkable view of just the new and changed elements. `approve` records the
