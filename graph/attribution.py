@@ -49,19 +49,35 @@ scope):
   text is receipt-grain prose the OWNING procedure carries; a claim
   found there attributes at receipt grade citing the procedure (the
   owning procedure is the step name's prefix before the section mark).
-- **Paraphrase tolerance (properties rung).** Value matching folds two
-  mechanical normalizations: a wrapping-parenthesis strip so a
-  name-with-parenthetical's inner words are tokens, and a numeric
-  canon (strip a leading plus, strip a trailing point-zero) so a claim
-  naming a citizen plus a number homes on the structured value. No
-  spelled-out or signed equivalences — only format.
+- **Paraphrase tolerance (properties rung).** Value matching folds
+  mechanical normalizations only: a wrapping-parenthesis strip so a
+  name-with-parenthetical's inner words are tokens, a possessive fold,
+  and a numeric canon (strip a leading plus, strip a trailing
+  point-zero) so a claim naming a citizen plus a number homes on the
+  structured value. No spelled-out or signed equivalences — only
+  format.
+- **Fact-grain fidelity (properties rung).** Three guards keep number
+  claims honest: a numeric value that echoes the citizen's own name
+  ("Might 7" whose cap is 7) stays matchable, but only when the claim
+  says the number twice — once as the name, once as the value; an
+  overlap made only of grammar words ("to") anchors nothing; and a
+  citizen's property NAMES are a scored surface, so the citizen that
+  owns "max body points" outranks a passer-by that merely shares a
+  token.
+
+Tables comprehend into claims: the census reads the draft's own headed
+tables as fact-grain claims (see comprehension's table machinery), so
+"did every number land?" is answered by this instrument — landed or
+not yet landed, an intake question that surfaces and never blocks.
 
 Pure logic, driver-free; canon is read from the committed export.
 """
 
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 
+from .comprehension import markdown_table_claims
 from .judge import claims_of, normalize
 from .ontology import UNAUTHORABLE_EDGE_TYPES
 from .refs import CitizenRef
@@ -102,6 +118,13 @@ _STEP_SECTION_MARK = "§"
 # a bare number, optionally signed, optionally decimal
 _NUMBER = re.compile(r"^[+-]?\d+(?:\.\d+)?$")
 
+# grammar words that anchor nothing on their own (the weak-anchor
+# guard): a rung-1 overlap consisting only of these is no home — a
+# surface form like "Modifier to X" must not home a claim on the
+# strength of the word "to"
+_FUNCTION_WORDS = frozenset(
+    "a an and are as at by for from in is it of on or the to with".split())
+
 
 @dataclass
 class Attribution:
@@ -141,12 +164,14 @@ class Attribution:
 def _canon(token):
     """Mechanical token canon for structured matching (rung 1 only):
     strip wrapping parentheses/brackets so "(cut)" tokenizes as
-    "cut", then normalize a number's format — drop a leading plus,
-    drop a trailing point-zero — so "+2" and "2", "3.0" and "3" home
-    together. No signed or spelled-out equivalence: "-2" stays "-2",
-    "minus" stays a word. Idempotent; a non-numeric, unparenthesized
-    token is returned unchanged."""
+    "cut", fold a possessive so "bog's" and "bog" home together, then
+    normalize a number's format — drop a leading plus, drop a trailing
+    point-zero — so "+2" and "2", "3.0" and "3" home together. No
+    signed or spelled-out equivalence: "-2" stays "-2", "minus" stays
+    a word. Idempotent; a plain token is returned unchanged."""
     token = token.strip("()[]")
+    if token.endswith("'s") or token.endswith("’s"):
+        token = token[:-2]
     if _NUMBER.match(token):
         if token.startswith("+"):
             token = token[1:]
@@ -190,6 +215,7 @@ class CanonIndex:
             name_tokens = _tokens(str(name))
             is_step = label == "Step"
             value_tokens = set()
+            prop_words = set()
             receipt_sentences = []
             prose_sentences = []
             for key, value in props.items():
@@ -210,14 +236,23 @@ class CanonIndex:
                     prose_sentences += [normalize(s) for s in
                                         claims_of(str(value))]
                 elif isinstance(value, bool):
-                    continue  # Y/N flags carry no citable token
+                    # Y/N flags carry no citable token, but the flag's
+                    # NAME is still a word surface the citizen owns
+                    prop_words |= {w for w in key.lower().split("_") if w}
                 else:
                     value_tokens |= _tokens(str(value))
+                    prop_words |= {w for w in key.lower().split("_") if w}
             name_canon = _canon_set(name_tokens)
+            # a numeric value that echoes the citizen's own name stays a
+            # value ("Might 7" whose cap is 7); only the WORD tokens of
+            # the name are subtracted — a name alone attests subject,
+            # not content
+            name_words = {t for t in name_canon if not _NUMBER.match(t)}
             entry = {
                 "key": (label, str(name)),
                 "name_canon": name_canon,
-                "value_canon": _canon_set(value_tokens) - name_canon,
+                "value_canon": _canon_set(value_tokens) - name_words,
+                "prop_canon": _canon_set(prop_words),
                 "receipts": [s for s in receipt_sentences if s],
                 "step_lifts": [],
                 "prose": [s for s in prose_sentences if s],
@@ -234,6 +269,7 @@ class CanonIndex:
             if entry is None:
                 entry = {"key": ("Procedure", owner), "name_canon":
                          _canon_set(_tokens(owner)), "value_canon": set(),
+                         "prop_canon": set(),
                          "receipts": [], "step_lifts": [], "prose": []}
                 self.entries.append(entry)
             entry["step_lifts"].extend(sentences)
@@ -286,7 +322,9 @@ class CanonIndex:
         (gap vs invention is parity's call, not this function's)."""
         claim_norm = normalize(claim)
         claim_tokens = set(claim_norm.split())
-        claim_canon = _canon_set(claim_tokens)
+        claim_list = [t for t in (_canon(tok)
+                                  for tok in claim_norm.split()) if t]
+        claim_canon = set(claim_list)
         # rung 1 — the structured/first-class home, from two surfaces:
         #  (value) the citizen's name anchored in the claim PLUS one of
         #          its structured values — a name alone attests subject,
@@ -294,22 +332,32 @@ class CanonIndex:
         #  (edge)  both endpoint names of a ground edge anchored AND the
         #          edge type's own words spoken — the relationship is a
         #          structured fact, so both endpoints are homes.
+        # Two guards keep the anchor honest: a numeric value that also
+        # spells the citizen's name homes only when the claim says the
+        # number twice (once as the name, once as the value — "The Cap
+        # of Might 7 is 7"), and an overlap made only of grammar words
+        # is no home at all. Matched property-name words join the
+        # scored surface so the owning citizen outranks passers-by.
         matches = []
+        counts = Counter(claim_list)
         for entry in self.entries:
             if not entry["name_canon"] or \
                     not entry["name_canon"] <= claim_canon:
                 continue
-            if not entry["value_canon"] or \
-                    not entry["value_canon"] & claim_canon:
+            overlap = entry["value_canon"] & claim_canon
+            overlap -= {t for t in overlap & entry["name_canon"]
+                        if counts[t] < 2}
+            if not overlap - _FUNCTION_WORDS:
                 continue
-            matches.append((_jaccard(claim_canon, entry["name_canon"]
-                                     | entry["value_canon"]),
+            surface = (entry["name_canon"] | entry["value_canon"]
+                       | (entry["prop_canon"] & claim_canon))
+            matches.append((_jaccard(claim_canon, surface),
                             entry["key"], EV_VALUE))
         for edge in self.edges:
             if not (edge["from_canon"] <= claim_canon
                     and edge["to_canon"] <= claim_canon):
                 continue
-            if not edge["type_words"] & claim_canon:
+            if not (edge["type_words"] & claim_canon) - _FUNCTION_WORDS:
                 continue
             score = _jaccard(claim_canon, edge["from_canon"]
                              | edge["to_canon"] | edge["type_words"])
@@ -353,14 +401,18 @@ class CanonIndex:
 
 
 def census_claims(draft_text):
-    """The v0 claim census: the draft's sentence-grain claims, table
-    rows and embed references excluded (tables are judged by their own
-    tier; fact-grain subdivision is agent-side work, each split a
-    recorded judgment)."""
+    """The claim census: the draft's sentence-grain prose claims plus
+    fact-grain claims from its own headed tables (tables comprehend
+    into claims — each cell one fact in the domain's terms, censused by
+    the same instrument as prose). A `{{csv:}}` embed reference is
+    structure, never a claim; a headerless table names no properties
+    and stays structure too."""
     prose_lines = [line for line in draft_text.splitlines()
                    if not line.lstrip().startswith("|")
                    and "{{csv:" not in line]
-    return claims_of("\n".join(prose_lines))
+    return (claims_of("\n".join(prose_lines))
+            + [normalize(row["sentence"])
+               for row in markdown_table_claims(draft_text)])
 
 
 def census(draft_text, graph, invented=(), consulted=None):
