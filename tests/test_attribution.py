@@ -79,11 +79,21 @@ def test_earned_flag_follows_the_consulted_set():
     assert silent.earned is None  # no trace supplied — nothing claimed
 
 
-def test_census_skips_tables_and_embeds():
+def test_census_comprehends_headed_tables_and_skips_structure():
     draft = ("Bog imposes -2 to defense.\n"
-             "| Knack | Spark |\n| Bound | Faint |\n"
+             "| Knack | Spark |\n| --- | --- |\n| Bound | Faint |\n"
              "{{csv:data/knacks.csv}}\n")
-    # claims come back judge-normalized; table rows and embeds are gone
+    # prose claims come back judge-normalized; a headed table
+    # comprehends into fact-grain claims; the embed stays structure
+    assert census_claims(draft) == ["bog imposes -2 to defense",
+                                    "the spark of knack bound is faint"]
+
+
+def test_census_leaves_headerless_tables_as_structure():
+    draft = ("Bog imposes -2 to defense.\n"
+             "| Knack | Spark |\n| Bound | Faint |\n")
+    # no separator line means no header names no properties — the
+    # table stays structure until a reading rules its shape
     assert census_claims(draft) == ["bog imposes -2 to defense"]
 
 
@@ -210,6 +220,55 @@ def test_numeric_folding_is_format_only_never_sign_or_spelling():
         == CANON_GAP
     assert index.attribute("Chill imposes minus 2 to the roll.").verdict \
         == CANON_GAP
+
+
+# --- fact-grain fidelity: the guards that keep number claims honest ---
+
+
+def test_numeric_name_echo_matches_when_the_claim_says_it_twice():
+    # "Might 7" whose cap is 7: the value survives the name subtraction,
+    # but homes only when the claim carries the number once as the name
+    # and once as the value — a bare mention anchors nothing
+    g = GraphData()
+    g.ensure_node("Rung", "Might 7", cap=7, bite_mod=-1)
+    index = CanonIndex(g)
+    fact = index.attribute("The Cap of Might 7 is 7.")
+    assert fact.verdict == ATTRIBUTED and fact.rung == PROPERTIES
+    assert ("Rung", "Might 7") in fact.citizens
+    bare = index.attribute("A beast may reach Might 7.")
+    assert bare.verdict == CANON_GAP
+
+
+def test_wrong_number_finds_no_home_through_grammar_words():
+    # a surface form like "Boon to X" must not home a wrong-number claim
+    # on the strength of the word "to"
+    g = GraphData()
+    g.ensure_node("Archetype", "Boon", surface_forms="['Boon to X']")
+    g.ensure_node("Rung", "Might 3", bite_mod=-4)
+    index = CanonIndex(g)
+    right = index.attribute("The Bite Mod of Might 3 is -4.")
+    assert right.verdict == ATTRIBUTED and right.rung == PROPERTIES
+    wrong = index.attribute("The Bite Mod of Might 3 is -5.")
+    assert wrong.verdict == CANON_GAP
+
+
+def test_property_names_lift_the_owning_citizens_score():
+    # both citizens anchor, but the one whose property NAMES the claim
+    # speaks ("body cap") outranks the passer-by that merely shares a
+    # numeric token
+    g = GraphData()
+    g.ensure_node("Rung", "Might 3", body_cap=3, bite_mod=-4)
+    g.ensure_node("Gem", "Might Core", charge=3)
+    verdict = CanonIndex(g).attribute("The Body Cap of Might 3 is 3.")
+    assert verdict.verdict == ATTRIBUTED
+    assert verdict.citizens[0] == ("Rung", "Might 3")
+
+
+def test_possessive_folds_at_the_structured_rung():
+    g = GraphData()
+    g.ensure_node("Terrain", "Bog", defense_mod=-2)
+    verdict = CanonIndex(g).attribute("Bog's defense mod is -2.")
+    assert verdict.verdict == ATTRIBUTED and verdict.rung == PROPERTIES
 
 
 def test_whole_book_unit_produces_one_scorecard(make_repo):

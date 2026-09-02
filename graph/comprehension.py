@@ -31,7 +31,9 @@ Pure logic (fingerprint/read/serialize/parse) is driver-free and
 unit-tested; only the load/wipe helpers touch the neo4j driver.
 """
 
+import csv as _csv
 import hashlib
+import io as _io
 import json
 import re as _re
 import re
@@ -345,6 +347,150 @@ def load_reading(driver, reading):
             "      (parent:Section {id: row.parent}) "
             "MERGE (child)-[:PART_OF]->(parent)",
             rows=rows)
+
+
+# -- tables comprehend into claims (fact grain) ---------------------------
+#
+# A table is presentation, not structure-of-record. Comprehension reads
+# one SEMANTICALLY: each non-empty cell yields an ordinary fact-grain
+# claim in the domain's own words — subject (key-column header + key
+# cell), property (the column's own header), value (the cell) — with a
+# rendered sentence that enters the same census as prose claims. Zero
+# cell vocabulary reaches any surface. The shape ruling (which column is
+# the key) is a one-time judgment recorded per table; the default is the
+# first column. The claim's provenance is a LOCATOR, never carried
+# bytes: fingerprint-prefix : position path — the section-id scheme one
+# level down. Same bytes recompute the same locators (deletion-
+# tolerant); changed bytes change the fingerprint, so a locator can
+# never silently point into different content. Facts are position-free
+# (extraction is header-keyed), so a column inserted mid-table moves
+# locators in the new file and moves no facts.
+
+# a markdown table row, and the separator line that underlines a header
+MD_TABLE_ROW = re.compile(r"^\s*\|(.+)\|\s*$")
+MD_TABLE_SEPARATOR = re.compile(r"^\s*\|?[\s:|-]+\|?\s*$")
+
+
+def _clean_cell(value):
+    return " ".join(str(value or "").split())
+
+
+def grid_claims(columns, rows, fingerprint="", key_column=None,
+                path_prefix=""):
+    """Fact-grain claims from one table grid: header names + body rows
+    of raw cells. Empty cells and empty markers yield nothing (sparsity
+    is free). ``key_column`` is the shape ruling, found by header name
+    wherever it sits; absent or unknown, the first column is the key.
+    ``path_prefix`` extends the locator's position path for containers
+    (a markdown text's table index; one day a workbook's sheet)."""
+    columns = [_clean_cell(column) for column in columns]
+    if not columns:
+        return []
+    key_index = columns.index(key_column) if key_column in columns else 0
+    short = fingerprint[:12]
+    claims = []
+    for row_index, row in enumerate(rows):
+        cells = [_clean_cell(cell) for cell in row]
+        cells += [""] * (len(columns) - len(cells))
+        key_cell = cells[key_index]
+        if not key_cell or key_cell in parsers.EMPTY_MARKERS:
+            continue
+        subject = f"{columns[key_index]} {key_cell}".strip()
+        for col_index, column in enumerate(columns):
+            if col_index == key_index or not column:
+                continue
+            value = cells[col_index]
+            if not value or value in parsers.EMPTY_MARKERS:
+                continue
+            locator = f"{path_prefix}{row_index}.{col_index}"
+            claims.append({
+                "subject": subject,
+                "property": column,
+                "value": value,
+                "locator": f"{short}:{locator}" if short else locator,
+                "sentence": f"The {column} of {subject} is {value}.",
+            })
+    return claims
+
+
+def csv_claims(data, key_column=None):
+    """Fact-grain claims from a CSV table's bytes. The table is its own
+    content-addressed artifact — the locator's fingerprint is the
+    sha256 of THESE bytes."""
+    rows = list(_csv.reader(_io.StringIO(data.decode("utf-8"))))
+    if not rows:
+        return []
+    return grid_claims(rows[0], rows[1:],
+                       fingerprint=fingerprint_bytes(data),
+                       key_column=key_column)
+
+
+def _markdown_cells(line):
+    """One markdown table row as cells — escaped delimiters unescaped,
+    so a cell carrying the delimiter never splits into phantom cells."""
+    inner = line.strip().strip("|")
+    return [piece.replace("\\|", "|").strip()
+            for piece in re.split(r"(?<!\\)\|", inner)]
+
+
+def markdown_table_claims(text, key_columns=None):
+    """Fact-grain claims from every HEADED markdown table in a text (a
+    header row underlined by a separator line). A headerless table
+    names no properties, so it yields no claims — it stays structure.
+    ``key_columns``, when given, maps a table's key-column header to
+    itself as a shape ruling: any table whose header row contains one
+    of these names uses it as the key."""
+    lines = text.splitlines()
+    fingerprint = fingerprint_bytes(text.encode("utf-8"))
+    claims = []
+    table_index = 0
+    index = 0
+    while index < len(lines):
+        if not (MD_TABLE_ROW.match(lines[index])
+                and index + 1 < len(lines)
+                and MD_TABLE_ROW.match(lines[index + 1])
+                and MD_TABLE_SEPARATOR.match(lines[index + 1])):
+            index += 1
+            continue
+        columns = _markdown_cells(lines[index])
+        body = []
+        index += 2
+        while index < len(lines) and MD_TABLE_ROW.match(lines[index]) \
+                and not MD_TABLE_SEPARATOR.match(lines[index]):
+            body.append(_markdown_cells(lines[index]))
+            index += 1
+        key_column = next((name for name in (key_columns or ())
+                           if name in columns), None)
+        claims += grid_claims(columns, body, fingerprint=fingerprint,
+                              key_column=key_column,
+                              path_prefix=f"{table_index}.")
+        table_index += 1
+    return claims
+
+
+def reading_table_claims(reading, read_bytes, key_columns=None):
+    """A sealed reading's table spans comprehended into fact-grain
+    claims, in document order. ``read_bytes(relpath)`` supplies each
+    embedded table's bytes; ``key_columns`` maps relpath -> the ruled
+    key column. Every claim rides with its section heading and table
+    path. Unreadable tables are collated, never raised — returns
+    (claims, unreadable_relpaths)."""
+    claims, unreadable = [], []
+    for section in reading.sections:
+        for span in section.get("spans", []):
+            if span.get("class") != TABLE:
+                continue
+            relpath = span["table"]
+            try:
+                data = read_bytes(relpath)
+            except OSError:
+                unreadable.append(relpath)
+                continue
+            for row in csv_claims(data, key_column=(key_columns
+                                                    or {}).get(relpath)):
+                claims.append({**row, "section": section["heading"],
+                               "table": relpath})
+    return claims, unreadable
 
 
 FINDINGS_FILE = "findings.jsonl"

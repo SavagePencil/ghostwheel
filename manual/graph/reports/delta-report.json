@@ -1,6 +1,7 @@
 {
+  "kb": "manual",
   "kind": "delta-report",
-  "proposal_id": "39bd22fc016eaa73330b43053c1b4f074c808052b9647efa5977e3ed27befe7c",
+  "proposal_id": "cea0e507e6866433e7d986d536d70746478e23e9c551465d6f768c9234faf9e4",
   "summary": {
     "edges_added": 0,
     "edges_changed": 0,
