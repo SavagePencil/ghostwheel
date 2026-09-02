@@ -111,6 +111,38 @@ def test_prerequisites_targets_must_be_declared_labels(make_repo):
                for f in errors_of(findings))
 
 
+def test_prerequisites_stage_enum_must_be_declared(make_repo):
+    # A stage_enum naming no declared enum used to silently disable
+    # stage checking at extraction — the typo is refused by name where
+    # it was written.
+    bad = VALID_ONTOLOGY.replace(
+        "{ type: FRIENDS_WITH, to: Thing, column: Friends }",
+        "{ type: NEEDS, to: Thing, column: Friends, parser: prerequisites, "
+        "staged_to: Thing, named_to: Thing, stage_enum: Kindd }")
+    base, path = make_repo(MINI_CSV, bad)
+    _, findings = load_ontology(path, base)
+    assert any("unknown enum 'Kindd' in 'stage_enum'" in f.detail
+               for f in errors_of(findings))
+
+
+def test_prerequisites_declared_stage_enum_validates_clean(make_repo):
+    # The other side: a declared enum passes, and omitting stage_enum
+    # remains a legal declaration (stage checking declined on purpose,
+    # not by typo).
+    for rel in (
+            "{ type: NEEDS, to: Thing, column: Friends, "
+            "parser: prerequisites, staged_to: Thing, named_to: Thing, "
+            "stage_enum: Kind }",
+            "{ type: NEEDS, to: Thing, column: Friends, "
+            "parser: prerequisites, staged_to: Thing, named_to: Thing }"):
+        good = VALID_ONTOLOGY.replace(
+            "{ type: FRIENDS_WITH, to: Thing, column: Friends }", rel)
+        base, path = make_repo(MINI_CSV, good)
+        ontology, findings = load_ontology(path, base)
+        assert ontology is not None
+        assert errors_of(findings) == []
+
+
 def test_prerequisites_any_target_requires_report(make_repo):
     # Mirrors the `to: any` rule: label-agnostic resolution has no label
     # to create a placeholder in.
