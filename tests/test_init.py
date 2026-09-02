@@ -96,3 +96,19 @@ def test_init_refuses_a_bootstrap_style_base(capsys, tmp_path,
     err = capsys.readouterr().err
     assert "ontology.yaml" in err
     assert not (base / "graph" / "export").exists()
+
+
+def test_the_seed_carries_the_kernels_ordered_ladder(tmp_path,
+                                                     monkeypatch):
+    # What the kernel declares, the newborn holds: the Completeness
+    # ladder's ranks and edges ride the seed, not just the doc text.
+    _no_base_anywhere(monkeypatch, tmp_path)
+    base = tmp_path / "newborn"
+    assert main(["init", str(base)]) == 0
+    graph = read_export(base / "graph" / "export")
+    assert graph.nodes[("Archetype", "Cited")]["rank"] == 0
+    assert graph.nodes[("Archetype", "Attested")]["rank"] == 1
+    assert graph.nodes[("Archetype", "Transcribed")]["rank"] == 2
+    ladder = {(e.type, e.from_name, e.to_name) for e in graph.edges}
+    assert ("PRECEDES", "Attested", "Transcribed") in ladder
+    assert ("FOLLOWS", "Attested", "Cited") in ladder
