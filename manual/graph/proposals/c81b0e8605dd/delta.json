@@ -1,0 +1,252 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [
+  [
+   "Procedure",
+   "Agentic intake",
+   {
+    "description": "Drive a full graph-native intake end to end — recon, plan gate, scratch authoring via MCP, delta review, canonize, drain to zero. Use when the submitter hands over a source (doc, table, notes) and says \"intake this\" / \"let's ingest X\", for any data-plane intake. For classification interviews alone use ontology-intake; for procedure-shaped sources use procedure-intake inside this flow.",
+    "handle": "agentic-intake",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Procedure",
+   "The front door",
+   {
+    "description": "Be the designer-facing voice over every job — render approval gates, answer questions, take in artifacts, hold debate threads — in the designer's own language, learned live from canon. Use whenever the human in the room is the world's designer (not an engineer working on the machinery): presenting a pending changeset, answering \"what is X / what connects to X\", receiving any artifact for ingestion, or debating a ruling. The jobs (graph-query, agentic-intake, generation) run underneath; this skill governs everything the designer sees.",
+    "handle": "front-door",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Agentic intake",
+   {
+    "body": "---\nname: agentic-intake\ndescription: Drive a full graph-native intake end to end — recon, plan gate, scratch authoring via MCP, delta review, canonize, drain to zero. Use when the submitter hands over a source (doc, table, notes) and says \"intake this\" / \"let's ingest X\", for any data-plane intake. For classification interviews alone use ontology-intake; for procedure-shaped sources use procedure-intake inside this flow.\n---\n\n# Agentic intake\n\nThe end-to-end workflow over the intake pipeline (design:\nthe engine's agentic-etl design record (design/ in the engine repo; graph/engine_docs/design/ inside an installed engine package)). The human appears exactly\ntwice — the **plan gate** and the **diff gate** — and everything between\nis agent + machine loops. Boundary doctrine applies throughout:\n`python -m graph docs ontology-doctrine`.\n\n**The invariant:** you author artifacts; only approved artifacts touch\ncanon; derived layers are never authored by anyone. Your write access is\nthe `neo4j-scratch` MCP connection ONLY — live is query-only, always.\n\n**The source artifact is inviolable.** The engine never edits the\nsubmitter's material — not a typo, not a heading, and never an *offer*\nto edit it. Findings about the source (spelling, ambiguity,\ncontradiction) surface as suggestions or Question rows for the author\nto rule; a ruled correction rides the ingestion with its own Decision\nrow while the file stays untouched — a source's variant spelling of a\ncanonical term is absorbed as an alias, never edited in place. Only\nthe author touches the artifact.\n\n**Tables sit one notch looser, by written rule (owner-ruled): the\nengine PROPOSES table changes and edits a data file only under\nexplicit owner dictation, recorded verbatim in a Decision row.**\nEverything else lands graph-side and the file simply lags canon —\nlagging sources are legitimate, silent table edits are not. The\ndestination is full table inviolability once every instrument reads\ncanon instead of sources; until then, dictation-with-receipt is the\nonly door. **File deletions are the strictest dictation class**: a\ndeletion lands only on an own-words imperative from the owner\n(\"delete it\"), never on agreement-by-number to a recommendation —\nagreement is a sufficient receipt for edits, one grade too weak for\ndestroying a file. **Dictated table edits are CSV-aware**: a phrase\nreplacement that introduces a comma into an unquoted cell corrupts\nthe row silently. After every table edit, verify every row's column\ncount and run the corpus build — post-flip, the graph suite does not\nread the tables; only the corpus build does, and a green suite proves\nnothing about them.\n\n",
+    "procedure": "Agentic intake",
+    "rank": 0
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Cautions (Agentic intake)",
+   {
+    "body": "## Cautions\n\n- **Two gates, always.** No matter how mechanical the intake looks, the\n  plan gate and diff gate are never skipped or merged.\n- Branch from `origin/main` explicitly; issue-first; no commits without\n  explicit per-ship authorization in the current conversation.\n- Reports are the user interface: anything you surface to a human\n  follows the error doctrine (Attempted X / context Y / failed due to Z,\n  collated, with remedies).\n- **Gate presentations are human prose, not pipeline prose**: lead\n  with what changes in the CORPUS's terms — \"each rank in the ladder\n  gets its behavior sentence attached\" — one plain sentence per fact.\n  Delta/canonize/node/edge vocabulary stays in the linked reports;\n  the approver should never need the machinery glossary to approve their\n  own content.\n- Draft-then-verify discipline: claims about what the machinery will\n  derive are tested against the machinery (run the tools), not asserted.\n  **A dry run proves only the stages it actually executes** — a\n  verification that lives in the apply alone (re-derivation, a\n  completeness census) can refuse a round the dry run waved through.\n  Never present a dry run as evidence that findings \"don't block\";\n  either run the blocking stage or state aloud which stages the dry\n  run skipped.\n- If the source is quirky-formatted, write the normalized canonical\n  intermediate (approver-approved, hash-pinned) rather than proposing\n  engine parsers — the kernel does not grow per artifact.\n- **Engine asks are parser-era scaffolding.** The named one-line\n  machinery ask (`skip_values` set the model: shape + blast radius,\n  its own test, lands only on an explicit yes) is the CURRENT\n  correct form when an artifact wants a primitive the engine lacks.\n  It sunsets with the fixed parsers: once agents read artifacts\n  natively, a novel table shape is a comprehension problem, and the\n  destination CX never surfaces engine internals to a submitter at\n  all. Prefer shapes that need no engine change; never work around a\n  missing primitive with a lesser default.\n- **Engine additions speak no project vocabulary.** Docstrings,\n  comments, and test names inside engine code draw their examples from\n  an imaginary domain, never from the host project's — the\n  vocabulary-leak test enforces it, and a leak found at review is a\n  rewrite, not an exemption.\n",
+    "procedure": "Agentic intake",
+    "rank": 7
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Dispatch — which job serves the input",
+   {
+    "body": "## Dispatch — which job serves the input\n\nThe designer's input arrives as conversation. Classify it and invoke\nthe job; never make the designer name a job.\n\n| The designer... | Invoke | Door renders |\n|---|---|---|\n| hands over an artifact (text, image, model, audio, link) | the intake flow (agentic-intake) | progress silently; the gate at the end |\n| asks what/why/how about their world | the query flow (graph-query) | the cited answer (T11) |\n| asks for a draft or deliverable | the generation flow | the deliverable, plus what needed judgment |\n| annotates, rules, or debates | this skill directly | the thread (below) |\n| asks \"show me the machinery\" or names a reference number | forensics | the raw record or technical report, verbatim |\n\nThe jobs' own output (reports, verdicts, progress) is never shown\ndirectly — the door re-renders it. The one exception is forensics: on\nrequest, raw records are handed over untranslated.\n\n",
+    "procedure": "The front door",
+    "rank": 1
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Gate conduct",
+   {
+    "body": "## Gate conduct\n\n- **Lead with an example** at every built-work gate: the command, the\n  expected output, one thing to break. Explanation after, never instead.\n- **Rulings ride chat, not review-panel comments.** Inline plan-panel\n  comments have been lost in transit — anything not in the chat or a\n  file does not exist. Number every question on the collated sheet so\n  the owner can rule tersely by number; if panel comments arrive\n  anyway, echo them back in chat before acting on them.\n- **State the database picture** at every gate and demo: which database\n  currently shows what (live = branch state during a round; merged main\n  returns on reconcile).\n- **End every gate with the Question harvest line**: \"N new Questions\n  filed this round — rule any now, or all park.\"\n- **Churn is healthy** — mid-gate rulings are adversarial review\n  working. At a THIRD substantive ruling in one gate, OFFER a follow-on\n  round split; the approver decides. Never engineer the churn away.\n\n",
+    "procedure": "Agentic intake",
+    "rank": 2
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Gate voice",
+   {
+    "body": "## Gate voice\n\n- **Shape: asks first, decisions second, elucidation last.** Every gate\n  opens with **\"here are the asks\"** — a numbered list of exactly what\n  the approver must do or rule on — then **\"here are the decisions I\n  made\"** — judgment calls already taken — then the context and\n  reasoning for whoever wants them. Never a storytelling lead-in: the\n  reader must tell at a glance what needs them versus what is handled.\n- **The narratives' five voice rules govern gate presentations BY\n  DEFAULT, for every submitter — including the owner.** Machinery\n  vocabulary (proposal ids, version numbers, command names, Cypher)\n  appears only below a marked \"the machinery, for the record\" fold, or\n  when the submitter asks in kind. The owner's stated preference\n  (plain gates, machinery on request) is recorded by identity against\n  the empathic-presentation Question.\n- **Self-check BEFORE SENDING any gate — run the list per gate, every\n  gate; the same-message rule has now failed two independent sessions\n  when left to memory:**\n  1. Asks → decisions → elucidation, in that order?\n  2. Does every question grid carry its FULL context **in this same\n     message** — the decision, the evidence, each option's\n     consequences, a recommendation? The approver must be able to rule\n     from this message alone; context living two messages back is a\n     defect.\n  2b. Is the context CITED, not paraphrased? Quote the actual sources\n     verbatim — the artifact's sentences, the graph record's own text,\n     the tracker item's words — each labeled with where it lives, then\n     name the tension between them explicitly, then pros/cons per\n     option in prose. Narrative ABOUT the sources is not context; an\n     approver who cannot see the raw material cannot rule. And if the\n     approver rejects a grid or asks for context, the next message is\n     evidence and prose only — re-offering a grid immediately, however\n     enriched, reads as hammering; let them rule in their own words.\n  3. One re-read in the submitter's domain terms only — any sentence\n     needing the machinery glossary gets rewritten or moved below the\n     fold.\n  4. Are answers to the submitter's direct questions in the turn's\n     FINAL message — never only in between-tool status text, which the\n     submitter may never see?\n\n",
+    "procedure": "Agentic intake",
+    "rank": 5
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Holding a thread",
+   {
+    "body": "## Holding a thread\n\nWhen the designer pushes back on an item instead of answering it:\n\n- Marshal canon's evidence **both ways** — counts, citations,\n  precedents, and what canon lacks — and hand the ruling back (T9).\n  Never a side, never a taste.\n- \"What breaks if I say yes?\" is answered with the referencing\n  facts, counted and cited, pulled live from canon.\n- Absence is stated plainly and paired with the offer to record an\n  open question (T14).\n- The thread ends in a record (T15): the ruling with the designer's\n  words, or an open question. Before answering a resurfaced\n  question, query the Judgment records for prior rulings on the same\n  subject — a returning question is presented *with its prior thread*,\n  never cold.\n\n",
+    "procedure": "The front door",
+    "rank": 3
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Mapping and drafting lessons",
+   {
+    "body": "## Mapping and drafting lessons\n\n- **Design-intent prose sorts five ways at intake — never into one\n  \"philosophy\" bucket.** Premise (the world's terms), authorial intent\n  (what the work is for), REQUIREMENTS (binding directives, checkable\n  where worded so — kernel Judgment citizens), theses (claims about how\n  the system behaves — several verifiable), and rationales (why a\n  mechanic is shaped so — these attach to their mechanic as doc-notes,\n  never stand alone). Premise/intent/theses home under the kernel Theme\n  concept; requirements become Requirement rows; the sort question is a\n  standing intake habit beside Units and ladder-direction.\n- **A worked example gets a disambiguation question at intake, never a\n  silent default: \"preserve this exact example word-for-word, or treat\n  it as one illustration the system may regenerate from the mechanic?\"**\n  The two fates have different homes (a carry-verbatim row vs. a\n  regenerable render), and only the owner knows whether the example's\n  particular wording is the point.\n- **A forward reference in source prose (\"described later\", \"see the\n  end of this chapter\") gets a disambiguation question at intake: is the\n  ordering intentional?** If yes, the ordering is a claim to carry; if\n  no, the reference is glue a regeneration may replace with a better\n  cross-reference. Never decide silently in either direction.\n- **Normalizing stored text must never lose information.** If a\n  registry keys by a normalized form (case-folded, whitespace-collapsed),\n  the original bytes are stored beside the key — normalization is for\n  matching only. A store that cannot reproduce its input verbatim is\n  distorting it.\n- **A carried-verbatim row's name key is the whitespace-collapsed,\n  lowercased passage** (`\" \".join(text.split()).lower()` — trailing\n  punctuation KEPT), with the original bytes in its text property. This\n  is NOT the judge's sentence normalization (which strips trailing\n  punctuation); confusing the two produces rows the matcher silently\n  never finds. Read an existing row and mirror it exactly.\n- **Scope notes are predictions, not boundaries.** When a source\n  changes, recon verifies the FULL citation set — every program and\n  citizen citing that source — never just the subset the plan\n  predicted. A citation the plan missed, found at recon, is a\n  footnote; found mid-round, it is an interjection.\n- **A relationship the source states in a column may already be canon —\n  check under its DECLARED edge-type name before authoring it.** When the\n  schema maps a source column to an edge type, a bootstrap load may have\n  already materialized those edges; re-authoring them duplicates or trips\n  a uniqueness constraint. Read the edge type's exact name from the schema\n  and query for it — never probe with a guessed name and conclude \"absent\"\n  from a miss (a guessed name returns zero while the real edges sit under\n  the declared one). The same holds for template-instance bindings and\n  per-member value tags: verify what the load already carried before\n  proposing to add it, so the round authors only the genuinely-new.\n- **Give every new label its `doc:` string AT MAPPING TIME, drawn\n  verbatim from the chapter.** Chapter prose without a canon home keeps\n  regenerations red and forces a second schema round. The label `doc:`\n  is the canon home for section-level prose; Theme citizens home thesis\n  sentences; Quote citizens home quoted material with attribution.\n- **Procedure nodes are ground facts**: they enter canon through\n  scratch + delta carrying body (the full approved YAML text),\n  completeness, closures, inputs/outputs, source, source_path (mirror\n  an existing transcribed Procedure node). `rederive` alone never adds\n  them — it lifts Steps/Outcomes FROM the ground body at derivation.\n- **A program file approved in a prior round does not prove its citizen\n  landed.** A round has shipped approved program files while forgetting\n  their ground nodes, and the gap surfaced only when a later round went\n  looking. During recon (and again at delta self-review), diff the\n  schema's approved-program file list against the working graph's\n  procedure citizens; any file without a citizen is prior-round debt —\n  land it with the opening move, and file the finding as its own issue.\n- **Chapter drafts of procedure-cited sections must embed the rendered\n  program** (`python -m graph generate \"<name>\"`) — the roundtrip's\n  procedure tier judges the rendering's claims, not just the prose.\n- **Cold-draft formatting**: the claim splitter treats `*` bullets as\n  paragraph continuations (only `-`/`+`/`1.` start units) — separate a\n  lead-in line from a `*` bullet block with a blank line or their\n  claims merge and the lead-in reads as omitted.\n- **Quote program text that carries YAML-active characters.** An\n  unquoted scalar silently truncates at ` #` (an inline citation eats\n  the rest of its sentence) and breaks the parse at `: ` (a colon-space\n  mid-sentence reads as a nested mapping). Provenance lives on Judgment\n  rows, not in body text; quote any step that needs punctuation.\n  Validation carries a tripwire for the silent case (a ` #` tail that\n  vanished in parsing is flagged with its line number), and `generate`\n  remains the eyes-on check.\n- **Program bodies sync from their approved files — never by hand.**\n  After editing a program file, `python -m graph delta --sync-bodies`\n  rewrites the working graph's copy from the file; every delta run\n  verifies the sync across the whole working graph and refuses by name\n  when a body drifted. The paste-and-hash ritual is retired. A\n  chapter-spanning program lists every section it draws from\n  (`specified_in.section` takes a list); receipts check against all of\n  them.\n- **A concept rename re-points its ground anchors in the same\n  changeset.** Ground edges anchored to a machine node survive\n  re-derivation only while the concept stays declared — a rename\n  orphans them silently. Query the machine node's incoming ground\n  edges before renaming; re-point them to citizens that survive (the\n  machine layer is never authored by hand, so a vanished endpoint\n  cannot be recreated from scratch).\n- **Answer keys**: cells meaning \"no value exists here\" beyond the\n  global empty markers (a project's special glyphs) are declared per\n  key with `skip_values:` — never patched into the engine's\n  EMPTY_MARKERS.\n\n",
+    "procedure": "Agentic intake",
+    "rank": 6
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Rendering a gate",
+   {
+    "body": "## Rendering a gate\n\nThe pending changeset's facts live in the delta report records\n(graph/reports/delta-report.json): each verdict carries a code, a\nsubject, particulars, a remedy, and a plain-English reference number\n(`ref`). The\ntechnical rendering (graph/reports/delta.md) is the forensics layer —\nlink it on request, never lead with it.\n\nProcedure:\n\n1. **Header**: artifact name — world — \"enters canon on your\n   approval\" — pending count. One approval addresses one world's\n   canon: when an artifact touches several worlds, run one intake\n   per world and present their gates together under one header,\n   grouped by world (T4) — each world's sign-off commits only to\n   that world. A single world is named once.\n2. **Every verdict and ceremony record becomes a pending item** in\n   the four-move anatomy (T6): the question in the designer's terms;\n   current state and proposed state with evidence inline in the\n   artifact's native form; implications; the ask restated as a direct\n   action. To name a subject in the designer's terms, query canon:\n   the subject ref gives its identity; its kind and its own doc text\n   give what to call it and how to describe it. Never render a\n   record's `message` field to the designer — that is the machinery's\n   sentence; compose the item from `code`, `subject`, `data`, and\n   canon. (A few records still carry their facts only in `message` —\n   producers that predate the record shape. For those, take the facts\n   *from* the message but re-voice them under the tenets; never quote\n   the machinery's sentence. Each such record is conversion debt on\n   the machinery's side, not license to parse prose elsewhere.)\n3. **Frame by severity** (T8, provisional): a gap the designer can\n   fill on the spot is a request; a structural stop is a plain\n   verdict plus what would clear it.\n4. **Reference numbers** (T10): every item ends with\n   `⟨subject · ref⟩` using the record's `ref` key.\n5. **Compress the clean** (T7): everything that checked clean is one\n   line with counts, expandable on request.\n6. **Capture rulings as records** (T15): each resolution — and the\n   designer's stated reason, verbatim — is authored into the round as\n   the Judgment machinery's question/decision citizens, entering\n   canon through the same approval as the work itself.\n\n",
+    "procedure": "The front door",
+    "rank": 2
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Round scope (owner-ruled)",
+   {
+    "body": "## Round scope (owner-ruled)\n\n**The submitter chooses the round's scope at the start of every\nsitting** — one chapter, a subsystem batch, a paragraph; the machinery\nimposes no cadence. Open a campaign session by asking what this\nround's scope is (default: a subsystem batch). Inside a\nbatch, the per-chapter loop runs agent-side; the submitter sits one\nplan gate and one collated diff gate. The owner is trialing the\nbreakdowns firsthand in clean sessions; when multi-submitter arrives,\ncadence becomes a per-person graph-resident preference.\n\n",
+    "procedure": "Agentic intake",
+    "rank": 3
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Taking in an artifact",
+   {
+    "body": "## Taking in an artifact\n\n- Work the whole artifact; batch judgment calls to the gate (T13).\n  Interrupt only for a true blocker — a call that would distort how\n  everything after it is read.\n- Group inferences by pattern for one confirmation each (T12), every\n  family naming its instances.\n- The artifact's medium sets the evidence form (T3): quote the\n  sentence, show the region, timestamp the passage, link the page.\n\n",
+    "procedure": "The front door",
+    "rank": 4
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "The convergence loop",
+   {
+    "body": "## The convergence loop\n\nWhen a draft must reach parity with a source (chapter regeneration, the\nbook campaign), run the loop — never hand-polish toward a quiet judge:\n\n1. **Cold draft, fenced**: every draft sentence traces to a graph\n   record you can name. Canon gaps stay red on purpose — smuggling\n   source text into the draft hides real thinness. State the fence's\n   honesty limits aloud (prior exposure is discipline, not amnesia; the\n   judge is the objective check).\n2. **Judge, then burn down only what needs no one's judgment**\n   (findings are ROWS in the reading room — query the open set\n   beside its sections, update statuses as you resolve; the prose\n   report is a rendering, not the record): a\n   finding is agent-resolvable ONLY when its fix is fully determined by\n   the graph and rulings already on record — presentation-form\n   mismatches, rewording a draft sentence toward the source where the\n   graph already holds the fact, deleting the draft's own inventions.\n   Any fix that would add, drop, or bend meaning is not yours; it goes\n   to the gate. When in doubt, escalate. The goal is that the human\n   never sees finding 3 of 64 — and never misses one that was theirs\n   to rule.\n3. **One collated escalation gate**: everything needing a human word,\n   grouped by resolution channel — canon gaps (become intake), flavor\n   (verbatim-carried or Approved Omission), examples (per the\n   standing examples Decision on the graph), harness defects (their\n   own issues, with a one-line\n   engine ask). Each group states what each answer does.\n4. **Rulings recorded by identity** (Decision rows, Approved Omission\n   rows), then regenerate and re-judge. Converged parity = zero\n   UNAPPROVED differences — the report may stay non-empty forever, so\n   long as every line carries a ruling.\n\nStanding rules the loop rides on:\n\n- **Every PASS names its judged surface.** A green scorecard once\n  lied because prose inside procedure-cited sections was unjudged.\n  Unjudged space is either zero or declared aloud in the same breath\n  as the verdict.\n- **Verify presentation artifacts in the audience's renderer.** A\n  diagram verified in VS Code shipped unreadable on GitHub three times.\n  The acceptance test is the renderer the audience actually uses.\n- **Question triage at phase boundaries**: every retro/phase-cut\n  sitting opens with the carried Questions — rule some, park the rest,\n  never let the list grow silently.\n\n",
+    "procedure": "Agentic intake",
+    "rank": 4
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "The flow",
+   {
+    "body": "## The flow\n\n### 1. Recon (read-only; no human) — sealed reading FIRST\n**The reading is sealed before the mapping opens** (owner-ruled): read\nand comprehend the artifact ON ITS OWN TERMS — structure, vocabulary,\nfact-grain claims, its own internal contradictions — BEFORE any canon\nquery. A reader whose head is full of canon assimilates the artifact\nto existing categories before it has finished speaking, harmonizes\ncontradictions it should surface, and misses genuine deviations; the\nkernel (metaontology structure) may inform the reading, project canon\nmay not. Only when comprehension is complete does the mapping open:\neach artifact-local claim judged against canon — same-as / extends /\nnew / contradicts — every mapping a recorded Opinion with confidence,\nlow confidence batching to the owner's question sheet. (Held as\ndiscipline — the lens system that will enforce it physically is\ndesigned and built (the engine's lens module and its lenses design record (design/ in the engine repo; graph/engine_docs/design/ inside an installed engine package)); the seal\nbecomes physical when the declarations take graph residence at the\nowner's gate.)\n\nOpen the reading room first: `python -m graph comprehend <artifact>`\nfingerprints the source and builds its structure (section tree, bodies,\norder, embedded-table refs) in the comprehension workspace, filing the\nflat archive under `graph/comprehension/`. Canon is the subject matter,\nnever the document — the artifact's insides live here, not as canon\ncitizens; artifact quirks\n(duplicate headings, odd nesting) are absorbed silently, never surfaced\nto the submitter. Then read the source cold. Identify — by **semantic\ncomprehension, never word search** — every entity, relationship, and\nrule it asserts, whatever the casing discipline. Resolve pronouns and indirect references; ambiguity\nthat survives multiple passes becomes an owner question, never a guess.\nResolve every candidate through the graph (read-only Cypher + the term\nindex; `python -m graph terms` is the mechanical backstop, not the\nmethod). Check the stub worklist (`MATCH (s:Archetype {stub: true})`) and\nprior Judgment rows — the term may already be a known-open item. Bucket\nfindings: *relates-to* / *introduces* / *uncertain*, with grades.\n**A machinery risk you can verify during recon is a recon task, not a\nrisk to carry into the round**: read the code or run the tool now, and\nif the gap is real, its ask joins the owner's collated sheet as a\nnumbered question. A \"named risk\" in the plan that a five-minute read\nwould have settled resurfaces later as a mid-round interjection — the\ncostlier shape.\n\n### 2. The plan gate (the approver)\nPresent the what's-this-about proposal, **leading with the implications\npreview**: what the approver GETS, what they LOSE or change, what it\nAFFORDS later — each with a concrete example from the corpus. Then the\ninterview, per ontology-intake's discipline (three tiers; scenario\nquestions; the owner names everything and rules everything —\nexplicitly, never by silence). The interview arrives as ONE collated\nquestion sheet — every question batched with its cited evidence,\nnamed tension, consequences, and a recommendation; serial pinging is\nnot a permitted shape (see that skill's interview step).\nProcedure-shaped content inside the source\nfollows procedure-intake at this point. Nothing has been written\nanywhere.\n\n### 3. Schema is ground on the graph — and changes by ceremony\nThe schema stratum (the concept citizens and their edges) is ground\ntruth on the graph itself: post-bootstrap machinery reads it from the\ngraph, never from a schema file, and the schema anchor's version\nauto-stamps from the event-log sequence at apply. **Schema changes\nride the schema ceremony**: an owner-gated round may add a new\nDECLARED concept (the Archetype arrives WITH its DECLARED_IN edge, and\nusually INSTANCE_OF into its parent), birth a new LABEL (a\nspec-carrying row arriving WITH its DECLARED_IN edge, permitted only\nwhen the base holds no ground rows under it — nothing yet underneath,\nso nothing moves), edit a schema row's doc text,\nadd an ALIAS to a label's spec (a new surface spelling reading as an\nexisting citizen — additions only, each target existing in the base or\nborn by the same round), or\nremove an UNREFERENCED schema row — the delta report itemizes these\nunder its marked ceremony section, and the owner's approval of that\nround IS the ceremony ruling. Everything else on the stratum — changes\nto existing labels, other spec/catalog changes, renames, referenced\nremovals — still\nrefuses by name (data moves underneath those; they ride the migration\ncharter) and PARKS as a Question at the plan gate for the owner to\nrule and sequence; it never blocks the fact-plane work that doesn't\nneed it, and it is never worked around with a lesser encoding. Facts\nwhose schema doesn't exist yet wait with their Question.\n\nOne mirror rides ceremony edits that change what the bootstrap file\ndeclares: when the corpus keeps a from-sources bootstrap file guarded\nby a round-trip parity suite, that file gains the same change in the\nsame change set — a doc edit on a CONCEPT row (a schema row without an\nembedded spec) mirrors its doc text into the concept entry, and an\nADDED ALIAS mirrors into the label entry's aliases map. The suite\ncompares the loader's specs against the graph's and fails on the\ndivergence. A doc edit on a LABEL row alone needs no mirror; that doc\nlives on the row.\n\n### 4. Scratch authoring (agent + machine)\nReset scratch first (`python -m graph restore --database scratch`, using\nthe KB's own working-copy name if its settings declare one) — stale\nscratch produces phantom diffs, and the round machinery refuses a copy\nwhose in-band identity does not match the round. **The standing first authoring move is\nclearing the previous round's debts**: stamp that round's shipped PR\nlink onto its Judgment rows, and land any edges it deferred under\nmarker rows whose endpoints now exist in canon. A round that skips the\nopening move leaves the debt to compound — one round of lag is the\ndesign; two is a backlog. Then author **ground facts** through the\n`neo4j-scratch` MCP connection, the way agents naturally work: create,\nquery your own work, fix, iterate.\n- MATCH existing endpoints, MERGE only the new node/relationship (a\n  whole-path MERGE duplicates existing nodes and trips the uniqueness\n  constraint).\n- Every non-obvious fact carries its receipt as properties: `from_text`\n  (verbatim source quote), `source` (where), `grade: 'agent-proposed'`.\n  Receipts are review evidence — canonize deliberately never renders\n  them into files.\n- NEVER write derived edge types (INSTANCE_OF, projections, MENTIONS,\n  lift edges, KNOWN_AT…) or machine labels (Archetype/Step/Outcome) —\n  the delta lint rejects them with the reason.\n- **Identity stays single-label; membership is multi.** Each citizen is\n  keyed and exported by exactly one roster label — its home, its\n  catalog, its source — and that never changes. But a citizen may be\n  declared a member of more than one concept: author a ground\n  `DECLARED_MEMBER_OF` edge FROM the citizen TO a Concept Archetype,\n  carrying a required `basis` rationale, and derivation folds it into\n  the citizen's `INSTANCE_OF`. So a gem its roster makes a Treasure can\n  ALSO be declared a Tool while a sibling gem on the same roster is not\n  — an overlap no longer needs the shared-catalog-vocabulary workaround.\n  The edge only ADDS membership and never re-homes the citizen: its\n  target must be a subject-matter Concept (never a Facet, never another\n  label's Archetype), and `INSTANCE_OF` itself stays never-authored —\n  the fold computes it.\n- A concept Archetype born by THIS round's schema edit does not exist\n  in scratch (scratch is cut pre-schema from the backup) — anchor\n  Judgment ABOUT edges for brand-new labels to value citizens instead.\n  The same constraint blocks DOMAIN ground edges: an edge whose target\n  citizen is born by this round's schema edit cannot be authored in\n  scratch at all. Declare exactly those edges in the round's STITCH\n  file — `graph/proposals/current/stitch.json`, a JSON list of\n  connections in the proposal document's edge shape (type, from_label,\n  from_name, to_label, to_name, optional props). They ride the same\n  approval and land in the same apply, after re-derivation births\n  their endpoints; the delta report itemizes them under \"Stitch\" and\n  refuses any that don't genuinely need it. Never re-point a deferred\n  edge at a lesser endpoint that happens to exist. (Marker-row\n  deferrals from earlier rounds still land at the opening move; new\n  rounds use the stitch.)\n- Provenance URLs on Judgment rows: take the repo from `gh repo view`,\n  never guess the owner (a guessed owner once landed in a whole batch\n  of rows and forced a correction round).\n\n### 5. Delta + self-review (agent + machine)\n`python -m graph delta` — the itemized, linted changeset\n(graph/reports/delta.md). Read it against your own plan: every\nsurprise is either fixed in scratch or demoted to the uncertain bucket.\nLint violations are yours to fix before the approver ever sees the\nreport. Then `python -m graph canonize` (dry run) — confirm everything\nrenders deterministically; a REVIEW-REQUIRED item at this stage means a\nschema ruling was missed: go back to step 3 (or the plan gate if it is a\ngenuinely new decision).\n\n### 6. The diff gate (the approver)\nPresent the delta report — and offer the Bloom walk on scratch (the\nproposal is explorable as a graph before it exists in canon). The\napprover resolves the uncertain bucket: rule, \"give it a go\" (back to\nstep 4), or park as Judgment citizens. Approval here is approval of the\nexact changeset.\n\n**Mid-round refactor pressure is never round scope.** A tempting\nrename, a structural cleanup the round doesn't need — park it as a\nJudgment row routed via HAS_DISCIPLINE / HAS_AUDIENCE to the project's\nDiscipline and Audience citizens. The kernel declares those two\nclasses only; each project's values are its own, disclosed by the team\nor discerned from real cases — the first round that needs a value\nproposes it at the escalation gate like any new vocabulary. Parked\npressure is design input for a later phase, never scope creep.\n\n### 7. Approve, canonize + drain to zero (machine)\nWhen the approver rules \"approved\" at the diff gate, record it:\n`python -m graph approve` (the record names the human; the proposal's\ncontent hash is frozen — apply replays exactly what was reviewed, and\nrefuses by name if scratch or the base moved after approval). Then\n`python -m graph canonize --apply` — GRAPH-NATIVE since the flip:\nno file is edited. Apply verifies the live database still\nmatches the backup, applies the pinned changeset to the ground layer,\nre-derives every machine layer, loads canon, re-exports the backup FROM\nthe database, and writes the EVENT LOG (chained entry in\n`graph/proposals/applied.log` + the delta's inverse) — all one command,\nrefusing collated and writing nothing on any failure. Then the ritual:\npytest → commit the export + round archive + applied.log line in one\nchange set. The next round cuts scratch fresh\n(`python -m graph restore --database scratch`). `load` and\n`export --from-sources` are bootstrap scaffolding only.\n\n### 8. Bookkeeping (same standards as any round)\nJudgment rows for parked items (they can flow through scratch + canonize\ntoo), the ontology TODO block, the glossary stage (classify every\nunresolved-term hit; shrink the stub worklist), skills updated with any\nlesson learned in-session — **stated timelessly and domain-neutrally**:\nno issue numbers, no dates, no project vocabulary; the rule stands on\nits own, with an agnostic example where one earns its keep. PR\nprovenance lands via the NEXT round's standing opening move (step 4) —\nthe shipped PR's link cannot exist before ship, so the stamp is always\none round behind by design. Definition\nof Done applies: tests, docs, skills ride along.\n\n",
+    "procedure": "Agentic intake",
+    "rank": 1
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "The front door",
+   {
+    "body": "---\nname: front-door\ndescription: Be the designer-facing voice over every job — render approval gates, answer questions, take in artifacts, hold debate threads — in the designer's own language, learned live from canon. Use whenever the human in the room is the world's designer (not an engineer working on the machinery): presenting a pending changeset, answering \"what is X / what connects to X\", receiving any artifact for ingestion, or debating a ruling. The jobs (graph-query, agentic-intake, generation) run underneath; this skill governs everything the designer sees.\n---\n\n# The front door\n\nThe door is a separate concept from the jobs it invokes. It owns the\nonly conversation the designer sees; the jobs own the work. Its\nconstitution is the fifteen tenets in the engine's front-door-tenets\ndesign record (design/ in the engine repo; graph/engine_docs/design/\ninside an installed package) — read them before speaking. This skill\nis the operating procedure that puts them into practice.\n\n**The invariant:** the door never parses prose for facts and never\nspeaks machinery words. Facts come from two places only — the typed\nrecords the jobs emit, and canon itself, queried live. If a fact is\nnot in a record and not in canon, the door does not know it, and says\nso (T14).\n\n",
+    "procedure": "The front door",
+    "rank": 0
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "What the door never does",
+   {
+    "body": "## What the door never does\n\n- Never invents domain vocabulary, opinions, or design decisions —\n  the designer rules; the door informs (T9).\n- Never shows machinery words on any surface (T2): no database,\n  graph, delta, scratch, round, lint. The system's acts have one\n  vocabulary: *enters canon*, *pending your approval*.\n- Never presents an item that cannot be ruled on from itself alone\n  (T6).\n- Never answers without a citation (T11), and never fabricates one:\n  an uncitable answer is an absence, said plainly.\n",
+    "procedure": "The front door",
+    "rank": 5
+   }
+  ]
+ ],
+ "nodes_changed": [
+  [
+   "Procedure",
+   "Dynamic-ontology intake",
+   {
+    "handle": [
+     null,
+     "ontology-intake"
+    ],
+    "slug": [
+     "ontology-intake",
+     null
+    ]
+   }
+  ],
+  [
+   "Procedure",
+   "Generation",
+   {
+    "handle": [
+     null,
+     "generation"
+    ],
+    "slug": [
+     "generation",
+     null
+    ]
+   }
+  ],
+  [
+   "Procedure",
+   "Procedure intake",
+   {
+    "handle": [
+     null,
+     "procedure-intake"
+    ],
+    "slug": [
+     "procedure-intake",
+     null
+    ]
+   }
+  ],
+  [
+   "Procedure",
+   "Querying the rules graph",
+   {
+    "handle": [
+     null,
+     "graph-query"
+    ],
+    "slug": [
+     "graph-query",
+     null
+    ]
+   }
+  ],
+  [
+   "Procedure",
+   "The maintenance loop",
+   {
+    "handle": [
+     null,
+     "rebuild-graph"
+    ],
+    "slug": [
+     "rebuild-graph",
+     null
+    ]
+   }
+  ],
+  [
+   "[Design Record]",
+   "Front Door Tenets",
+   {
+    "handle": [
+     null,
+     "front-door-tenets"
+    ],
+    "slug": [
+     "front-door-tenets",
+     null
+    ]
+   }
+  ],
+  [
+   "[Design Record]",
+   "Two Ontology Layers",
+   {
+    "handle": [
+     null,
+     "ontology-doctrine"
+    ],
+    "slug": [
+     "ontology-doctrine",
+     null
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}

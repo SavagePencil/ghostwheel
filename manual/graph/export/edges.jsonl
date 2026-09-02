@@ -77,27 +77,41 @@
 {"from": {"label": "[Boundary Rule]", "name": "New roots are the most ceremonial change"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Prefer graph citizens over prose"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "Archetype", "name": "[Boundary Rule]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Agentic intake"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Attribution: every claim seeks its graph home"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Canon changes (full flow: the agentic-intake skill)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Cautions (Agentic intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Generation)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Procedure intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Dispatch — which job serves the input"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Failure triage"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Gate conduct"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Gate voice"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Generation"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Holding a thread"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Idioms that matter (each learned the hard way)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Input layers (the evaluator boundary)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Mapping and drafting lessons"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Posture"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Presentation is its own check"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Procedure (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Procedure (Procedure intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Procedure intake"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Querying the rules graph"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Rendering a gate"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Round scope (owner-ruled)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Taking in an artifact"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The Completeness ruling comes first"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The convergence loop"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The default path (short; machinery engages only on signals)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The flow"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The front door"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The invariants (medium-independent)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The trace and the margin"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "What the door never does"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "When answering"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
@@ -125,10 +139,12 @@
 {"from": {"label": "[Tenet]", "name": "The editor's desk"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "The item's anatomy: rulable from itself alone"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "Threads end in a record"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "Generation"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "Procedure intake"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "Querying the rules graph"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
+{"from": {"label": "Procedure", "name": "The front door"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "[Boundary Rule]", "name": "Intake only proposes against the engine layer"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Kernel names cannot be redeclared"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
@@ -137,27 +153,41 @@
 {"from": {"label": "[Boundary Rule]", "name": "New roots are the most ceremonial change"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "Prefer graph citizens over prose"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
 {"from": {"label": "[Boundary Rule]", "name": "References flow one way"}, "properties": {}, "to": {"label": "[Section]", "name": "Boundary rules"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Agentic intake"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Attribution: every claim seeks its graph home"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Canon changes (full flow: the agentic-intake skill)"}, "properties": {}, "to": {"label": "Procedure", "name": "The maintenance loop"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Cautions (Agentic intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Generation)"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Procedure intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Procedure intake"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Dispatch — which job serves the input"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Failure triage"}, "properties": {}, "to": {"label": "Procedure", "name": "The maintenance loop"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Gate conduct"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Gate voice"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Generation"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Holding a thread"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Idioms that matter (each learned the hard way)"}, "properties": {}, "to": {"label": "Procedure", "name": "Querying the rules graph"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Input layers (the evaluator boundary)"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Mapping and drafting lessons"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Posture"}, "properties": {}, "to": {"label": "Procedure", "name": "Querying the rules graph"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Presentation is its own check"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Procedure (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Procedure (Procedure intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Procedure intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Procedure intake"}, "properties": {}, "to": {"label": "Procedure", "name": "Procedure intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Querying the rules graph"}, "properties": {}, "to": {"label": "Procedure", "name": "Querying the rules graph"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Rendering a gate"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Round scope (owner-ruled)"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Taking in an artifact"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The Completeness ruling comes first"}, "properties": {}, "to": {"label": "Procedure", "name": "Procedure intake"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The convergence loop"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The default path (short; machinery engages only on signals)"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The flow"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The front door"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The invariants (medium-independent)"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "Procedure", "name": "The maintenance loop"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The trace and the margin"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "What the door never does"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "When answering"}, "properties": {}, "to": {"label": "Procedure", "name": "Querying the rules graph"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
@@ -183,6 +213,14 @@
 {"from": {"label": "[Tenet]", "name": "The editor's desk"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "The item's anatomy: rulable from itself alone"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "Threads end in a record"}, "properties": {}, "to": {"label": "[Section]", "name": "Conduct"}, "type": "PART_OF"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Agentic intake"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Cautions (Agentic intake)"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Gate conduct"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Gate voice"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Mapping and drafting lessons"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Round scope (owner-ruled)"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The convergence loop"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The flow"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Cautions (Dynamic-ontology intake)"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Dynamic-ontology intake"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Procedure (Dynamic-ontology intake)"}, "type": "SPECIFIED_IN"}
@@ -202,6 +240,12 @@
 {"from": {"label": "Procedure", "name": "Querying the rules graph"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Posture"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Querying the rules graph"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Querying the rules graph"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Querying the rules graph"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "When answering"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "The front door"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Dispatch — which job serves the input"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "The front door"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Holding a thread"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "The front door"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Rendering a gate"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "The front door"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Taking in an artifact"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "The front door"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The front door"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "The front door"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "What the door never does"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Canon changes (full flow: the agentic-intake skill)"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Failure triage"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "type": "SPECIFIED_IN"}
