@@ -32,7 +32,7 @@ failures=""
 echo "pre-commit gate 1/3: packaged-docs mirror test"
 if ! "$pytest_cmd" -q tests/test_engine_docs_mirror.py; then
     failures="$failures
-- Attempted to verify the packaged docs mirror before committing. Failed due to a mirror mismatch. To fix: sync design/ and .claude/skills/ into graph/engine_docs/ in this change set."
+- Attempted to verify the packaged canon mirror before committing. Failed due to a mirror mismatch. To fix: copy manual/graph/export/*.jsonl into graph/engine_docs/canon/ (and regenerate the golden: GOLDEN_REGEN=1 pytest tests/test_record_render.py) in this change set."
 fi
 
 echo "pre-commit gate 2/3: full test suite"

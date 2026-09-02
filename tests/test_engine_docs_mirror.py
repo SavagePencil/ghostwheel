@@ -1,25 +1,12 @@
-"""The packaged docs mirror (graph/engine_docs/) must byte-match its
-sources — design/ and .claude/skills/ — so the package ships exactly
-the living copies. A consuming knowledge base vendors FROM the
-installed package; a stale mirror would ship a second truth."""
+"""The packaged canon mirror (graph/engine_docs/canon/) must byte-match
+the manual's committed export — the package ships exactly the canon the
+records are rendered from. A consuming knowledge base pulls records
+FROM the installed package; a stale mirror would ship a second truth."""
 
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MIRROR = ROOT / "graph" / "engine_docs"
-
-
-def test_design_records_mirror_byte_identical():
-    sources = sorted((ROOT / "design").glob("*.md"))
-    assert sources, "design/ is empty?"
-    for source in sources:
-        mirrored = MIRROR / "design" / source.name
-        assert mirrored.exists(), f"{source.name} missing from the mirror"
-        assert mirrored.read_bytes() == source.read_bytes(), \
-            f"{source.name} drifted — re-copy design/ into graph/engine_docs/"
-    extras = {p.name for p in (MIRROR / "design").glob("*.md")} \
-        - {s.name for s in sources}
-    assert not extras, f"mirror carries retired records: {sorted(extras)}"
 
 
 def test_canon_mirror_byte_identical():
@@ -36,15 +23,8 @@ def test_canon_mirror_byte_identical():
     assert not extras, f"mirror carries retired files: {sorted(extras)}"
 
 
-def test_skills_mirror_byte_identical():
-    sources = sorted((ROOT / ".claude" / "skills").glob("*/SKILL.md"))
-    assert sources, ".claude/skills is empty?"
-    for source in sources:
-        name = source.parent.name
-        mirrored = MIRROR / "skills" / name / "SKILL.md"
-        assert mirrored.exists(), f"skill {name} missing from the mirror"
-        assert mirrored.read_bytes() == source.read_bytes(), \
-            f"skill {name} drifted — re-copy into graph/engine_docs/"
-    extras = {p.parent.name for p in (MIRROR / "skills").glob("*/SKILL.md")} \
-        - {s.parent.name for s in sources}
-    assert not extras, f"mirror carries retired skills: {sorted(extras)}"
+def test_the_prose_mirrors_stay_retired():
+    for retired in ("design", "skills"):
+        assert not (MIRROR / retired).exists(), \
+            f"graph/engine_docs/{retired}/ returned after the flip — " \
+            "records live in canon; the packaged prose mirrors are retired"

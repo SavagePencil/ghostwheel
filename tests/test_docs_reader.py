@@ -1,10 +1,12 @@
-"""The docs reader: engine design records are pulled from the installed
-package, never vendored into a knowledge base (the copy-retirement,
-stage 1). The command opens no knowledge base and no database — it must
-answer from anywhere, including a bare directory with no base in sight.
+"""The docs reader: engine records are pulled from the packaged canon,
+never vendored into a knowledge base (the copy retirement, completed by
+the flip). The command opens no knowledge base and no database — it
+must answer from anywhere, including a bare directory with no base in
+sight.
 """
 
-from graph.__main__ import ENGINE_DOCS_DIR, ENGINE_SKILLS_DIR, main
+from graph import records
+from graph.__main__ import main
 
 
 def _no_base_anywhere(monkeypatch, tmp_path):
@@ -12,40 +14,36 @@ def _no_base_anywhere(monkeypatch, tmp_path):
     monkeypatch.delenv("GHOSTWHEEL_BASE", raising=False)
 
 
-def test_known_record_prints_the_packaged_file(capsys, tmp_path,
-                                               monkeypatch):
+def test_known_record_prints_the_canon_render(capsys, tmp_path,
+                                              monkeypatch):
     _no_base_anywhere(monkeypatch, tmp_path)
+    canon = records.load_canon()
+    label, name = records.records(canon)["ontology-doctrine"]
     assert main(["docs", "ontology-doctrine"]) == 0
-    out = capsys.readouterr().out
-    packaged = (ENGINE_DOCS_DIR / "ontology-doctrine.md") \
-        .read_text(encoding="utf-8")
-    assert out == packaged
+    assert capsys.readouterr().out == records.render(canon, label, name)
 
 
-def test_bare_docs_lists_every_packaged_record(capsys, tmp_path,
-                                               monkeypatch):
+def test_bare_docs_lists_every_canon_record(capsys, tmp_path,
+                                            monkeypatch):
     _no_base_anywhere(monkeypatch, tmp_path)
     assert main(["docs"]) == 0
     out = capsys.readouterr().out
-    packaged = sorted(p.stem for p in ENGINE_DOCS_DIR.glob("*.md"))
-    assert packaged, "the package must ship design records"
-    for name in packaged:
-        assert name in out
-    conduct = sorted(d.name for d in ENGINE_SKILLS_DIR.iterdir()
-                     if (d / "SKILL.md").is_file())
-    assert conduct, "the package must ship conduct records"
-    for name in conduct:
-        assert name in out
+    listing = records.records(records.load_canon())
+    assert listing, "the packaged canon must carry records"
+    for handle in listing:
+        assert handle in out
+    labels = {label for label, _ in listing.values()}
+    assert len(labels) > 1, "both record kinds must be in canon"
 
 
-def test_conduct_record_prints_the_packaged_skill(capsys, tmp_path,
-                                                  monkeypatch):
+def test_conduct_record_prints_the_canon_render(capsys, tmp_path,
+                                                monkeypatch):
     _no_base_anywhere(monkeypatch, tmp_path)
+    canon = records.load_canon()
+    label, name = records.records(canon)["agentic-intake"]
+    assert records.is_conduct(label)
     assert main(["docs", "agentic-intake"]) == 0
-    out = capsys.readouterr().out
-    packaged = (ENGINE_SKILLS_DIR / "agentic-intake" / "SKILL.md") \
-        .read_text(encoding="utf-8")
-    assert out == packaged
+    assert capsys.readouterr().out == records.render(canon, label, name)
 
 
 def test_unknown_record_refuses_naming_the_available(capsys, tmp_path,
@@ -53,5 +51,5 @@ def test_unknown_record_refuses_naming_the_available(capsys, tmp_path,
     _no_base_anywhere(monkeypatch, tmp_path)
     assert main(["docs", "no-such-record"]) == 2
     err = capsys.readouterr().err
-    assert "no packaged record carries that name" in err
+    assert "no record in the engine's canon carries that name" in err
     assert "ontology-doctrine" in err

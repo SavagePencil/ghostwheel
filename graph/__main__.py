@@ -1782,36 +1782,27 @@ def canon_term_index(base_dir):
     return extractor, None
 
 
-ENGINE_DOCS_DIR = Path(__file__).resolve().parent / "engine_docs" / "design"
-ENGINE_SKILLS_DIR = Path(__file__).resolve().parent / "engine_docs" / "skills"
-
-
-def _conduct_records():
-    if not ENGINE_SKILLS_DIR.is_dir():
-        return []
-    return sorted(d.name for d in ENGINE_SKILLS_DIR.iterdir()
-                  if (d / "SKILL.md").is_file())
-
-
 def cmd_docs(record=None):
-    """Print a packaged engine record — a design record or a conduct
-    record (a skill's full procedure). They live once, in the engine —
-    a knowledge base points here instead of vendoring a copy (the copy
-    retirement), and the plugin's trigger stubs point here for their
-    instructions (the stub model). No base, no database: the command
-    answers from anywhere. A record the manual's canon carries is
-    assembled from its citizens; one not yet in canon is served from
-    the packaged file."""
+    """Print an engine record — a design record or a conduct record (a
+    skill's full procedure) — assembled from the manual's packaged
+    canon. The records live once, as citizens: a knowledge base points
+    here instead of vendoring a copy (the copy retirement), and the
+    plugin's trigger stubs point here for their instructions (the stub
+    model). No base, no database: the canon ships in the package, and
+    the command answers from anywhere."""
     from . import records as records_mod
 
     canon = records_mod.load_canon()
-    in_canon = records_mod.records(canon) if canon is not None else {}
-    designs = sorted({p.stem for p in ENGINE_DOCS_DIR.glob("*.md")}
-                     | {handle for handle, (label, _) in in_canon.items()
-                        if not records_mod.is_conduct(label)})
-    conduct = sorted(set(_conduct_records())
-                     | {handle for handle, (label, _) in in_canon.items()
-                        if records_mod.is_conduct(label)})
+    if canon is None:
+        print("Attempted to read the engine's records. Failed due to: "
+              "the packaged canon is missing (a broken install). "
+              "Reinstall the engine package.", file=sys.stderr)
+        return 2
+    in_canon = records_mod.records(canon)
+    designs = sorted(handle for handle, (label, _) in in_canon.items()
+                     if not records_mod.is_conduct(label))
+    conduct = sorted(handle for handle, (label, _) in in_canon.items()
+                     if records_mod.is_conduct(label))
     if not record:
         print("Engine design records (python -m graph docs <record>):")
         for name in designs:
@@ -1820,20 +1811,14 @@ def cmd_docs(record=None):
         for name in conduct:
             print(f"  {name}")
         return 0
-    if record in in_canon:
-        label, name = in_canon[record]
-        sys.stdout.write(records_mod.render(canon, label, name))
-        return 0
-    path = ENGINE_DOCS_DIR / f"{record}.md"
-    if not path.is_file():
-        path = ENGINE_SKILLS_DIR / record / "SKILL.md"
-    if not path.is_file():
+    if record not in in_canon:
         print(f"Attempted to read the engine record '{record}'. "
-              "Failed due to: no packaged record carries that name. "
-              "Available: " + ", ".join(designs + conduct),
+              "Failed due to: no record in the engine's canon carries "
+              "that name. Available: " + ", ".join(designs + conduct),
               file=sys.stderr)
         return 2
-    sys.stdout.write(path.read_text(encoding="utf-8"))
+    label, name = in_canon[record]
+    sys.stdout.write(records_mod.render(canon, label, name))
     return 0
 
 

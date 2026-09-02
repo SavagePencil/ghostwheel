@@ -29,10 +29,13 @@ never heard of any other consumer.
 - **Local test gates**: `make hooks` (one-time per clone) installs the
   tracked pre-commit hook, which blocks commits on a red suite and runs
   the trace check when the local-only tool is present.
-- **Docs are the one living copy**: design records in `design/` and
-  skills in `.claude/skills/` mirror into the package under
-  `graph/engine_docs/` — sync the mirror in the same change set (the
-  mirror test enforces it).
+- **The records live in the manual's canon** (`python -m graph docs
+  <record>`; the flip): prose changes ride gated rounds like any canon,
+  and a round that moves the canon syncs the packaged mirror
+  (`manual/graph/export/*.jsonl` → `graph/engine_docs/canon/`) and
+  regenerates the golden in the same change set (the mirror test
+  enforces it). `.claude/skills/` here are the plugin's trigger stubs,
+  byte for byte.
 - **Errors follow the form** "Attempted X with context Y. Failed due
   to Z" — plus what to do instead. Collate, don't stop: gather every
   error before reporting.
