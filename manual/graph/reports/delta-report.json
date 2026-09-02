@@ -1,33 +1,11 @@
 {
-  "ceremony": [
-    {
-      "code": "new-label",
-      "data": {
-        "concept": [
-          "[Conduct Section]"
-        ],
-        "declared_in": "Ontology",
-        "doc": "A run of a conduct record's text — the verbatim body at one heading, ordered within the Procedure it specifies.",
-        "instance_of": [
-          "Provenance"
-        ]
-      },
-      "message": "NEW LABEL '[Conduct Section]' (born empty) — declared in Ontology, binding concept [Conduct Section], an instance of Provenance; doc: \"A run of a conduct record's text — the verbatim body at one heading, ordered within the Procedure it specifies.\"",
-      "ref": "new-catalog",
-      "subject": {
-        "kind": "node",
-        "label": "Archetype",
-        "name": "[Conduct Section]"
-      }
-    }
-  ],
   "kind": "delta-report",
-  "proposal_id": "2686d6428dec4f43d603abe6f8e1ef4b6aae3b0ce1d5618cfb0cb79cba9eb3a0",
+  "proposal_id": "aa11098ebe1b02645891a7459e9308f9097fcd8518dd462aaafb17434887dc9b",
   "summary": {
-    "edges_added": 2,
+    "edges_added": 0,
     "edges_changed": 0,
     "edges_removed": 0,
-    "nodes_added": 5,
+    "nodes_added": 23,
     "nodes_changed": 0,
     "nodes_removed": 0
   }
