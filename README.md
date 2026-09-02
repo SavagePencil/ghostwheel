@@ -35,21 +35,21 @@ honest:
   Stateful, …). Each knowledge base layers its own **project ontology** on top.
   References flow one way, project → kernel; the kernel must stay meaningful for a
   knowledge base that has never heard of yours. See
-  [design/ontology-doctrine.md](design/ontology-doctrine.md).
+  `python -m graph docs ontology-doctrine`.
 - **Changes flow through rounds and a diff gate.** Canon never changes by direct
   edit. An author works in a **scratch** database cloned from canon; the itemized
   changeset — the **delta** — is linted, reviewed, and approved by the owner at a
   **diff gate**; only then does `canonize --apply` replay exactly the approved
   changeset into canon, re-derive the machine layers, re-export the backup, and
-  chain the event log. See [design/agentic-etl.md](design/agentic-etl.md).
+  chain the event log. See `python -m graph docs agentic-etl`.
 - **Lenses decide who sees what.** Visibility is a first-class layer enforced on
   the in-memory graph value itself, so traversals never yield a hidden element and
   derived layers recompute coherently under a lens. See
-  [design/lenses.md](design/lenses.md).
+  `python -m graph docs lenses`.
 
 New here, or wondering what a "floor", "round", or "lens" is? The glossary — a
 lay tier and the working vocabulary beneath it — lives in
-[design/north-star-workflow.md](design/north-star-workflow.md). A knowledge
+`python -m graph docs north-star-workflow`. A knowledge
 base's own domain terms live on the graph itself (`python -m graph terms`; every
 citizen carries its own doc).
 
@@ -107,7 +107,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `canonize --apply` | Apply the pinned changeset to the graph, re-derive the machine layers, re-export the backup, and chain the event log. |
 | `corpus` | Re-check every owner-blessed floor; reds name the blessing they break. |
 | `terms` | List the knowledge base's own domain terms — every citizen's doc, read from the graph. |
-| `docs [<record>]` | Print a packaged engine record — design records (`ontology-doctrine`, `agentic-etl`, …) and conduct records (the skills' full procedures, e.g. `agentic-intake`); bare `docs` lists them. A record the manual's canon carries is assembled from its citizens; the rest come from the packaged markdown. Needs no knowledge base — the records live once, in the engine, and are pulled, never vendored. |
+| `docs [<record>]` | Print an engine record — design records (`ontology-doctrine`, `agentic-etl`, …) and conduct records (the skills' full procedures, e.g. `agentic-intake`); bare `docs` lists them. Every record is assembled from the manual's packaged canon. Needs no knowledge base — the records live once, as citizens, and are pulled, never vendored. |
 | `generate "<name>"` | Render a citizen (e.g. a procedure) back into prose from the graph — measured against the authored text, never a replacement. |
 | `export --mask judgment --out dist/runtime` | Lens-scoped export: ship a runtime graph with the design-time stratum stripped. |
 | `restore --from dist/runtime --database scratch` | Inspect any export in a workspace database (never live canon; no round cut). |
@@ -237,7 +237,7 @@ Ghostwheel's schema has two layers with different ownership and change ceremony:
 The full boundary rules — references flow one way, new vocabulary is born in the
 project layer, facets are promoted to the kernel only by earning the
 many-projects test — are in
-[design/ontology-doctrine.md](design/ontology-doctrine.md). Consuming knowledge
+`python -m graph docs ontology-doctrine`. Consuming knowledge
 bases import that doctrine into their own instructions so it is standing context
 for all work.
 
@@ -264,7 +264,7 @@ lens is enforced on the in-memory graph value itself, so a traversal never yield
 a hidden element, edges never dangle, and derived layers recompute coherently
 under the lens. Lenses materialize in exactly one place — a lens-scoped export
 (the shipped runtime graph). The full design, including the branch-isolation
-walkthrough, is in [design/lenses.md](design/lenses.md).
+walkthrough, is in `python -m graph docs lenses`.
 
 ## Cypher cookbook and canned checks
 
@@ -285,8 +285,8 @@ a source and say "intake this." The agent recons it, brings you the plan
 facts in scratch with receipts, self-reviews the linted delta, brings you the
 changeset, and on your approval canonizes it. You appear exactly twice — the plan
 gate and the diff gate. The architecture is in
-[design/agentic-etl.md](design/agentic-etl.md); the philosophy in
-[design/agentic-approach.md](design/agentic-approach.md).
+`python -m graph docs agentic-etl`; the philosophy in
+`python -m graph docs agentic-approach`.
 
 ## The front door
 
@@ -300,7 +300,7 @@ carrying a plain-English reference number (`ref` on every verdict and
 ceremony record, mapped from its code) that traces to the raw machine
 record for forensics.
 Its constitution is fifteen owner-ruled tenets:
-[design/front-door-tenets.md](design/front-door-tenets.md).
+`python -m graph docs front-door-tenets`.
 
 ## MCP
 
@@ -314,43 +314,44 @@ from backup by `restore`.
 
 ## Design records
 
-The `design/` directory holds the engine's design doctrine:
+The engine's design doctrine lives in the manual's canon — read any
+record with `python -m graph docs <record>` (bare `docs` lists them):
 
-- [ontology-doctrine.md](design/ontology-doctrine.md) — the two ontology layers
-  and the boundary rules between them.
-- [agentic-etl.md](design/agentic-etl.md) — the persistent-graph intake
-  architecture: rounds, the delta lifecycle, the event log, the micro-kernel.
-- [agentic-approach.md](design/agentic-approach.md) — the philosophy the engine
-  executes through: its Virtues, Tenets, and Method.
-- [lenses.md](design/lenses.md) — the visibility system.
-- [north-star-workflow.md](design/north-star-workflow.md) — the two-lane
-  workflow and the full glossary (lay tier and working vocabulary).
-- [engine-as-corpus.md](design/engine-as-corpus.md) — the engine's own
-  knowledge base: a self-world versioned by the engine's semver, born
-  graph-native, with the parity flip criterion and world-tailored
-  conduct.
+- `ontology-doctrine` — the two ontology layers and the boundary rules
+  between them.
+- `agentic-etl` — the persistent-graph intake architecture: rounds, the
+  delta lifecycle, the event log, the micro-kernel.
+- `agentic-approach` — the philosophy the engine executes through: its
+  Virtues, Tenets, and Method.
+- `lenses` — the visibility system.
+- `north-star-workflow` — the two-lane workflow and the full glossary
+  (lay tier and working vocabulary).
+- `engine-as-corpus` — the engine's own knowledge base: a self-world
+  versioned by the engine's semver, born graph-native, with the flip
+  that made this list render from canon.
 
 ## The manual
 
 [`manual/`](manual/) is the engine's own knowledge base — the first one
 born graph-native (`python -m graph init manual`; kernel schema stratum
 alone, no `ontology.yaml`, no sources). The engine-as-corpus campaign
-grows it through gated rounds until the design and conduct records above
-live there as citizens.
+grew it through gated rounds until every design and conduct record
+lived there as a citizen — and then the prose files retired (the flip):
+canon is the records' only source.
 
-`docs` already renders from that canon: a record the canon carries is
-assembled from its citizens (each section's body in rank order, a
-section's claims following it — the walk that reverses the intake's
-byte-faithful slicing), and a record not yet canonized is served from
-the packaged markdown, so every pre-flip round stays additive. The canon
-ships inside the package as a mirror of `manual/graph/export/` at
-`graph/engine_docs/canon/`, held byte-identical by the mirror test.
-Parity tests hold every canonized record's render byte-identical to its
-prose file — the flip criterion — and a golden snapshot pins the render
-within a version. A round that moves the manual's canon therefore
-refreshes, in the same change set: the canon mirror
+`docs` renders every record from that canon: assembled from its
+citizens, each section's body in rank order, a section's claims
+following it — the walk that reverses the intake's byte-faithful
+slicing. The canon ships inside the package as a mirror of
+`manual/graph/export/` at `graph/engine_docs/canon/`, held
+byte-identical by the mirror test, and a golden snapshot pins the
+render within a version. A record's prose therefore changes the same
+way any canon does — a gated round — and a round that moves the
+manual's canon refreshes, in the same change set: the canon mirror
 (`cp manual/graph/export/*.jsonl graph/engine_docs/canon/`) and the
 golden snapshot (`GOLDEN_REGEN=1 pytest tests/test_record_render.py`).
+The engine repo's own `.claude/skills/` are the plugin's trigger stubs,
+byte for byte — its sessions pull conduct the way every world does.
 
 ## Development
 
