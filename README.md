@@ -105,6 +105,8 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `approve` | Record the diff-gate approval against the proposal's content hash. |
 | `canonize` | Show the approved changeset and freeze status (dry run). |
 | `canonize --apply` | Apply the pinned changeset to the graph, re-derive the machine layers, re-export the backup, and chain the event log. |
+| `kernel-migrate` | Migrate this canon's embedded kernel stratum to the installed engine's kernel (dry run: report the splice and the orphan check, write nothing). Refuses when a removed kernel name would orphan project references — repoint those through an ordinary gated round first. |
+| `kernel-migrate --apply` | Perform the splice as a first-class round: project stratum and ground untouched (checked, not assumed), the delta archived with its inverse, the event log chained, the backup re-exported. Mutating commands refuse on kernel skew until this runs; read commands warn. |
 | `corpus` | Re-check every owner-blessed floor; reds name the blessing they break. |
 | `terms` | List the knowledge base's own domain terms — every citizen's doc, read from the graph. |
 | `docs [<record>]` | Print an engine record — design records (`ontology-doctrine`, `agentic-etl`, …) and conduct records (the skills' full procedures, e.g. `agentic-intake`); bare `docs` lists them. Every record is assembled from the manual's packaged canon. Needs no knowledge base — the records live once, as citizens, and are pulled, never vendored. |
@@ -230,6 +232,11 @@ Ghostwheel's schema has two layers with different ownership and change ceremony:
   kernel is *"would a children's storybook project need it?"* Changing the kernel
   is a **ceremony**: an explicit owner ruling, a Decision row naming it, and a
   version bump in the same change set. Never a silent side effect of intake.
+  A canon's committed backup embeds the kernel stratum it was built with, so
+  the ceremony's change set also migrates every canon this repo ships
+  (`python -m graph kernel-migrate`; the kernel guard test enforces it), and a
+  consuming knowledge base hears the skew finding — *built with kernel X, the
+  installed engine carries Y* — until it runs the migration itself.
 - The **project ontology** is everything a given knowledge base derived — its
   own labels, catalogs, and relationships, living on the graph as ground
   citizens. This is the owner's daily surface.

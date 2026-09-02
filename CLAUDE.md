@@ -41,4 +41,6 @@ never heard of any other consumer.
   error before reporting.
 - The kernel (`graph/metaontology.yaml`) changes only by owner
   ceremony: explicit ruling, semver bump, and ledger line in the same
-  change set.
+  change set — and that change set migrates every canon this repo
+  ships (`python -m graph kernel-migrate`; the kernel guard test
+  enforces it).

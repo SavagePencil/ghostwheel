@@ -214,6 +214,11 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
     except (FileNotFoundError, ValueError, OSError) as exc:
         print(exc, file=sys.stderr)
         return 1
+    if not from_dir:
+        from .kernel_migrate import kernel_skew
+        skew = kernel_skew(graph)
+        if skew:
+            print(f"Advisory: {skew}", file=sys.stderr)
     config = load_mod.read_config(base_dir)
     if from_dir and database == config["NEO4J_DATABASE"]:
         print(f"Attempted to load {from_dir} into the live canon "
@@ -431,6 +436,11 @@ def cmd_rederive(base_dir):
               "from-sources bootstrap, use the load/validate path.",
               file=sys.stderr)
         return 1
+    from .kernel_migrate import kernel_skew
+    skew = kernel_skew(base)
+    if skew:
+        print(f"rederive refused — {skew}", file=sys.stderr)
+        return 1
     # The schema is reconstructed FROM the graph (the schema-delta ceremony): the committed
     # backup is the schema of record; ontology.yaml is bootstrap-only.
     ontology = ontology_from_graph(base, base_dir)
@@ -470,6 +480,163 @@ def cmd_rederive(base_dir):
           f"{summary['loaded_nodes']} nodes, {summary['loaded_edges']} "
           "edges; ground layer unchanged; backup re-exported from the "
           "database.")
+    return 0
+
+
+def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
+    """Migrate this canon's embedded kernel stratum to the installed
+    engine's kernel — the kernel-side sibling of rederive. Dry run by
+    default: report the splice and the orphan check, write nothing.
+    --apply performs the splice as a first-class round: the delta
+    archived with its inverse, the event log chained, the backup
+    re-exported from the database. The project stratum and the ground
+    stay untouched — checked after the splice, never assumed."""
+    from . import canonize as canonize_mod
+    from . import delta as delta_mod
+    from . import kernel_migrate as km
+    from . import load as load_mod
+    from . import proposal as proposal_mod
+    from . import restore as restore_mod
+    from .extract import derive, strip_derived
+    from .ontology import ERROR as SEV_ERROR
+    from .ontology import ontology_from_graph
+
+    try:
+        base = canon_base(base_dir)
+    except FileNotFoundError as exc:
+        print("Attempted to load the committed backup (graph/export). "
+              f"Failed due to: {exc}. A kernel migration needs an "
+              "existing canon; a fresh knowledge base seeds the current "
+              "kernel at init.", file=sys.stderr)
+        return 1
+    seed, findings = km.fresh_kernel(base_dir, metaontology_path)
+    if seed is None:
+        print("Attempted to read the installed engine's kernel. Failed "
+              "due to:", file=sys.stderr)
+        for finding in findings:
+            print(f"  ⚠ {finding.detail}", file=sys.stderr)
+        return 1
+    version, _fingerprint = km.installed_kernel_identity(metaontology_path)
+    ground = strip_derived(base)
+    old_nodes, old_edges = km.kernel_stratum(ground)
+    new_nodes, new_edges = km.kernel_stratum(seed)
+    if old_nodes == new_nodes and old_edges == new_edges:
+        print(f"This canon already carries the installed kernel "
+              f"({version}) — nothing to migrate.")
+        return 0
+    old_names = set(old_nodes)
+    removed = old_names - set(new_nodes)
+    orphans = km.orphaned_references(ground, removed, old_names)
+    if orphans:
+        print("kernel-migrate refused — removing these kernel names "
+              "would orphan project references; nothing was written:",
+              file=sys.stderr)
+        for edge in orphans:
+            print(f"  ⚠ ({edge.from_label}, '{edge.from_name}') "
+                  f"-{edge.type}-> removed kernel name '{edge.to_name}'",
+                  file=sys.stderr)
+        print("Repoint or retire these references through an ordinary "
+              "gated round first, then rerun the migration.",
+              file=sys.stderr)
+        return 1
+    spliced = km.splice(ground, old_names, new_nodes, new_edges)
+    changes = delta_mod.diff(ground, spliced)
+    leak = km.leaks(changes, old_names | set(new_nodes))
+    if leak:
+        print("kernel-migrate refused — the splice reached beyond the "
+              "kernel stratum (an engine fault, not a fault in your "
+              "canon); nothing was written:", file=sys.stderr)
+        for item in leak:
+            print(f"  ⚠ {item}", file=sys.stderr)
+        return 1
+    old_version = old_nodes.get(km.KERNEL_ANCHOR, {}).get(
+        "version", "unknown")
+    print(f"Kernel migration: {old_version} -> {version}.")
+    for word, names in (
+            ("entering", sorted(set(new_nodes) - old_names)),
+            ("leaving", sorted(removed)),
+            ("changed", [name for _label, name, _changes
+                         in changes.nodes_changed])):
+        if names:
+            print(f"  {word} ({len(names)}): {', '.join(names)}")
+    print("  orphan check: clean — no project reference points at a "
+          "leaving kernel name.")
+    if not apply:
+        print("Dry run: nothing written. Rerun with --apply to migrate.")
+        return 0
+    pin = proposal_mod.current_dir(base_dir) / proposal_mod.BASE_FILE
+    if pin.exists():
+        print("kernel-migrate refused — a round is in flight "
+              f"({pin.relative_to(base_dir)} pins its base), and the "
+              "migration would move the base underneath it. Finish the "
+              "round (canonize --apply) or abandon it, then rerun.",
+              file=sys.stderr)
+        return 1
+    ontology = ontology_from_graph(spliced, base_dir)
+    new_graph, derive_findings = derive(ontology, spliced)
+    derive_errors = [f for f in derive_findings if f.severity == SEV_ERROR]
+    if derive_errors:
+        print("kernel-migrate refused — re-derivation over the migrated "
+              "kernel reported errors; nothing was written:",
+              file=sys.stderr)
+        for finding in derive_errors:
+            print(f"  ⚠ {finding.file} {finding.location}: "
+                  f"{finding.detail}", file=sys.stderr)
+        return 1
+    seq = proposal_mod.next_log_sequence(base_dir)
+    stamp_problems = canonize_mod.stamp_ontology_anchor(new_graph, seq)
+    if stamp_problems:
+        print("kernel-migrate refused — the version anchor cannot be "
+              "stamped; nothing was written:", file=sys.stderr)
+        for problem in stamp_problems:
+            print(f"  ⚠ {problem}", file=sys.stderr)
+        return 1
+    config = load_mod.read_config(base_dir)
+    try:
+        summary = load_mod.load(new_graph, config)
+        dumped = restore_mod.dump_db(config)
+    except Exception as exc:
+        print(f"Migration failed mid-write: {exc}. The backup files are "
+              "untouched — python -m graph restore returns the live "
+              "database to the last state.", file=sys.stderr)
+        return 1
+    if export_mod.serialize(dumped) != export_mod.serialize(new_graph):
+        print("EVENT LOG NOT WRITTEN — the database read back differently "
+              "than what was written (driver round-trip fault). The "
+              "backup files are untouched; python -m graph restore "
+              "returns the database to the last applied state.",
+              file=sys.stderr)
+        return 1
+    export_mod.write_export(dumped, base_dir / "graph" / "export")
+    # --- the event log: the migration is a first-class round ----------
+    delta_text = proposal_mod.serialize_delta(changes)
+    delta_hash = proposal_mod.content_hash(delta_text)
+    current = proposal_mod.current_dir(base_dir)
+    current.mkdir(parents=True, exist_ok=True)
+    (current / proposal_mod.DELTA_FILE).write_text(delta_text,
+                                                   encoding="utf-8")
+    (current / proposal_mod.INVERSE_FILE).write_text(
+        proposal_mod.serialize_delta(proposal_mod.invert_delta(changes)),
+        encoding="utf-8")
+    base_before = proposal_mod.base_identity(base)
+    base_after = proposal_mod.base_identity(dumped)
+    from . import workspace as workspace_mod
+    workspace_mod.stamp(config, "canon", base_after, git_ref(base_dir))
+    chain = proposal_mod.append_applied_log(
+        base_dir, delta_hash, base_before, base_after)
+    proposal_mod.write_json(current / proposal_mod.APPLIED_FILE,
+                            {"delta_hash": delta_hash,
+                             "base_after": base_after,
+                             "applied": "kernel-migration",
+                             "kernel": version,
+                             "chain": chain})
+    archive = proposal_mod.archive_round(base_dir, delta_hash)
+    print(f"Migrated to kernel {version}: {summary['loaded_nodes']} "
+          f"nodes, {summary['loaded_edges']} edges now live; backup "
+          "re-exported from the database.")
+    print(f"Round archived: {archive.relative_to(base_dir)} — event log "
+          f"entry chained ({chain[:12]}), inverse recorded.")
+    print("Ritual: pytest, commit the export + round archive.")
     return 0
 
 
@@ -683,6 +850,10 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     except FileNotFoundError as exc:
         print(exc, file=sys.stderr)
         return 1
+    from .kernel_migrate import kernel_skew
+    skew = kernel_skew(base)
+    if skew:
+        print(f"Advisory: {skew}", file=sys.stderr)
     config = load_mod.read_config(base_dir)
     database = _authoring_database(database, branch, config)
     # A branch may never read live canon as its authoring source, and an
@@ -882,6 +1053,17 @@ def cmd_canonize(base_dir, database, apply, branch=None):
               f"Failed due to: {exc}. For a from-sources bootstrap, use "
               "the load/validate path.", file=sys.stderr)
         return 1
+    from .kernel_migrate import kernel_skew
+    skew = kernel_skew(base)
+    if skew:
+        # Building more canon on a stale kernel deepens the skew, so the
+        # default line refuses to apply. A branch canon has no migration
+        # path of its own (it migrates when its line succeeds canon), so
+        # mid-rebuild the finding stays advisory.
+        if apply and branch is None:
+            print(f"--apply refused — {skew}", file=sys.stderr)
+            return 1
+        print(f"Advisory: {skew}", file=sys.stderr)
     config = dict(config)
     config["NEO4J_DATABASE"] = database
     identity = _working_copy_check(base_dir, config, database, branch)
@@ -2004,6 +2186,15 @@ def main(argv=None):
              "canon's machine layers against the current ontology.yaml, "
              "ground layer untouched, backup re-exported from the "
              "database")
+    kernel_parser = sub.add_parser(
+        "kernel-migrate",
+        help="migrate this canon's embedded kernel stratum to the "
+             "installed engine's kernel — dry run by default; --apply "
+             "performs the splice as a chained, archived round (project "
+             "stratum and ground untouched)")
+    kernel_parser.add_argument(
+        "--apply", action="store_true",
+        help="write the migration (dry run without it)")
     restore_parser.add_argument(
         "--database", default=None,
         help="target database override (e.g. 'scratch' — cuts a round: "
@@ -2210,6 +2401,8 @@ def main(argv=None):
                            base=args.base)
     if args.command == "rederive":
         return cmd_rederive(base_dir)
+    if args.command == "kernel-migrate":
+        return cmd_kernel_migrate(base_dir, args.apply)
     if args.command == "verify-seal":
         return cmd_verify_seal(base_dir, args.exam)
     if args.command == "load":

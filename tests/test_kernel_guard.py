@@ -19,30 +19,12 @@ kernel ceremony whose change set migrates the manual's canon too.
 from pathlib import Path
 
 from graph.extract import Extractor, schema_only
+from graph.kernel_migrate import kernel_stratum as _kernel_stratum
 from graph.ontology import ARCHETYPE_LABEL, kernel_ontology
 from graph.restore import read_export
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MANUAL_EXPORT = REPO_ROOT / "manual" / "graph" / "export"
-
-
-def _kernel_stratum(graph):
-    """The kernel-declared subset of a graph: nodes named DECLARED_IN
-    the Metaontology layer plus the Metaontology anchor, and every edge
-    leaving one of them."""
-    kernel = {edge.from_name for edge in graph.edges
-              if edge.type == "DECLARED_IN"
-              and edge.from_label == ARCHETYPE_LABEL
-              and edge.to_label == ARCHETYPE_LABEL
-              and edge.to_name == "Metaontology"}
-    kernel.add("Metaontology")
-    nodes = {name: props
-             for (label, name), props in graph.nodes.items()
-             if label == ARCHETYPE_LABEL and name in kernel}
-    edges = {edge for edge in graph.edges
-             if edge.from_label == ARCHETYPE_LABEL
-             and edge.from_name in kernel}
-    return nodes, edges
 
 
 def _fresh_seed(tmp_path):
