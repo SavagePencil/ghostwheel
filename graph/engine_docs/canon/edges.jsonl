@@ -114,16 +114,29 @@
 {"from": {"label": "[Conduct Section]", "name": "What the door never does"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "When answering"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Glossary, for the lay reader"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Glossary, the working vocabulary"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Reading the diagram"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Slice 1 (built) and what waits"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The diagram"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The keeper walkthrough (the design's acceptance story) [owner]"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The one-paragraph design (owner-accepted)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Trust"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Voice"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "What each lane never sees"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Why each piece (the dialogue, condensed)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "A reference number on every item"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "Absence is information, plus an offer"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "Any artifact; its content and meaning"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
@@ -193,11 +206,22 @@
 {"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Glossary, for the lay reader"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Glossary, the working vocabulary"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Reading the diagram"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Slice 1 (built) and what waits"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The diagram"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The keeper walkthrough (the design's acceptance story) [owner]"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The one-paragraph design (owner-accepted)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Trust"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Voice"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "What each lane never sees"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Why each piece (the dialogue, condensed)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "A reference number on every item"}, "properties": {}, "to": {"label": "[Section]", "name": "Trust"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "Absence is information, plus an offer"}, "properties": {}, "to": {"label": "[Section]", "name": "Conduct"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "Any artifact; its content and meaning"}, "properties": {}, "to": {"label": "[Section]", "name": "Language"}, "type": "PART_OF"}
