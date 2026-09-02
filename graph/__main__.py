@@ -1799,9 +1799,19 @@ def cmd_docs(record=None):
     a knowledge base points here instead of vendoring a copy (the copy
     retirement), and the plugin's trigger stubs point here for their
     instructions (the stub model). No base, no database: the command
-    answers from anywhere."""
-    designs = sorted(p.stem for p in ENGINE_DOCS_DIR.glob("*.md"))
-    conduct = _conduct_records()
+    answers from anywhere. A record the manual's canon carries is
+    assembled from its citizens; one not yet in canon is served from
+    the packaged file."""
+    from . import records as records_mod
+
+    canon = records_mod.load_canon()
+    in_canon = records_mod.records(canon) if canon is not None else {}
+    designs = sorted({p.stem for p in ENGINE_DOCS_DIR.glob("*.md")}
+                     | {handle for handle, (label, _) in in_canon.items()
+                        if not records_mod.is_conduct(label)})
+    conduct = sorted(set(_conduct_records())
+                     | {handle for handle, (label, _) in in_canon.items()
+                        if records_mod.is_conduct(label)})
     if not record:
         print("Engine design records (python -m graph docs <record>):")
         for name in designs:
@@ -1809,6 +1819,10 @@ def cmd_docs(record=None):
         print("Conduct records — the skills' full procedures:")
         for name in conduct:
             print(f"  {name}")
+        return 0
+    if record in in_canon:
+        label, name = in_canon[record]
+        sys.stdout.write(records_mod.render(canon, label, name))
         return 0
     path = ENGINE_DOCS_DIR / f"{record}.md"
     if not path.is_file():

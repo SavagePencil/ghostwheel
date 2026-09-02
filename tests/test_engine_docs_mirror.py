@@ -22,6 +22,20 @@ def test_design_records_mirror_byte_identical():
     assert not extras, f"mirror carries retired records: {sorted(extras)}"
 
 
+def test_canon_mirror_byte_identical():
+    sources = sorted((ROOT / "manual" / "graph" / "export").glob("*.jsonl"))
+    assert sources, "the manual's export is empty?"
+    for source in sources:
+        mirrored = MIRROR / "canon" / source.name
+        assert mirrored.exists(), f"{source.name} missing from the mirror"
+        assert mirrored.read_bytes() == source.read_bytes(), \
+            f"{source.name} drifted — re-copy manual/graph/export/ into " \
+            "graph/engine_docs/canon/"
+    extras = {p.name for p in (MIRROR / "canon").glob("*.jsonl")} \
+        - {s.name for s in sources}
+    assert not extras, f"mirror carries retired files: {sorted(extras)}"
+
+
 def test_skills_mirror_byte_identical():
     sources = sorted((ROOT / ".claude" / "skills").glob("*/SKILL.md"))
     assert sources, ".claude/skills is empty?"

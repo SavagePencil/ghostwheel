@@ -6,7 +6,7 @@
 # (See README, "Why the package is called `graph`".)
 [project]
 name = "ghostwheel"
-version = "0.28.0"
+version = "0.29.0"
 description = "Ghostwheel: a project-agnostic knowledge-graph engine — two-layer ontology, deterministic export/restore, reviewed delta rounds with a diff gate, a chained event log, and visibility lenses."
 requires-python = ">=3.11"
 dependencies = ["pyyaml", "neo4j"]
@@ -26,7 +26,7 @@ packages = ["graph", "graph.grammars"]
 # carries its skills and design records, so a consuming knowledge base
 # vendors them FROM the installed package — one living copy, here.
 graph = ["metaontology.yaml", "engine_docs/design/*.md",
-         "engine_docs/skills/*/SKILL.md"]
+         "engine_docs/skills/*/SKILL.md", "engine_docs/canon/*.jsonl"]
 
 [build-system]
 requires = ["setuptools>=68"]
