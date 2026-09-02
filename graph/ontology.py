@@ -1177,6 +1177,14 @@ def check_ontology(ontology):
                     elif target not in ontology.nodes:
                         problem(ERROR, rloc,
                                 f"unknown target label '{target}'")
+                # A stage_enum naming no declared enum would silently
+                # disable stage checking at extraction — refuse the typo
+                # where it was written.
+                stage_enum = rel.get("stage_enum")
+                if stage_enum and stage_enum not in ontology.enums:
+                    problem(ERROR, rloc,
+                            f"unknown enum '{stage_enum}' in 'stage_enum' "
+                            f"(declared: {sorted(ontology.enums)})")
             if rel.get("from_column"):
                 rel_header = []
                 if not rel.get("source"):
