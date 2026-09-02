@@ -64,6 +64,7 @@ from dataclasses import dataclass, field
 
 from .judge import claims_of, normalize
 from .ontology import UNAUTHORABLE_EDGE_TYPES
+from .refs import CitizenRef
 
 PROPERTIES = "properties"
 RECEIPT = "receipt"
@@ -107,17 +108,17 @@ class Attribution:
     """One claim's verdict against canon."""
     claim: str
     verdict: str               # attributed | canon-gap | unattributed-invention
-    rung: str = None           # properties | receipt | prose (attributed only)
+    rung: "str | None" = None  # properties | receipt | prose (attributed only)
     citizens: list = field(default_factory=list)  # [(label, name)]
     score: float = 0.0         # best match strength at the winning rung
-    earned: bool = None        # strong form: cited citizen in the
+    earned: "bool | None" = None  # strong form: cited citizen in the
     #                            drafter's consulted set (None = no
     #                            trace supplied)
     nearest: list = field(default_factory=list)   # gap aid: [(label, name)]
     evidence: list = field(default_factory=list)  # which surfaces matched:
     #                            value | edge | step | receipt | prose
 
-    def row(self):
+    def row(self, kb=None, branch=None):
         doc = {"claim": self.claim, "verdict": self.verdict,
                "score": round(self.score, 3)}
         if self.rung:
@@ -125,12 +126,14 @@ class Attribution:
         if self.evidence:
             doc["evidence"] = list(self.evidence)
         if self.citizens:
-            doc["citizens"] = [f"({label}) {name}"
+            doc["citizens"] = [CitizenRef(label, name).row(kb=kb,
+                                                           branch=branch)
                                for label, name in self.citizens]
         if self.earned is not None:
             doc["earned"] = self.earned
         if self.nearest:
-            doc["nearest"] = [f"({label}) {name}"
+            doc["nearest"] = [CitizenRef(label, name).row(kb=kb,
+                                                          branch=branch)
                               for label, name in self.nearest]
         return doc
 
@@ -418,7 +421,9 @@ def render_census(results):
     if soup:
         lines += ["### Prose-only homes (attributed, and a named debt: "
                   "these facts are still soup)", ""]
-        lines += [f"- {r.claim} — {', '.join(c for c in r.row()['citizens'])}"
+        lines += [f"- {r.claim} — "
+                  + ", ".join(f"({label}) {name}"
+                              for label, name in r.citizens)
                   for r in soup[:20]]
         if len(soup) > 20:
             lines.append(f"- … and {len(soup) - 20} more (see the "

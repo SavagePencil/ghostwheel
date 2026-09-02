@@ -14,12 +14,21 @@ Two conventions this module holds to:
   as a standalone field so machines never parse prose for it. A future
   wording pass may de-duplicate; the record shape already permits it.
 - Serialized rows follow the house style: plain dicts, snake_case keys,
-  optional fields omitted when empty. Citizens are referenced as
-  ``{"label": …, "name": …}`` objects; connections nest one on each end.
+  optional fields omitted when empty. Citizens and connections are
+  referenced through the refs module's structs (CitizenRef /
+  ConnectionRef) — one shape on every machine surface, each row
+  carrying its knowledge base (and branch, off the default line) when
+  the renderer knows the line it is serving.
 """
 
 import json
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+from .refs import CitizenRef, ConnectionRef
+
+if TYPE_CHECKING:  # delta imports report; the reverse edge is type-only
+    from .delta import Delta
 
 REFUSAL = "refusal"
 ADVISORY = "advisory"
@@ -68,6 +77,7 @@ REF_KEYS = {
     "body-out-of-sync": "out-of-sync",
     "roster-gap": "missing-entry",
     # ceremony items
+    "kb-named": "name-declared",
     "new-concept": "new-concept",
     "new-label": "new-catalog",
     "doc-edit": "description-edit",
@@ -82,39 +92,6 @@ def ref_key(code):
     return REF_KEYS.get(code, code)
 
 
-@dataclass(frozen=True)
-class NodeRef:
-    """A citizen, by its graph identity. ``name`` may be None when the
-    verdict is precisely that the node has no name yet."""
-    label: str
-    name: object = None
-
-    def row(self):
-        return {"kind": "node", "label": self.label, "name": self.name}
-
-
-@dataclass(frozen=True)
-class EdgeRef:
-    """A connection, by type and endpoints."""
-    type: str
-    source: NodeRef
-    target: NodeRef
-
-    def row(self):
-        return {"kind": "edge", "type": self.type,
-                "from": {"label": self.source.label,
-                         "name": self.source.name},
-                "to": {"label": self.target.label,
-                       "name": self.target.name}}
-
-
-def edge_ref(edge):
-    """EdgeRef from an extract.Edge (or anything edge-shaped)."""
-    return EdgeRef(edge.type,
-                   NodeRef(edge.from_label, edge.from_name),
-                   NodeRef(edge.to_label, edge.to_name))
-
-
 @dataclass
 class Verdict:
     """One lint result: something the round may not do (refusal) or
@@ -123,20 +100,20 @@ class Verdict:
     message: str
     severity: str = REFUSAL
     remedy: str = ""
-    subject: "NodeRef | EdgeRef | None" = None
+    subject: "CitizenRef | ConnectionRef | None" = None
     data: dict = field(default_factory=dict)
 
     def __str__(self):
         return self.message
 
-    def row(self):
+    def row(self, kb=None, branch=None):
         doc: dict = {"code": self.code, "severity": self.severity,
                      "ref": ref_key(self.code),
                      "message": self.message}
         if self.remedy:
             doc["remedy"] = self.remedy
         if self.subject is not None:
-            doc["subject"] = self.subject.row()
+            doc["subject"] = self.subject.row(kb=kb, branch=branch)
         if self.data:
             doc["data"] = dict(self.data)
         return doc
@@ -148,18 +125,18 @@ class CeremonyItem:
     the round carrying these IS the ceremony ruling."""
     code: str
     message: str
-    subject: "NodeRef | None" = None
+    subject: "CitizenRef | None" = None
     data: dict = field(default_factory=dict)
 
     def __str__(self):
         return self.message
 
-    def row(self):
+    def row(self, kb=None, branch=None):
         doc: dict = {"code": self.code,
                      "ref": ref_key(self.code),
                      "message": self.message}
         if self.subject is not None:
-            doc["subject"] = self.subject.row()
+            doc["subject"] = self.subject.row(kb=kb, branch=branch)
         if self.data:
             doc["data"] = dict(self.data)
         return doc
@@ -169,7 +146,7 @@ class CeremonyItem:
 class DeltaReport:
     """The delta gate's report model: the changeset plus everything the
     gate says about it. Both renderers read only this."""
-    delta: object                     # delta.Delta
+    delta: "Delta"
     verdicts: list = field(default_factory=list)    # Verdict (refusals)
     ceremony: list = field(default_factory=list)    # CeremonyItem
     advisories: list = field(default_factory=list)  # Verdict (advisory)
@@ -288,13 +265,15 @@ def render_markdown(report):
     return "\n".join(lines) + _advisories_tail(report)
 
 
-def render_json(report, proposal_id=None):
+def render_json(report, proposal_id=None, kb=None, branch=None):
     """The same report as machine-readable rows: summary counts, verdict
     and ceremony records, advisories. The changeset's own rows live in
     the proposal document (delta.json) — this report references it by id
     rather than repeating it. Not part of the frozen artifacts: the
     report is a rendering, re-derivable from the pinned changeset and
-    base."""
+    base. ``kb``/``branch`` name the line of truth being reported on;
+    every subject row carries them (per-row addressing, the CitizenRef
+    ruling)."""
     delta = report.delta
     doc: dict = {"kind": "delta-report"}
     if delta.empty:
@@ -311,11 +290,18 @@ def render_json(report, proposal_id=None):
         doc["summary"] = summary
     if proposal_id:
         doc["proposal_id"] = proposal_id
+    if kb:
+        doc["kb"] = kb
+    if branch:
+        doc["branch"] = branch
     if report.verdicts:
-        doc["verdicts"] = [v.row() for v in report.verdicts]
+        doc["verdicts"] = [v.row(kb=kb, branch=branch)
+                           for v in report.verdicts]
     if report.ceremony:
-        doc["ceremony"] = [i.row() for i in report.ceremony]
+        doc["ceremony"] = [i.row(kb=kb, branch=branch)
+                           for i in report.ceremony]
     if report.advisories:
-        doc["advisories"] = [v.row() for v in report.advisories]
+        doc["advisories"] = [v.row(kb=kb, branch=branch)
+                             for v in report.advisories]
     return json.dumps(doc, ensure_ascii=False, sort_keys=True,
                       indent=2) + "\n"

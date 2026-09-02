@@ -118,9 +118,11 @@ def test_subjects_carry_the_citizen_ref_shape(tmp_path):
     doc = json.loads(render_json(rich_report(tmp_path)))
     by_code = {v["code"]: v for v in doc["verdicts"]}
     node = by_code["machine-label-authored"]["subject"]
-    assert node == {"kind": "node", "label": "Step", "name": "Ghost Step"}
+    assert node == {"kind": "citizen", "label": "Step",
+                    "name": "Ghost Step"}
     edge = by_code["membership-basis-blanked"]["subject"]
-    assert edge["kind"] == "edge" and edge["type"] == "DECLARED_MEMBER_OF"
+    assert edge["kind"] == "connection" \
+        and edge["type"] == "DECLARED_MEMBER_OF"
     assert edge["from"] == {"label": "Object", "name": "Plain Pebble"}
     assert edge["to"] == {"label": "Archetype", "name": "Tool"}
 
@@ -146,7 +148,7 @@ def test_ceremony_rows_carry_their_particulars(tmp_path):
         "property": "doc", "before": None,
         "after": "A thing that does work"}
     assert by_code["removed-concept"]["subject"] == {
-        "kind": "node", "label": "Archetype", "name": "Relic"}
+        "kind": "citizen", "label": "Archetype", "name": "Relic"}
 
 
 def test_long_doc_edit_is_truncated_in_prose_but_whole_in_data():

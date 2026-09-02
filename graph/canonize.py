@@ -37,6 +37,7 @@ from pathlib import Path
 import yaml
 
 from .ontology import Reader, node_reader
+from .refs import ONTOLOGY_ANCHOR
 from .parsers import EMPTY_MARKERS
 
 # Agent-authoring metadata consumed at review time, never rendered.
@@ -53,7 +54,7 @@ JOINER = ", "
 # GRAPH, not with a file — the hand-bumped-integer era ends. The stamp
 # happens at apply, after the ground facts land and the machine layers
 # re-derive, before anything is written.
-ONTOLOGY_ANCHOR = "Ontology"
+# (the anchor's name itself is refs.py's constant, imported above)
 # The anchor's own stamps are metadata about the schema, not part of its
 # shape — excluded from the fingerprint so re-stamping is idempotent (the
 # fingerprint never chases its own tail).

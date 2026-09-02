@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from . import export as export_mod
+from . import refs as refs_mod
 from . import validate as validate_mod
 
 
@@ -976,7 +977,9 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     delta_id = proposal_mod.content_hash(delta_text)
     json_path = reports_dir / "delta-report.json"
     json_path.write_text(
-        report_mod.render_json(report_model, proposal_id=delta_id),
+        report_mod.render_json(report_model, proposal_id=delta_id,
+                               kb=refs_mod.kb_name(base, base_dir),
+                               branch=branch),
         encoding="utf-8")
     print(f"Report records: {json_path.relative_to(base_dir)}")
     delta_path = proposal_mod.current_dir(base_dir, branch) \
@@ -1788,7 +1791,8 @@ def cmd_roundtrip(base_dir, scope, draft, book=False):
     # filing stays with the orchestrator)
     if result.attribution:
         from . import attribution as attribution_mod
-        debts = [r.row() for r in result.attribution
+        kb = refs_mod.kb_name_from_export(base_dir)
+        debts = [r.row(kb=kb) for r in result.attribution
                  if r.verdict == attribution_mod.CANON_GAP
                  or (r.verdict == attribution_mod.ATTRIBUTED
                      and r.rung == attribution_mod.PROSE)]
@@ -2004,7 +2008,7 @@ def cmd_docs(record=None):
     return 0
 
 
-def cmd_init(target):
+def cmd_init(target, name=None):
     """Seed a new knowledge base, born graph-native: no ontology.yaml,
     no sources, no derive path. Writes a committed backup holding the
     kernel's schema stratum alone into <target>/graph/export — the same
@@ -2012,7 +2016,7 @@ def cmd_init(target):
     can build everything else through gated rounds. No database needed:
     the first `restore` there brings the DBMS into the story."""
     from .extract import Extractor, schema_only
-    from .ontology import ERROR, kernel_ontology
+    from .ontology import ARCHETYPE_LABEL, ERROR, kernel_ontology
 
     target = Path(target).resolve()
     existing = [marker for marker in
@@ -2043,10 +2047,13 @@ def cmd_init(target):
     extractor = Extractor(ontology)
     extractor.build_metamodel()
     seed = schema_only(extractor.graph)
+    kb = name or target.name
+    seed.ensure_node(ARCHETYPE_LABEL, refs_mod.ONTOLOGY_ANCHOR,
+                     **{refs_mod.KB_NAME_PROP: kb})
     export_dir = target / "graph" / "export"
     export_mod.write_export(seed, export_dir)
-    print(f"Knowledge base seeded at {target} from the engine kernel "
-          f"alone — {len(seed.nodes)} schema citizens, "
+    print(f"Knowledge base '{kb}' seeded at {target} from the engine "
+          f"kernel alone — {len(seed.nodes)} schema citizens, "
           f"{len(seed.edges)} schema edges; no ground facts.")
     print("Next: python -m graph restore (build its canon database from "
           "the backup), then restore --database scratch to cut the "
@@ -2261,6 +2268,11 @@ def main(argv=None):
         "target", nargs="?", default=".",
         help="directory to become the knowledge base root (default: the "
              "current directory)")
+    init_parser.add_argument(
+        "--name", default=None,
+        help="the knowledge base's declared name, written onto its "
+             "Ontology anchor so it travels with the committed backup "
+             "(default: the target directory's basename)")
     sub.add_parser(
         "corpus",
         help="re-check every owner-blessed floor (the regression corpus): each guard "
@@ -2370,7 +2382,7 @@ def main(argv=None):
     if args.command == "init":
         # Opens no knowledge base either — it births one where none
         # exists, so base-dir discovery cannot precede it.
-        return cmd_init(args.target)
+        return cmd_init(args.target, name=args.name)
 
     base_dir = find_base_dir()
     load_corpus_grammars(base_dir)
