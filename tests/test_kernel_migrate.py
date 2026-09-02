@@ -212,16 +212,17 @@ def test_the_skew_finding_speaks_only_on_skew(tmp_path):
     # a canon built with an older kernel
     anchor["version"] = "0.0.1"
     message = km.kernel_skew(graph)
+    assert message is not None
     assert "built with kernel 0.0.1" in message
     assert f"carries kernel {kernel_version}" in message
     assert km.MIGRATE_COMMAND in message
     # same version, different content: a broken kernel ceremony
     anchor["version"] = kernel_version
     anchor["fingerprint"] = "not-the-installed-fingerprint"
-    assert "broken kernel ceremony" in km.kernel_skew(graph)
+    assert "broken kernel ceremony" in (km.kernel_skew(graph) or "")
     # no anchor at all: unverifiable, and the finding says so
     del graph.nodes[(ARCHETYPE_LABEL, km.KERNEL_ANCHOR)]
-    assert "no Metaontology anchor" in km.kernel_skew(graph)
+    assert "no Metaontology anchor" in (km.kernel_skew(graph) or "")
 
 
 def test_mutating_commands_refuse_on_skew(tmp_path, capsys):

@@ -2073,7 +2073,7 @@ def cmd_terms(base_dir):
     from . import parsers
 
     extractor, error = canon_term_index(base_dir)
-    if error:
+    if error or extractor is None:
         print(error, file=sys.stderr)
         return 1
 
@@ -2129,6 +2129,12 @@ def load_corpus_grammars(base_dir):
         return
     import importlib.util
     spec = importlib.util.spec_from_file_location("corpus_grammars", hook)
+    if spec is None or spec.loader is None:  # not importable as a module
+        print(f"Attempted to load the corpus grammar module ({hook}). "
+              "Failed because Python could not build an import spec for "
+              "it. Extraction that needs a declared parser will refuse "
+              "until it loads.", file=sys.stderr)
+        return
     module = importlib.util.module_from_spec(spec)
     try:
         spec.loader.exec_module(module)

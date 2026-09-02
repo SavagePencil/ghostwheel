@@ -131,7 +131,8 @@ def specified_in_of(spec):
         if isinstance(section, list):
             sections = [str(s).strip() for s in section if str(s).strip()]
         else:
-            sections = [section.strip()] if (section or "").strip() else []
+            sections = [str(section).strip()] \
+                if str(section or "").strip() else []
         return ((raw.get("artifact") or "").strip() or None,
                 sections,
                 raw.get("approved_hash"))

@@ -51,7 +51,7 @@ from .roundtrip import table_ref_columns
 class TableRender:
     """One {{csv:}} embed, rendered or reported as a gap."""
     relpath: str
-    columns: list = None          # the embed's columns= filter, or None
+    columns: "list | None" = None  # the embed's columns= filter, or None
     label: str = ""               # the source-mapped label, if one was found
     markdown: str = ""            # the rendered markdown table (empty on gap)
     gap: str = ""                 # why it could not be rendered (empty if it was)

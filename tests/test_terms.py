@@ -120,13 +120,13 @@ def canon(tmp_path_factory):
 
 def test_canon_term_index_builds(canon):
     extractor, error = canon_term_index(canon)
-    assert error is None, error
+    assert error is None and extractor is not None, error
     assert extractor.term_index
 
 
 def test_every_canon_citizen_resolves_by_name(canon):
     extractor, error = canon_term_index(canon)
-    assert error is None, error
+    assert error is None and extractor is not None, error
     index = extractor.term_index
     missing = [
         (label, name)
@@ -143,7 +143,7 @@ def test_list_alias_resolves_to_every_target(canon):
     # "Swap" names BOTH its Knacks — a list-valued alias lands each target
     # in the index under the one surface.
     extractor, error = canon_term_index(canon)
-    assert error is None, error
+    assert error is None and extractor is not None, error
     assert {("Knack", "Swap (active)"), ("Knack", "Swap (reactive)")} \
         <= extractor.term_index.get("Swap", set())
 
@@ -152,7 +152,7 @@ def test_list_alias_refuses_csv_cells(canon):
     # A deliberately ambiguous alias may never resolve a data cell — the
     # cell keeps its raw name for the dangling-reference check.
     extractor, error = canon_term_index(canon)
-    assert error is None, error
+    assert error is None and extractor is not None, error
     assert extractor.resolve_alias("Knack", "Swap") == "Swap"
     # 1:1 aliases still resolve cells as before.
     assert extractor.resolve_alias(

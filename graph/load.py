@@ -9,6 +9,7 @@ the graph is entirely derived from the sources in git.
 
 import os
 from pathlib import Path
+from typing import LiteralString, cast
 
 DEFAULTS = {
     "NEO4J_URI": "bolt://localhost:7687",
@@ -43,6 +44,14 @@ def read_config(base_dir):
 def batched(items, size=BATCH_SIZE):
     for start in range(0, len(items), size):
         yield items[start:start + size]
+
+
+def vouched(query):
+    """A dynamically built Cypher string, vouched for: every dynamic
+    piece is a label or relationship-type name from the graph's own
+    validated data, never outside input — which is what the driver's
+    LiteralString guard exists to ask about."""
+    return cast(LiteralString, query)
 
 
 def ensure_database(driver, database):
@@ -90,22 +99,23 @@ def load(graph, config):
         with driver.session(database=database) as session:
             session.run("MATCH (n) DETACH DELETE n")
             for label in sorted(node_rows):  # actual labels incl. Archetype
-                session.run(
+                session.run(vouched(
                     f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:`{label}`) "
-                    "REQUIRE n.name IS UNIQUE")
+                    "REQUIRE n.name IS UNIQUE"))
             for label, rows in node_rows.items():
                 for batch in batched(rows):
-                    session.run(
+                    session.run(vouched(
                         f"UNWIND $rows AS row CREATE (n:`{label}` "
-                        "{name: row.name}) SET n += row.props",
+                        "{name: row.name}) SET n += row.props"),
                         rows=batch)
             for (rel_type, from_label, to_label), rows in edge_rows.items():
                 for batch in batched(rows):
-                    session.run(
+                    session.run(vouched(
                         "UNWIND $rows AS row "
                         f"MATCH (a:`{from_label}` {{name: row.from}}) "
                         f"MATCH (b:`{to_label}` {{name: row.to}}) "
-                        f"CREATE (a)-[r:`{rel_type}`]->(b) SET r += row.props",
+                        f"CREATE (a)-[r:`{rel_type}`]->(b) "
+                        "SET r += row.props"),
                         rows=batch)
             counts = session.run(
                 "MATCH (n) WITH count(n) AS nodes "
