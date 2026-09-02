@@ -125,20 +125,38 @@ def orphaned_references(ground, removed_names, old_names):
 def splice(ground, old_names, seed_nodes, seed_edges):
     """A copy of the ground with the old kernel stratum swapped for the
     seed's: old kernel citizens and their outbound edges out, fresh ones
-    in; every project node, project edge, and ground fact untouched."""
+    in; every project node, project edge, and ground fact untouched.
+
+    Merge-with-visibility (the enrichment ruling): the seed wins every
+    key it defines — the kernel owns its identity — but a canon-side
+    key the seed does NOT define is the world's own enrichment of a
+    kernel citizen, and it rides the splice unchanged. A removed
+    citizen's enrichment is not resurrected (the orphan check upstream
+    already ruled on the removal). Returns (spliced, carried) where
+    carried = {citizen name: sorted canon-only keys that rode} — the
+    report names what rode rather than re-diffing."""
     spliced = GraphData()
+    carried = {}
     for (label, name), props in ground.nodes.items():
         if label == ARCHETYPE_LABEL and name in old_names:
             continue
         spliced.ensure_node(label, name, **props)
     for name, props in seed_nodes.items():
-        spliced.ensure_node(ARCHETYPE_LABEL, name, **props)
+        merged = dict(props)
+        if name in old_names:
+            old_props = ground.nodes.get((ARCHETYPE_LABEL, name)) or {}
+            extras = {key: value for key, value in old_props.items()
+                      if key not in props}
+            if extras:
+                merged.update(extras)
+                carried[name] = sorted(extras)
+        spliced.ensure_node(ARCHETYPE_LABEL, name, **merged)
     for edge in ground.edges:
         if edge.from_label == ARCHETYPE_LABEL and edge.from_name in old_names:
             continue
         spliced.edges.append(edge)
     spliced.edges.extend(seed_edges)
-    return spliced
+    return spliced, carried
 
 
 def leaks(delta, kernel_names):

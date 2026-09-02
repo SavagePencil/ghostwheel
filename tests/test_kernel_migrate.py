@@ -107,7 +107,8 @@ def test_the_splice_moves_only_the_kernel_stratum(tmp_path):
     seed, _findings = km.fresh_kernel(base_dir, nxt)
     old_nodes, _old_edges = km.kernel_stratum(ground)
     new_nodes, new_edges = km.kernel_stratum(seed)
-    spliced = km.splice(ground, set(old_nodes), new_nodes, new_edges)
+    spliced, _carried = km.splice(ground, set(old_nodes), new_nodes,
+                                  new_edges)
     # the project stratum rides through untouched
     key = (ARCHETYPE_LABEL, PROJECT_CONCEPT)
     assert spliced.nodes[key] == ground.nodes[key]
@@ -246,3 +247,82 @@ def test_rederive_proceeds_when_the_kernel_matches(tmp_path, capsys,
     fake_database(monkeypatch)
     assert cmd_rederive(base_dir) == 0
     assert "Rederived canon" in capsys.readouterr().out
+
+
+# -- the enrichment ruling: canon's own knowledge on kernel citizens ----
+#    rides the splice; the seed wins only the keys it defines --------------
+
+
+def enriched_kb(tmp_path):
+    """A knowledge base whose canon enriched a kernel citizen: 'Question'
+    carries a world-authored spec catalog the kernel never defined, plus
+    a doc the seed DOES define (the seed must win that one back)."""
+    base_dir = seeded_kb(tmp_path)
+    export_dir = base_dir / "graph" / "export"
+    graph = read_export(export_dir)
+    question = graph.nodes[(ARCHETYPE_LABEL, "Question")]
+    question["spec_json"] = '{"catalog": {"asked_by": "text"}}'
+    question["doc"] = "a world-reworded doc the kernel will win back"
+    export_mod.write_export(graph, export_dir)
+    return base_dir
+
+
+def test_canon_enrichment_rides_the_splice_and_the_seed_wins_its_keys(
+        tmp_path):
+    base_dir = enriched_kb(tmp_path)
+    nxt = modified_kernel(tmp_path, add="Minted Kernel Concept")
+    ground = strip_derived(read_export(base_dir / "graph" / "export"))
+    seed, _findings = km.fresh_kernel(base_dir, nxt)
+    old_nodes, _old_edges = km.kernel_stratum(ground)
+    new_nodes, new_edges = km.kernel_stratum(seed)
+    spliced, carried = km.splice(ground, set(old_nodes), new_nodes,
+                                 new_edges)
+    after = spliced.nodes[(ARCHETYPE_LABEL, "Question")]
+    # the world's own key rides through unchanged...
+    assert after["spec_json"] == '{"catalog": {"asked_by": "text"}}'
+    # ...the seed wins the key it defines...
+    assert after["doc"] == new_nodes["Question"]["doc"]
+    assert "reworded" not in after["doc"]
+    # ...and the carried map names exactly what rode
+    assert carried == {"Question": ["spec_json"]}
+
+
+def test_a_removed_citizens_enrichment_does_not_resurrect(tmp_path):
+    base_dir = seeded_kb(tmp_path)
+    export_dir = base_dir / "graph" / "export"
+    graph = read_export(export_dir)
+    graph.nodes[(ARCHETYPE_LABEL, "Theme")]["spec_json"] = "{}"
+    export_mod.write_export(graph, export_dir)
+    nxt = modified_kernel(tmp_path, drop="Theme")
+    ground = strip_derived(read_export(export_dir))
+    seed, _findings = km.fresh_kernel(base_dir, nxt)
+    old_nodes, _old_edges = km.kernel_stratum(ground)
+    new_nodes, new_edges = km.kernel_stratum(seed)
+    spliced, carried = km.splice(ground, set(old_nodes), new_nodes,
+                                 new_edges)
+    assert (ARCHETYPE_LABEL, "Theme") not in spliced.nodes
+    assert carried == {}
+
+
+def test_the_dry_run_names_what_rode(tmp_path, capsys):
+    base_dir = enriched_kb(tmp_path)
+    nxt = modified_kernel(tmp_path, add="Minted Kernel Concept")
+    assert cmd_kernel_migrate(base_dir, metaontology_path=nxt) == 0
+    out = capsys.readouterr().out
+    assert "carried (1): Question (spec_json)" in out
+    assert "rides the migration unchanged" in out
+    assert "orphan check: clean" in out
+    assert "Dry run: nothing written" in out
+
+
+def test_the_applied_migration_keeps_the_enrichment(tmp_path, capsys,
+                                                    monkeypatch):
+    base_dir = enriched_kb(tmp_path)
+    nxt = modified_kernel(tmp_path, add="Minted Kernel Concept")
+    fake_database(monkeypatch)
+    assert cmd_kernel_migrate(base_dir, apply=True,
+                              metaontology_path=nxt) == 0
+    after = read_export(base_dir / "graph" / "export")
+    question = after.nodes[(ARCHETYPE_LABEL, "Question")]
+    assert question["spec_json"] == '{"catalog": {"asked_by": "text"}}'
+    assert "reworded" not in question["doc"]

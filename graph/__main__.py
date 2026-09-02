@@ -540,7 +540,7 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
               "gated round first, then rerun the migration.",
               file=sys.stderr)
         return 1
-    spliced = km.splice(ground, old_names, new_nodes, new_edges)
+    spliced, carried = km.splice(ground, old_names, new_nodes, new_edges)
     changes = delta_mod.diff(ground, spliced)
     leak = km.leaks(changes, old_names | set(new_nodes))
     if leak:
@@ -560,6 +560,15 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
                          in changes.nodes_changed])):
         if names:
             print(f"  {word} ({len(names)}): {', '.join(names)}")
+    if carried:
+        # enrichment this canon holds that the kernel does not define —
+        # carried through the splice unchanged, named for the record
+        riders = ", ".join(f"{name} ({', '.join(keys)})"
+                           for name, keys in sorted(carried.items()))
+        print(f"  carried ({len(carried)}): {riders}")
+        print("  (carried = this canon's own knowledge on kernel "
+              "citizens, beyond what the kernel defines — it rides "
+              "the migration unchanged.)")
     print("  orphan check: clean — no project reference points at a "
           "leaving kernel name.")
     if not apply:
