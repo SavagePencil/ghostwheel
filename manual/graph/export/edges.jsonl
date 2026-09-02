@@ -1,3 +1,32 @@
+{"from": {"label": "[Conduct Section]", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Canon changes (full flow: the agentic-intake skill)"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Dispatch — which job serves the input"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Dispatch — which job serves the input"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Dispatch — which job serves the input"}, "properties": {}, "to": {"label": "Procedure", "name": "Querying the rules graph"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Posture"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Procedure (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Procedure (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "The maintenance loop"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Procedure (Procedure intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Procedure intake"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Procedure intake"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "Querying the rules graph"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "The flow"}, "properties": {}, "to": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "The flow"}, "properties": {}, "to": {"label": "Procedure", "name": "Procedure intake"}, "type": "CITES"}
+{"from": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "10. Open questions (named, not resolved)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "5. Two customer archetypes; streamlining is a floor"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "7. Evaluability: traces, the run graph, and the regression corpus"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "Born graph-native"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "Invariants (the non-negotiables)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "The delta lifecycle (the artifact's own states)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "The reading room (comprehension graph)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "What the citizens are"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "CITES"}
+{"from": {"label": "[Section]", "name": "What worlds do with the conduct"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "CITES"}
 {"from": {"label": "Archetype", "name": "Answer"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "Approved Omission"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
@@ -113,29 +142,60 @@
 {"from": {"label": "[Conduct Section]", "name": "The trace and the margin"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "What the door never does"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "When answering"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Design Record]", "name": "The engine as corpus"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "1. The Virtues (engine character — any universe)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "10. Open questions (named, not resolved)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "2. The Tenets (ruled by the owner; wording remains his)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "3. The Method (the owner's ten steps — wording WIP, his to strike)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "4. The architecture: a short path plus engagement signals"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "5. Two customer archetypes; streamlining is a floor"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "6. Casting and briefs"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "7. Evaluability: traces, the run graph, and the regression corpus"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "8. The margin: bidirectional, anchored, deduced"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "9. Superseded: what v1 got wrong, and who killed it"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "A self-world, riding the engine's own version"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Agentic ETL — the Persistent-Graph Era"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Anatomy of a delta"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Born graph-native"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Glossary, for the lay reader"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Glossary, the working vocabulary"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Invariants (the non-negotiables)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Reading the diagram"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Slice 1 (built) and what waits"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The delta lifecycle (the artifact's own states)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The diagram"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The engine as corpus"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The isolation decision"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The keeper walkthrough (the design's acceptance story) [owner]"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The kernel stays honest"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The micro-kernel: five organs, fixed forever"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The narrative: you hand the agent a doc with a table"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The one-paragraph design (owner-accepted)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The process state machine"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The reading room (comprehension graph)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The render contract and the flip"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The words this document uses"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Trust"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Voice"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "What each lane never sees"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "What the citizens are"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "What worlds do with the conduct"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Why each piece (the dialogue, condensed)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "A reference number on every item"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Tenet]", "name": "Absence is information, plus an offer"}, "properties": {}, "to": {"label": "Archetype", "name": "[Tenet]"}, "type": "INSTANCE_OF"}
@@ -202,25 +262,53 @@
 {"from": {"label": "[Conduct Section]", "name": "The trace and the margin"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "What the door never does"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "When answering"}, "properties": {}, "to": {"label": "Procedure", "name": "Querying the rules graph"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "1. The Virtues (engine character — any universe)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "10. Open questions (named, not resolved)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "2. The Tenets (ruled by the owner; wording remains his)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "3. The Method (the owner's ten steps — wording WIP, his to strike)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "4. The architecture: a short path plus engagement signals"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "5. Two customer archetypes; streamlining is a floor"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "6. Casting and briefs"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "7. Evaluability: traces, the run graph, and the regression corpus"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "8. The margin: bidirectional, anchored, deduced"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "9. Superseded: what v1 got wrong, and who killed it"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "A self-world, riding the engine's own version"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Agentic ETL — the Persistent-Graph Era"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Anatomy of a delta"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Born graph-native"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Glossary, for the lay reader"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Glossary, the working vocabulary"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Invariants (the non-negotiables)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Reading the diagram"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Slice 1 (built) and what waits"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The delta lifecycle (the artifact's own states)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The diagram"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The engine as corpus"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The isolation decision"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The keeper walkthrough (the design's acceptance story) [owner]"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The kernel stays honest"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The micro-kernel: five organs, fixed forever"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The narrative: you hand the agent a doc with a table"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The one-paragraph design (owner-accepted)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The process state machine"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The reading room (comprehension graph)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The render contract and the flip"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The words this document uses"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Trust"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Voice"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "What each lane never sees"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "What the citizens are"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "What worlds do with the conduct"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Why each piece (the dialogue, condensed)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "A reference number on every item"}, "properties": {}, "to": {"label": "[Section]", "name": "Trust"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "Absence is information, plus an offer"}, "properties": {}, "to": {"label": "[Section]", "name": "Conduct"}, "type": "PART_OF"}
