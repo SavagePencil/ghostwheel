@@ -107,7 +107,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `canonize --apply` | Apply the pinned changeset to the graph, re-derive the machine layers, re-export the backup, and chain the event log. |
 | `corpus` | Re-check every owner-blessed floor; reds name the blessing they break. |
 | `terms` | List the knowledge base's own domain terms — every citizen's doc, read from the graph. |
-| `docs [<record>]` | Print a packaged engine record — design records (`ontology-doctrine`, `agentic-etl`, …) and conduct records (the skills' full procedures, e.g. `agentic-intake`); bare `docs` lists them. Needs no knowledge base — the records live once, in the engine, and are pulled, never vendored. |
+| `docs [<record>]` | Print a packaged engine record — design records (`ontology-doctrine`, `agentic-etl`, …) and conduct records (the skills' full procedures, e.g. `agentic-intake`); bare `docs` lists them. A record the manual's canon carries is assembled from its citizens; the rest come from the packaged markdown. Needs no knowledge base — the records live once, in the engine, and are pulled, never vendored. |
 | `generate "<name>"` | Render a citizen (e.g. a procedure) back into prose from the graph — measured against the authored text, never a replacement. |
 | `export --mask judgment --out dist/runtime` | Lens-scoped export: ship a runtime graph with the design-time stratum stripped. |
 | `restore --from dist/runtime --database scratch` | Inspect any export in a workspace database (never live canon; no round cut). |
@@ -336,8 +336,21 @@ The `design/` directory holds the engine's design doctrine:
 born graph-native (`python -m graph init manual`; kernel schema stratum
 alone, no `ontology.yaml`, no sources). The engine-as-corpus campaign
 grows it through gated rounds until the design and conduct records above
-live there as citizens and `docs` renders from that canon. Until that
-flip, the packaged markdown remains what `docs` serves.
+live there as citizens.
+
+`docs` already renders from that canon: a record the canon carries is
+assembled from its citizens (each section's body in rank order, a
+section's claims following it — the walk that reverses the intake's
+byte-faithful slicing), and a record not yet canonized is served from
+the packaged markdown, so every pre-flip round stays additive. The canon
+ships inside the package as a mirror of `manual/graph/export/` at
+`graph/engine_docs/canon/`, held byte-identical by the mirror test.
+Parity tests hold every canonized record's render byte-identical to its
+prose file — the flip criterion — and a golden snapshot pins the render
+within a version. A round that moves the manual's canon therefore
+refreshes, in the same change set: the canon mirror
+(`cp manual/graph/export/*.jsonl graph/engine_docs/canon/`) and the
+golden snapshot (`GOLDEN_REGEN=1 pytest tests/test_record_render.py`).
 
 ## Development
 
