@@ -57,6 +57,39 @@ def test_empty_delta_reproduces_its_golden():
     assert render_markdown(build_report(Delta(), [])) == golden("empty")
 
 
+def test_empty_delta_with_refusals_renders_the_lint_section():
+    # A round can refuse without proposing anything — the classic case
+    # is a program body out of sync with its approved file, where the
+    # node never enters the delta. The markdown must say so, exactly as
+    # the JSON rendering always has; a clean empty round stays byte-
+    # identical to its own golden (the test above).
+    from graph.report import Verdict
+    verdicts = [Verdict(
+        code="body-out-of-sync",
+        message="program body 'Tend the Grove' is out of sync with its "
+                "approved file — re-approve the body or restore the "
+                "file")]
+    rendered = render_markdown(build_report(Delta(), verdicts))
+    assert rendered == golden("empty-refused")
+    assert "no proposal present" in rendered
+    assert "## Ground-facts lint" in rendered
+    assert "Tend the Grove" in rendered
+
+
+def test_empty_delta_refusals_and_advisories_render_together():
+    # Both tails at once: the lint section first, the roster advisories
+    # after — nothing swallowed by the empty short-circuit.
+    from graph.report import Verdict
+    verdicts = [Verdict(code="body-out-of-sync", message="a refusal")]
+    rendered = render_markdown(build_report(Delta(), verdicts,
+                                            advisories=fx.ADVISORIES))
+    lint_at = rendered.index("## Ground-facts lint")
+    advisories_at = rendered.index("## Advisories — the branch's roster")
+    assert lint_at < advisories_at
+    for advisory in fx.ADVISORIES:
+        assert advisory in rendered
+
+
 def test_empty_delta_keeps_the_advisories_section():
     # A branch round with nothing authored yet must still surface its
     # roster gaps on the approver's markdown — the empty short-circuit

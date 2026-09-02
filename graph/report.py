@@ -176,11 +176,20 @@ def render_markdown(report):
     delta = report.delta
     lines = ["# Delta report — scratch vs source-derived base", ""]
     if delta.empty:
-        # An empty changeset still renders the advisories tail below —
-        # on a branch, roster gaps must reach the approver's surface
-        # even when scratch matches the base exactly.
+        # An empty changeset still renders its refusals and the
+        # advisories tail below — a round can refuse without proposing
+        # anything (a program body out of sync never enters the delta),
+        # and both renderings of the report must say so, not just the
+        # JSON. Roster gaps likewise reach the approver's surface even
+        # when scratch matches the base exactly.
         lines += ["Scratch matches the base exactly — no proposal present.",
                   ""]
+        if report.verdicts:
+            lines += ["## Ground-facts lint", "",
+                      "The items below cannot become canon as written — "
+                      "each says why, and what to do instead. Nothing "
+                      "canonizes until they are resolved.", ""]
+            lines += [f"- ⚠ {verdict}" for verdict in report.verdicts] + [""]
         return "\n".join(lines) + _advisories_tail(report)
     lines += [f"**Summary:** {len(delta.nodes_added)} nodes added · "
               f"{len(delta.nodes_changed)} changed · "
