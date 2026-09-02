@@ -66,6 +66,8 @@
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "DISCUSSES"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "DISCUSSES"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "DISCUSSES"}
+{"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Cited"}, "type": "FOLLOWS"}
+{"from": {"label": "Archetype", "name": "Transcribed"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "FOLLOWS"}
 {"from": {"label": "Archetype", "name": "Answer"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Approved Omission"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Completeness"}, "type": "INSTANCE_OF"}
@@ -325,6 +327,8 @@
 {"from": {"label": "[Tenet]", "name": "The editor's desk"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "The item's anatomy: rulable from itself alone"}, "properties": {}, "to": {"label": "[Section]", "name": "Voice"}, "type": "PART_OF"}
 {"from": {"label": "[Tenet]", "name": "Threads end in a record"}, "properties": {}, "to": {"label": "[Section]", "name": "Conduct"}, "type": "PART_OF"}
+{"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Transcribed"}, "type": "PRECEDES"}
+{"from": {"label": "Archetype", "name": "Cited"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "PRECEDES"}
 {"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Agentic intake"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Cautions (Agentic intake)"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Gate conduct"}, "type": "SPECIFIED_IN"}

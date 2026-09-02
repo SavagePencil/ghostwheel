@@ -1,0 +1,72 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [
+  {
+   "from_label": "Archetype",
+   "from_name": "Attested",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Cited",
+   "type": "FOLLOWS"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Transcribed",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Attested",
+   "type": "FOLLOWS"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Attested",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Transcribed",
+   "type": "PRECEDES"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Cited",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Attested",
+   "type": "PRECEDES"
+  }
+ ],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "Attested",
+   {
+    "rank": [
+     1,
+     null
+    ]
+   }
+  ],
+  [
+   "Archetype",
+   "Cited",
+   {
+    "rank": [
+     0,
+     null
+    ]
+   }
+  ],
+  [
+   "Archetype",
+   "Transcribed",
+   {
+    "rank": [
+     2,
+     null
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}

@@ -732,3 +732,34 @@ def test_prerequisites_stage_outside_declared_enum_warns(make_repo):
     _, findings = extract(ontology)
     assert any("'Wizardly' not in" in f.detail and "Mastery" in f.detail
                for f in findings)
+
+
+def test_concept_ladder_declared_above_its_members_still_ranks(make_repo):
+    # Declaration order is not semantics: a ladder concept written ABOVE
+    # its members (the kernel's own Completeness is) stamps the same
+    # ranks and ladder edges as one written below them — the ladder pass
+    # runs only after every concept node exists.
+    ontology_src = """\
+        version: 1
+        concepts:
+          Ripeness:
+            instance_of: Concept
+            ordered: true
+            values: [Green, Ripe, Overripe]
+          Green: { instance_of: Ripeness }
+          Ripe: { instance_of: Ripeness }
+          Overripe: { instance_of: Ripeness }
+        nodes: {}
+    """
+    base_dir, path = make_repo({}, ontology_src)
+    ontology, findings = load_ontology(path, base_dir)
+    assert ontology is not None, findings
+    graph, _findings = extract(ontology)
+    for rank, name in enumerate(("Green", "Ripe", "Overripe")):
+        assert graph.nodes[("Archetype", name)]["rank"] == rank
+    edges = {(e.type, e.from_name, e.to_name) for e in graph.edges}
+    assert ("PRECEDES", "Green", "Ripe") in edges
+    assert ("PRECEDES", "Ripe", "Overripe") in edges
+    assert ("FOLLOWS", "Overripe", "Ripe") in edges
+    assert ("INSTANCE_OF", "Ripeness", "Ordered") in {
+        (e.type, e.from_name, e.to_name) for e in graph.edges}

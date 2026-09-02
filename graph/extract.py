@@ -1289,8 +1289,14 @@ class Extractor:
                     self.graph.edges.append(make_edge(
                         "SUBTYPE_OF", sub_label, detail,
                         ARCHETYPE_LABEL, concept))
-            # Archetype-level ladder (e.g. Completeness: Cited < Attested <
-            # Transcribed) — same Ordered treatment value labels get.
+        # Archetype-level ladders (e.g. Completeness: Cited < Attested <
+        # Transcribed) — same Ordered treatment value labels get. A
+        # SECOND pass, after every concept node exists: a ladder is free
+        # to be declared above its members (the kernel's own Completeness
+        # is), and the member filter below must see them all — inside the
+        # first loop it silently dropped any member declared later.
+        for concept, spec in self.ontology.concepts.items():
+            spec = spec or {}
             if spec.get("ordered") and spec.get("values"):
                 instance_edge(ARCHETYPE_LABEL, concept, ORDERED_CONCEPT)
                 ladder = [value for value in spec["values"]

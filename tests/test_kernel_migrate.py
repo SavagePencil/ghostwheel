@@ -326,3 +326,18 @@ def test_the_applied_migration_keeps_the_enrichment(tmp_path, capsys,
     question = after.nodes[(ARCHETYPE_LABEL, "Question")]
     assert question["spec_json"] == '{"catalog": {"asked_by": "text"}}'
     assert "reworded" not in question["doc"]
+
+
+def test_the_seed_derives_the_kernels_own_ordered_ladder(tmp_path):
+    # The kernel declares Completeness ordered with its members; the
+    # seed must carry the ranks and ladder edges that declaration asks
+    # for — a consuming world's canon was RICHER than the seed here,
+    # which is how the gap surfaced.
+    seed, _findings = km.fresh_kernel(tmp_path)
+    assert seed is not None
+    for rank, name in enumerate(("Cited", "Attested", "Transcribed")):
+        assert seed.nodes[(ARCHETYPE_LABEL, name)]["rank"] == rank
+    edges = {(e.type, e.from_name, e.to_name) for e in seed.edges}
+    assert ("PRECEDES", "Cited", "Attested") in edges
+    assert ("PRECEDES", "Attested", "Transcribed") in edges
+    assert ("FOLLOWS", "Transcribed", "Attested") in edges
