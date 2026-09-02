@@ -78,8 +78,9 @@ def test_the_engine_repo_eats_the_dogfood():
 def test_plugin_version_locks_to_the_package():
     manifest = json.loads(PLUGIN.read_text(encoding="utf-8"))
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    package_version = re.search(
-        r'^version = "([^"]+)"', pyproject, re.M).group(1)
+    version_line = re.search(r'^version = "([^"]+)"', pyproject, re.M)
+    assert version_line, "pyproject.toml carries no version line"
+    package_version = version_line.group(1)
     assert manifest["version"] == package_version, (
         "the plugin and the pip package ride the same tag — bump "
         ".claude-plugin/plugin.json with pyproject.toml.")

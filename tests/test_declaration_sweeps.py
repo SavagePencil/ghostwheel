@@ -119,6 +119,7 @@ def test_unmapped_sweep_surfaces_only_unreferenced_files_under_roots(make_repo):
 def test_referenced_files_covers_overlays_and_answer_key_tables(make_repo):
     base, path = make_repo(UNMAPPED_FILES, UNMAPPED_ONTOLOGY)
     ontology, _ = load_ontology(path, base)
+    assert ontology is not None
     referenced = ontology.referenced_files()
     assert {"data/things.csv", "data/things.yaml", "data/checks.csv"} \
         <= referenced

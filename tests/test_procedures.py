@@ -132,7 +132,7 @@ def errors_of(text):
 
 def test_parse_clean_program():
     spec, errors = parse_procedure(PROGRAM)
-    assert errors == []
+    assert errors == [] and spec is not None
     assert spec["procedure"] == "Wilt"
 
 

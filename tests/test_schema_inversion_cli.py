@@ -154,7 +154,7 @@ def test_terms_runs_from_the_graph(canon, monkeypatch, capsys):
 def test_canon_term_index_builds_from_the_graph(canon, monkeypatch):
     _poison_load_ontology(monkeypatch)
     extractor, error = canon_term_index(canon)
-    assert error is None, error
+    assert error is None and extractor is not None, error
     assert extractor.term_index
 
 

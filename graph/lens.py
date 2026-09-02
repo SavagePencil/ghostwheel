@@ -488,7 +488,7 @@ def compile_lens(declarations, graph, subject=None, mask=(), without=()):
             f"Attempted to compile a lens with the mask "
             f"({', '.join(mask)}). Failed due to:\n  - "
             + "\n  - ".join(problems))
-    granted = denied = frozenset()
+    granted = denied = folded = frozenset()
     if subject is not None:
         if isinstance(subject, str):
             folded = fold(decls, subject)

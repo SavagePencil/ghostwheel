@@ -209,6 +209,7 @@ def test_the_graph_reports_the_ledgered_version(green_repo):
     ontology, _ = load_ontology(
         green_repo / "graph" / "ontology.yaml", green_repo,
         metaontology_path=green_repo / "graph" / "metaontology.yaml")
+    assert ontology is not None
     assert ontology.meta["version"] == current_state(green_repo, META_REL)[0]
     assert str(ontology.raw["version"]) == current_state(
         green_repo, ONTO_REL)[0]
