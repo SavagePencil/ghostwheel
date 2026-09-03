@@ -332,3 +332,73 @@ def test_multi_line_row_receipts_retire_and_sentences_stay():
     assert rows.verdict == CANON_GAP  # the rows index as nothing
     quote = index.attribute("A Bog Beast suffers -2 to defense.")
     assert quote.verdict == ATTRIBUTED  # sentence-grain receipts stay
+
+
+# --- the plural fold, the declared column binding, and the twin rider ---
+
+
+def test_plural_headers_home_on_singular_edge_types():
+    # "The Ingredients of X is Y" vs HAS_INGREDIENT: morphology, not
+    # vocabulary — both sides fold to one form and the edge is a home
+    g = GraphData()
+    g.ensure_node("Brew", "Twilight Tonic")
+    g.ensure_node("Herb", "Nightbell")
+    g.edges.append(make_edge("HAS_INGREDIENT", "Brew", "Twilight Tonic",
+                             "Herb", "Nightbell"))
+    verdict = CanonIndex(g).attribute(
+        "The Ingredients of Twilight Tonic is Nightbell.")
+    assert verdict.verdict == ATTRIBUTED and verdict.rung == PROPERTIES
+    assert ("Brew", "Twilight Tonic") in verdict.citizens
+
+
+def test_type_words_fold_both_sides():
+    # a type whose own word is plural-shaped (REQUIRES) still meets the
+    # claim's "requires" — the fold is symmetric, never one-sided
+    g = GraphData()
+    g.ensure_node("Rite", "Dawn Song")
+    g.ensure_node("Herb", "Nightbell")
+    g.edges.append(make_edge("REQUIRES", "Rite", "Dawn Song",
+                             "Herb", "Nightbell"))
+    verdict = CanonIndex(g).attribute("Dawn Song requires Nightbell.")
+    assert verdict.verdict == ATTRIBUTED
+
+
+def test_the_lemma_layer_knows_irregulars_no_bespoke_fold_ever_could():
+    # rung 1's point: morphology is delegated, so irregular plurals
+    # arrive free — the engine never rules on a plural again
+    g = GraphData()
+    g.ensure_node("Keeper", "Marsh Warden")
+    g.ensure_node("Beast", "Goose")
+    g.edges.append(make_edge("TENDS_BEAST", "Keeper", "Marsh Warden",
+                             "Beast", "Goose"))
+    verdict = CanonIndex(g).attribute(
+        "The Marsh Warden tends the beasts, geese among them.")
+    assert verdict.verdict == ATTRIBUTED
+
+
+def test_numbers_never_enter_the_lemma():
+    # '-2' -> '2' through a lemmatizer would smuggle signed equivalence
+    # past the doctrine — number-bearing tokens skip the layer entirely
+    g = GraphData()
+    g.ensure_node("Gem", "Chill", penalty="-2")
+    assert CanonIndex(g).attribute(
+        "Chill imposes 2 to the roll.").verdict == CANON_GAP
+
+
+def test_twin_citizens_read_alike_despite_a_name_echo():
+    # the diagnostic rider: byte-identical stat shapes must read alike
+    # even when one twin's NAME carries the value word in parentheses —
+    # the word-shaped cousin of the numeric name-echo
+    g = GraphData()
+    g.ensure_node("Weapon", "Mace", damage_class="Crushing")
+    g.ensure_node("Weapon", "Sword (Slashing)", damage_class="Slashing")
+    index = CanonIndex(g)
+    plain = index.attribute("The Damage Class of Mace is Crushing.")
+    echoed = index.attribute(
+        "The Damage Class of Sword (Slashing) is Slashing.")
+    assert plain.verdict == ATTRIBUTED and plain.rung == PROPERTIES
+    assert echoed.verdict == ATTRIBUTED and echoed.rung == PROPERTIES
+    # a bare mention still attests subject, not content: the value word
+    # appears only once (as the name), so it anchors nothing
+    bare = index.attribute("Sword (Slashing) gleams in the dark.")
+    assert bare.verdict == CANON_GAP
