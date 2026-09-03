@@ -102,9 +102,7 @@ def test_run_checks_records_every_verdict(tmp_path):
     assert doc["counts"] == {"checks": 3, "failed": 1, "findings": 25}
 
 
-def test_check_cli_files_the_record_and_keeps_its_voice(tmp_path,
-                                                         monkeypatch,
-                                                         capsys):
+def test_check_cli_files_the_record_and_keeps_its_voice(tmp_path, capsys):
     files = _check_files(tmp_path)
     assert files
     session = _Session({"Q2": [{"name": "Sabre"}]})
@@ -122,9 +120,9 @@ def test_check_cli_files_the_record_and_keeps_its_voice(tmp_path,
         def run(self, text):
             return session.run(text)
 
-    monkeypatch.setattr("neo4j.GraphDatabase.driver",
-                        lambda *args, **kwargs: Driver())
-    assert main_mod.cmd_check(tmp_path) == 1
+    # the driver factory is injected: the suite never needs the driver
+    assert main_mod.cmd_check(
+        tmp_path, driver_factory=lambda *args, **kwargs: Driver()) == 1
     captured = capsys.readouterr()
     assert "== a-holds: PASS (assertion; 0 rows)" in captured.out
     assert "== b-broken: FAIL (assertion; 1 rows)" in captured.out
@@ -137,14 +135,13 @@ def test_check_cli_files_the_record_and_keeps_its_voice(tmp_path,
 
 
 def test_check_cli_records_the_guard_when_the_store_is_unreachable(
-        tmp_path, monkeypatch, capsys):
+        tmp_path, capsys):
     _check_files(tmp_path)
 
     def broken(*args, **kwargs):
         raise RuntimeError("no route to the store")
 
-    monkeypatch.setattr("neo4j.GraphDatabase.driver", broken)
-    assert main_mod.cmd_check(tmp_path) == 1
+    assert main_mod.cmd_check(tmp_path, driver_factory=broken) == 1
     assert "Check run failed: no route to the store" in \
         capsys.readouterr().err
     doc = _record(tmp_path, CHECK_REPORT_FILE)

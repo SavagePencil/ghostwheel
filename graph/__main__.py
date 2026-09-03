@@ -953,10 +953,13 @@ def check_report(base_dir, records=None, guard=None):
     return doc
 
 
-def cmd_check(base_dir):
-    from . import load as load_mod  # deferred: needs the neo4j driver
+def cmd_check(base_dir, driver_factory=None):
+    """Run every canned check against the live store and record the
+    verdicts. ``driver_factory`` (the neo4j driver constructor by
+    default) is injectable so the CLI's orchestration is provable
+    without a driver installed — the suite is DB-free by doctrine."""
+    from . import load as load_mod
     from . import report as report_mod
-    from neo4j import GraphDatabase
 
     def file_check(**kwargs):
         # the durable record beside the screen: what was checked and
@@ -973,8 +976,11 @@ def cmd_check(base_dir):
         file_check(guard=("check-none", text))
         return 2
     config = load_mod.read_config(base_dir)
+    if driver_factory is None:
+        from neo4j import GraphDatabase  # deferred: only DB access needs it
+        driver_factory = GraphDatabase.driver
     try:
-        driver = GraphDatabase.driver(
+        driver = driver_factory(
             config["NEO4J_URI"],
             auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))
         with driver, driver.session(
