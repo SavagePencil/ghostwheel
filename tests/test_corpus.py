@@ -40,7 +40,7 @@ def test_parse_collected_folds_parameterized_variants():
                                      "tests/test_b.py::test_param"}
 
 
-def test_missing_guard_names_the_orphaned_blessing():
+def test_missing_guard_names_the_orphaned_approval():
     floors = []
     record_floor(floors, "tests/test_gone.py::test_deleted", "renderer",
                  "ladders render in rank order", "PR #8")

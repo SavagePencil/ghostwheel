@@ -179,7 +179,7 @@ def test_floor_records_speak_three_statuses():
     assert [r["ref"] for r in records] == ["held", "approval-broken",
                                            "protection-lost"]
     assert "problem" not in records[0]
-    assert "blessed at PR 2" in records[1]["problem"]
+    assert "approved at PR 2" in records[1]["problem"]
     assert "is GONE" in records[2]["problem"]
     # the prose helpers derive from the same records
     assert missing_guards(_FLOORS, _COLLECTED) == [records[2]["problem"]]

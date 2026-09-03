@@ -1022,9 +1022,9 @@ def cmd_check(base_dir, driver_factory=None):
 
 
 def cmd_corpus(base_dir):
-    """Re-check every owner-blessed floor (the regression corpus): each floor's guard
+    """Re-check every owner-approved floor (the regression corpus): each floor's guard
     must still exist in the suite and still pass. Reds name the
-    blessing they break; a vanished guard is a red, never a silence."""
+    approval they break; a vanished guard is a red, never a silence."""
     from . import corpus as corpus_mod
     from . import report as report_mod
 
@@ -2724,8 +2724,8 @@ def main(argv=None):
              "(default: the target directory's basename)")
     sub.add_parser(
         "corpus",
-        help="re-check every owner-blessed floor (the regression corpus): each guard "
-             "must still exist and still pass; reds name the blessing "
+        help="re-check every owner-approved floor (the regression corpus): each guard "
+             "must still exist and still pass; reds name the approval "
              "they break")
     delta_parser = sub.add_parser(
         "delta",

@@ -692,9 +692,9 @@ def apply_approved_differences(tiers, originals, renderings):
     ok_originals = [_difference_key(o) for o in originals]
     ok_renderings = [_difference_key(r) for r in renderings]
 
-    def _covered(text, blessed):
+    def _covered(text, ruled):
         key = _difference_key(text)
-        return bool(key) and any(key in b for b in blessed)
+        return bool(key) and any(key in b for b in ruled)
 
     for tier in tiers:
         if tier.tier not in ("rule-prose", "invented", "verbatim-carried"):
