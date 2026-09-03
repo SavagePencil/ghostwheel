@@ -1002,3 +1002,97 @@ def test_derive_refuses_when_a_registered_file_has_no_citizen(make_repo):
     assert any(f.severity == ERROR
                and "data/procedures/tend.yaml has no Procedure citizen"
                in f.detail for f in findings)
+
+
+# -- precondition receipts (mapping form) --------------------------------
+
+
+def test_precondition_mapping_form_parses_and_carries_its_receipt():
+    spec, errors = parse_procedure(textwrap.dedent("""\
+        procedure: X
+        precondition:
+          text: the frost arrived
+          from_text: The frost arrived before the last harvest.
+        steps: [ {stop: done} ]
+        possible_outcomes:
+          Done: { ends: done, guarantee: fails-clean }
+        """))
+    assert errors == [] and spec is not None
+    from graph.procedures import precondition_text, receipts_of
+    assert precondition_text(spec) == "the frost arrived"
+    assert ("precondition",
+            "The frost arrived before the last harvest.") in \
+        receipts_of(spec)
+
+
+def test_precondition_plain_string_still_works():
+    spec, errors = parse_procedure(PROGRAM)
+    assert errors == [] and spec is not None
+    from graph.procedures import precondition_text, receipts_of
+    assert precondition_text(spec) == "the frost arrived"
+    assert not any(loc == "precondition"
+                   for loc, _ in receipts_of(spec))
+
+
+def test_precondition_bad_forms_refuse_by_name():
+    errs = errors_of("""\
+        procedure: X
+        precondition: { from_text: quote with no text }
+        steps: [ {stop: done} ]
+        """)
+    assert "precondition mapping needs a 'text'" in errs
+    errs = errors_of("""\
+        procedure: X
+        precondition: { text: fine, bogus: 1 }
+        steps: [ {stop: done} ]
+        """)
+    assert "unknown precondition key 'bogus'" in errs
+    errs = errors_of("""\
+        procedure: X
+        precondition: [a, list]
+        steps: [ {stop: done} ]
+        """)
+    assert "must be a string or a {text, from_text} mapping" in errs
+
+
+def test_precondition_renders_its_text_whichever_form(tmp_path):
+    spec, errors = parse_procedure(textwrap.dedent("""\
+        procedure: X
+        precondition: { text: the frost arrived, from_text: The frost. }
+        steps: [ {stop: done} ]
+        possible_outcomes:
+          Done: { ends: done, guarantee: fails-clean }
+        """))
+    assert errors == [] and spec is not None
+    assert "*Precondition:* the frost arrived." in render_markdown(spec)
+
+
+# -- approved_in: the archive pointer beside the tripwire ----------------
+
+
+def test_approved_in_parses_and_lands_on_the_citizen(make_repo):
+    program = PROGRAM.replace(
+        "specified_in: rules § Overview",
+        "specified_in:\n"
+        "  artifact: docs/rules.md\n"
+        "  section: Overview\n"
+        "  approved_in: https://example.test/repo/pull/7\n")
+    spec, errors = parse_procedure(program)
+    assert errors == [] and spec is not None
+    files = dict(FILES); files["data/procedures/test.yaml"] = program
+    base, path = make_repo(files, ONTOLOGY)
+    ontology, findings = load_ontology(path, base)
+    assert ontology is not None, findings
+    graph, _ = extract(ontology)
+    assert graph.nodes[("Procedure", "Wilt")]["approved_in"] \
+        == "https://example.test/repo/pull/7"
+
+
+def test_approved_in_must_be_a_link_shaped_string():
+    assert "approved_in must be a commit or PR link" in errors_of("""\
+        procedure: X
+        specified_in: { artifact: a.md, section: S, approved_in: 7 }
+        steps: [ {stop: done} ]
+        possible_outcomes:
+          Done: { ends: done, guarantee: fails-clean }
+        """)

@@ -99,7 +99,13 @@ KNOWN_OUTCOME_KEYS = {"ends", "guarantee", "from_text"}
 KNOWN_ATTESTED_OUTCOME_KEYS = {"guarantee", "assigns", "mutates",
                                "description", "from_text"}
 KNOWN_SECTION_KEYS = {"closed", "known"}
-KNOWN_SPECIFIED_IN_KEYS = {"artifact", "section", "approved_hash"}
+# approved_in: an archive pointer beside the approved_hash tripwire —
+# the hash DETECTS that the approved source moved; a commit or PR link
+# RETRIEVES the exact approved text forever. Stamped post-ship (the
+# text is typically amended in the same branch, so the link only exists
+# once the ship lands), like Judgment-row PR provenance.
+KNOWN_SPECIFIED_IN_KEYS = {"artifact", "section", "approved_hash",
+                           "approved_in"}
 
 # Edge vocabulary of the lift (referenced by extractor and tests).
 FIRST_STEP, NEXT, CASE, THEN, OTHERWISE = (
@@ -207,6 +213,7 @@ def parse_procedure(text):
                                 f"{completeness} procedure"))
     _check_specified_in(spec, errors)
     _check_inputs(spec, errors)
+    _check_precondition(spec, errors)
     if spec.get("locals") is not None and (
             not isinstance(spec["locals"], list)
             or not all(isinstance(name, str) for name in spec["locals"])):
@@ -257,6 +264,37 @@ def _check_specified_in(spec, errors):
                            "approved_hash must be a 64-char sha256 hex "
                            "string (quote it — YAML parses all-digit "
                            "values as numbers)"))
+        approved_in = raw.get("approved_in")
+        if approved_in is not None and not (
+                isinstance(approved_in, str) and approved_in.strip()):
+            errors.append(("specified_in",
+                           "approved_in must be a commit or PR link "
+                           "(the archive pointer that retrieves the "
+                           "approved text)"))
+
+
+KNOWN_PRECONDITION_KEYS = {"text", "from_text"}
+
+
+def _check_precondition(spec, errors):
+    """A precondition is a plain string, or the mapping form
+    {text, from_text} so its quote is machine-verified like inputs'
+    and outcomes' receipts are."""
+    entry = spec.get("precondition")
+    if entry is None or isinstance(entry, str):
+        return
+    if not isinstance(entry, dict):
+        errors.append(("precondition",
+                       "precondition must be a string or a "
+                       "{text, from_text} mapping"))
+        return
+    for key in entry:
+        if key not in KNOWN_PRECONDITION_KEYS:
+            errors.append(("precondition",
+                           f"unknown precondition key '{key}'"))
+    if not str(entry.get("text") or "").strip():
+        errors.append(("precondition",
+                       "precondition mapping needs a 'text'"))
 
 
 def _check_inputs(spec, errors):
@@ -290,6 +328,17 @@ def input_fields(entry):
     return (entry or "").strip(), True, ""
 
 
+def precondition_text(spec):
+    """The precondition's prose, whichever form carried it: the plain
+    string, or the mapping form's `text` (the mapping exists so the
+    precondition can carry a machine-verified from_text receipt like
+    inputs and outcomes do)."""
+    entry = spec.get("precondition")
+    if isinstance(entry, dict):
+        return str(entry.get("text") or "").strip()
+    return str(entry or "").strip()
+
+
 def receipts_of(spec):
     """Every (location, from_text) receipt an authored fact carries."""
     receipts = []
@@ -300,6 +349,9 @@ def receipts_of(spec):
         if isinstance(entry, dict) and entry.get("from_text"):
             receipts.append((f"possible_outcomes.{name}",
                              entry["from_text"].strip()))
+    entry = spec.get("precondition")
+    if isinstance(entry, dict) and entry.get("from_text"):
+        receipts.append(("precondition", entry["from_text"].strip()))
     return receipts
 
 
@@ -619,8 +671,8 @@ def render_markdown(spec):
     prose. An experiment in closing the graph->prose loop: output is measured
     against the authored section, never adopted automatically."""
     lines = [f"### {spec['procedure']}", ""]
-    if spec.get("precondition"):
-        lines += [f"*Precondition:* {spec['precondition']}. "
+    if precondition_text(spec):
+        lines += [f"*Precondition:* {precondition_text(spec)}. "
                   "If not met, skip this step.", ""]
     # The whole signature renders, not just the steps: authored inputs and
     # outputs face the generation diff too — an input the source never
