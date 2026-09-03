@@ -82,6 +82,19 @@ REF_KEYS = {
     # the taxonomy declaration
     "taxonomy-declared": "kind-of-declared",
     "taxonomy-endpoint-missing": "missing-citizen",
+    # the succession checklist's gate codes (the durable-checklist work)
+    "canon-backup-unreadable": "unreadable-backup",
+    "branch-backup-unreadable": "unreadable-backup",
+    "canon-database-drift": "moved-outside-the-path",
+    "branch-database-drift": "moved-outside-the-path",
+    "canon-database-unreadable": "unreadable-line",
+    "branch-database-unreadable": "unreadable-line",
+    "canon-chain-broken": "broken-history",
+    "branch-chain-broken": "broken-history",
+    "rederivation-error": "derivation-error",
+    "line-facts-unclean": "facts-unresolved",
+    "anchor-missing": "anchor-missing",
+    "ceremony-guard": "cannot-begin",
     # canonize refusal records (the durable-refusal work)
     "branch-isolation": "wrong-line",
     "backup-unreadable": "unreadable-backup",

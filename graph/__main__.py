@@ -1459,6 +1459,10 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
         print(refusal, file=sys.stderr)
         for problem in problems:
             print(f"  ⚠ {problem}", file=sys.stderr)
+        succession_mod.write_checklist_report(
+            base_dir, succession_mod.checklist_report(
+                base_dir, branch, [], False, [],
+                guard_problems=problems))
         return 1
 
     # --- verify phase: every gate runs, every problem collates -----------
@@ -1469,14 +1473,16 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
         canon_backup = canon_base(base_dir)
     except FileNotFoundError as exc:
         canon_backup = None
-        gates.append(("live canon backup readable", [
+        gates.append(("live canon backup readable",
+                      "canon-backup-unreadable", [
             "Attempted to read canon's committed backup (graph/export). "
             f"Failed due to: {exc}."]))
     branch_backup = None
     try:
         branch_backup = canon_base(base_dir, branch)
     except FileNotFoundError as exc:
-        gates.append(("branch backup readable", [
+        gates.append(("branch backup readable",
+                      "branch-backup-unreadable", [
             f"Attempted to read branch '{branch}''s committed backup. "
             f"Failed due to: {exc}."]))
 
@@ -1487,11 +1493,12 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
             live = restore_mod.dump_db(live_config)
             gates.append((
                 "live canon matches its committed backup (nothing moved "
-                "outside the delta path)",
+                "outside the delta path)", "canon-database-drift",
                 restore_mod.verify_against_backup(
                     live, proposal_mod.export_dir(base_dir))))
         except Exception as exc:
-            gates.append(("live canon database readable", [
+            gates.append(("live canon database readable",
+                          "canon-database-unreadable", [
                 "Attempted to read the live canon database "
                 f"('{live_canon_database}'). Failed due to: {exc}."]))
 
@@ -1503,11 +1510,12 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
             branch_live = restore_mod.dump_db(branch_config)
             gates.append((
                 "branch database re-serializes byte-identical to its "
-                "backup",
+                "backup", "branch-database-drift",
                 restore_mod.verify_against_backup(branch_live,
                                                   branch_export)))
         except Exception as exc:
-            gates.append((f"branch database '{branch}' readable", [
+            gates.append((f"branch database '{branch}' readable",
+                          "branch-database-unreadable", [
                 f"Attempted to read the branch database ('{branch}'). "
                 f"Failed due to: {exc}. Rehydrate it from the branch's "
                 f"backup: python -m graph restore --from "
@@ -1515,8 +1523,10 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
                 f"{branch}."]))
 
     gates.append(("canon's event-log chain verifies unbroken",
+                  "canon-chain-broken",
                   proposal_mod.verify_applied_log(base_dir)))
     gates.append((f"branch '{branch}''s event-log chain verifies unbroken",
+                  "branch-chain-broken",
                   proposal_mod.verify_applied_log(base_dir, branch)))
 
     if branch_backup is not None:
@@ -1528,8 +1538,9 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
                          for f in derive_findings
                          if f.severity == SEV_ERROR]
         gates.append(("roster at full strength and re-derivation clean",
-                      derive_errors))
-        gates.append(("ground-facts lint clean over the branch's full line",
+                      "rederivation-error", derive_errors))
+        gates.append(("ground-facts lint clean over the branch's full "
+                      "line", "line-facts-unclean",
                       succession_mod.line_lint(branch_backup)))
         from .canonize import ONTOLOGY_ANCHOR
         from .ontology import ARCHETYPE_LABEL
@@ -1539,13 +1550,22 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
             f"'{ONTOLOGY_ANCHOR}') version anchor on the branch. Failed "
             "due to: the branch carries no such anchor — every line "
             "carries one as ground schema."]
-        gates.append(("the version anchor rides the branch", anchor_missing))
+        gates.append(("the version anchor rides the branch",
+                      "anchor-missing", anchor_missing))
 
     failed = []
-    for label, gate_problems in gates:
+    for label, _code, gate_problems in gates:
         mark = "✓" if not gate_problems else "⚠"
         print(f"  {mark} {label}")
         failed.extend(gate_problems)
+    # the checklist is evidence whether the ceremony proceeds or not —
+    # compute the divergence facts first (read-only, printed later so
+    # the terminal's order is unchanged), then write the record
+    fork_known, diverged = succession_mod.post_fork_rounds(base_dir,
+                                                           branch)
+    checklist_text = succession_mod.write_checklist_report(
+        base_dir, succession_mod.checklist_report(
+            base_dir, branch, gates, fork_known, diverged))
     if failed:
         print(refusal + " nothing was written:", file=sys.stderr)
         for problem in failed:
@@ -1556,8 +1576,6 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
     # divergence is legitimate, but the owner rules with it in view):
     # rounds the line being superseded applied AFTER this branch's fork
     # do not ride the adoption.
-    fork_known, diverged = succession_mod.post_fork_rounds(base_dir,
-                                                           branch)
     if not fork_known:
         print("  ⚠ advisory — this branch records no fork point (it was "
               "cut before birth records existed): the line being "
@@ -1678,6 +1696,12 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
                 json.dumps(divergence_rows, ensure_ascii=False,
                            indent=2, sort_keys=True) + "\n",
                 encoding="utf-8")
+        if checklist_text:
+            # the verify checklist the adoption was ruled on, archived
+            # with the round — the ruling keeps its evidence
+            (round_dir
+             / succession_mod.CHECKLIST_REPORT_FILE).write_text(
+                checklist_text, encoding="utf-8")
         if proposal_mod.next_log_sequence(base_dir) != sequence:
             raise RuntimeError(
                 "the event log moved under the ceremony (the adoption "

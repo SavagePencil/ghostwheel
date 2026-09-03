@@ -724,3 +724,84 @@ def test_a_branch_without_birth_record_degrades_honestly(driven_kb,
     record = read_adoption(base, branch)
     assert record is not None
     assert record["post_fork_rounds"] == "unrecorded"
+
+
+# -- 8. THE CHECKLIST AS A DURABLE RECORD (the durable-checklist work) ---
+
+
+def _checklist(base):
+    import json as json_mod
+    path = base / "graph" / "reports" / "succession-report.json"
+    return json_mod.loads(path.read_text(encoding="utf-8"))
+
+
+def test_a_green_dry_run_writes_the_full_checklist(driven_kb, capsys):
+    base, fake, _ = driven_kb
+    _author_and_canonize_branch(base, fake, "rebuild")
+    _mount_live_canon(base, fake)
+    capsys.readouterr()
+    assert main_mod.cmd_succession(base, branch="rebuild",
+                                   apply=False) == 0
+    doc = _checklist(base)
+    assert doc["kind"] == "succession-report"
+    assert doc["kb"] and doc["branch"] == "rebuild"
+    # every gate that ran is on the record, PASS rows included — the
+    # checklist is evidence of what was checked
+    assert len(doc["gates"]) >= 7
+    assert all(row["status"] == "pass" for row in doc["gates"])
+    assert all(row["ref"] for row in doc["gates"])
+    assert doc["divergence"] == {"fork_known": True,
+                                 "post_fork_rounds": []}
+
+
+def test_a_failing_gate_records_its_code_and_problems(driven_kb, capsys):
+    base, fake, _ = driven_kb
+    branch = "rebuild"
+    _author_and_canonize_branch(base, fake, branch)
+    _mount_live_canon(base, fake)
+    # tamper with the branch database after its backup was written —
+    # the byte-identity gate must fail and say so on the record
+    fake.databases[branch].ensure_node("Character", "Interloper")
+    capsys.readouterr()
+    assert main_mod.cmd_succession(base, branch=branch, apply=False) == 1
+    assert "REFUSED" in capsys.readouterr().err
+    doc = _checklist(base)
+    by_code = {row["code"]: row for row in doc["gates"]}
+    failing = by_code["branch-database-drift"]
+    assert failing["status"] == "fail" and failing["problems"]
+    assert by_code["canon-chain-broken"]["status"] == "pass"
+
+
+def test_the_applied_ceremony_archives_its_checklist(driven_kb, capsys):
+    base, fake, _ = driven_kb
+    branch = "rebuild"
+    _author_and_canonize_branch(base, fake, branch)
+    _mount_live_canon(base, fake)
+    assert main_mod.cmd_succession(base, branch=branch, apply=True,
+                                   by="owner") == 0
+    record = read_adoption(base, branch)
+    assert record is not None
+    round_dir = proposals_dir(base) / \
+        serialize_record({k: v for k, v in record.items()})[1][:12]
+    import json as json_mod
+    archived = json_mod.loads(
+        (round_dir / "succession-report.json").read_text(encoding="utf-8"))
+    # the ruling keeps its evidence: the archived checklist is the one
+    # the adoption was ruled on
+    assert archived == _checklist(base)
+    assert all(row["status"] == "pass" for row in archived["gates"])
+
+
+def test_a_guard_refusal_leaves_the_ceremony_guard_record(driven_kb,
+                                                          capsys):
+    base, fake, _ = driven_kb
+    capsys.readouterr()
+    assert main_mod.cmd_succession(base, branch="never-cut",
+                                   apply=False) == 1
+    assert "no branch line exists" in capsys.readouterr().err
+    doc = _checklist(base)
+    assert doc["guard"]["code"] == "ceremony-guard"
+    assert doc["guard"]["ref"] == "cannot-begin"
+    assert any("no branch line exists" in p
+               for p in doc["guard"]["problems"])
+    assert "gates" not in doc  # the gates never ran
