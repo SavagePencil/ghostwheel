@@ -786,12 +786,25 @@ def pin_round(base_dir, graph, database, branch=None):
     into its own home (graph/branches/<name>/proposals/current)."""
     from . import proposal as proposal_mod
     ref = git_ref(base_dir)
-    base_path = proposal_mod.current_dir(base_dir, branch) \
-        / proposal_mod.BASE_FILE
+    current = proposal_mod.current_dir(base_dir, branch)
+    base_path = current / proposal_mod.BASE_FILE
     proposal_mod.write_json(
         base_path,
         {"base_hash": proposal_mod.base_identity(graph),
          "git_ref": ref, "database": database, "branch": branch})
+    # a declaration file already here belongs to a round that was never
+    # applied (an applied round's file archives with it): its links
+    # would ride THIS round's delta as if declared here — say so
+    leftover = current / proposal_mod.ATTRIBUTION_FILE
+    if leftover.exists():
+        try:
+            rows = proposal_mod.read_attribution_file(base_dir, branch)
+            count = f"{len(rows)} link{'s' if len(rows) != 1 else ''}"
+        except ValueError:
+            count = "links"
+        print(f"note: {leftover.relative_to(base_dir)} carries {count} "
+              "declared by a round that was never applied — this round "
+              "will declare them unless you remove or rewrite the file.")
     print(f"Round cut: base pinned at {ref} "
           f"({base_path.relative_to(base_dir)})")
 
