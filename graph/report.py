@@ -82,6 +82,10 @@ REF_KEYS = {
     # the taxonomy declaration
     "taxonomy-declared": "kind-of-declared",
     "taxonomy-endpoint-missing": "missing-citizen",
+    # recorded attribution (the provenance-recording rung)
+    "attribution-file-unreadable": "unreadable-file",
+    "attribution-row-malformed": "misrecorded-evidence",
+    "attribution-home-missing": "evidence-without-home",
     # the succession checklist's gate codes (the durable-checklist work)
     "canon-backup-unreadable": "unreadable-backup",
     "branch-backup-unreadable": "unreadable-backup",
@@ -250,7 +254,9 @@ def render_markdown(report):
               f"{len(delta.edges_changed)} changed · "
               f"{len(delta.edges_removed)} removed"
               + (f" · {len(delta.stitch)} stitched"
-                 if delta.stitch else ""), ""]
+                 if delta.stitch else "")
+              + (f" · {len(delta.attribution)} attribution links recorded"
+                 if delta.attribution else ""), ""]
     lines += ["## Ground-facts lint", ""]
     if report.verdicts:
         lines += ["The items below cannot become canon as written — each "
@@ -324,6 +330,21 @@ def render_markdown(report):
                          + (f" {{{props}}}" if props else "")
                          + f"]->({e.to_name})")
         lines.append("")
+    if delta.attribution:
+        lines += ["## Recorded attribution — each claim's home, on the "
+                  "record", "",
+                  "Approving this round records these claim→citizen "
+                  "links as provenance: the census will audit the "
+                  "record instead of guessing from words. Each line is "
+                  "a claim, where it lives in its source, and the "
+                  "citizens it attests.", ""]
+        for row in delta.attribution:
+            homes = ", ".join(f"({label}) {name}"
+                              for label, name in row.get("citizens", []))
+            lines.append(f"- \"{row.get('claim', '')}\" "
+                         f"[{row.get('source', '')} @ "
+                         f"{row.get('locator', '')}] → {homes}")
+        lines.append("")
     return "\n".join(lines) + _advisories_tail(report)
 
 
@@ -349,6 +370,8 @@ def render_json(report, proposal_id=None, kb=None, branch=None):
                    "edges_removed": len(delta.edges_removed)}
         if delta.stitch:
             summary["stitched"] = len(delta.stitch)
+        if delta.attribution:
+            summary["attribution_recorded"] = len(delta.attribution)
         doc["summary"] = summary
     if proposal_id:
         doc["proposal_id"] = proposal_id

@@ -100,6 +100,14 @@ RUNGS = (PROPERTIES, RECEIPT, PROSE)
 ATTRIBUTED = "attributed"
 CANON_GAP = "canon-gap"
 INVENTION = "unattributed-invention"
+# the recorded-provenance voices (the audit): a claim whose home was
+# recorded at authoring never meets the matcher — the census verifies
+# the record instead, and a record that no longer verifies is a NAMED
+# finding, never a silent re-guess
+RECORDED = "recorded"
+LINK_STALE = "link-stale"    # the source moved — the claim is no
+#                              longer among its current claims
+LINK_BROKEN = "link-broken"  # canon moved — a linked citizen is gone
 
 # best sentence-overlap at or above this counts as a textual home
 ATTRIBUTION_FLOOR = 0.5
@@ -122,6 +130,7 @@ EV_EDGE = "edge"        # both endpoints of a ground edge + its type words
 EV_STEP = "step"        # a procedure's lifted step text (rung 2)
 EV_RECEIPT = "receipt"  # a citizen's carried from_text sentence (rung 2)
 EV_PROSE = "prose"      # a long-prose home (rung 3, the soup)
+EV_RECORD = "record"    # a recorded claim→citizen link (the audit)
 
 # the section mark that separates a step's owning-procedure name from its
 # ordinal (e.g. "Calculate Point Maximums §1" -> "Calculate Point Maximums")
@@ -150,7 +159,12 @@ class Attribution:
     #                            trace supplied)
     nearest: list = field(default_factory=list)   # gap aid: [(label, name)]
     evidence: list = field(default_factory=list)  # which surfaces matched:
-    #                            value | edge | step | receipt | prose
+    #                            value | edge | step | receipt | prose |
+    #                            record
+    attested: "bool | None" = None  # recorded links only: the claim is
+    #                            still among its source's current claims
+    #                            (None = the source could not be
+    #                            consulted — counted, never nagged)
 
     def row(self, kb=None, branch=None):
         doc = {"claim": self.claim, "verdict": self.verdict,
@@ -165,6 +179,8 @@ class Attribution:
                                for label, name in self.citizens]
         if self.earned is not None:
             doc["earned"] = self.earned
+        if self.attested is not None:
+            doc["attested"] = self.attested
         if self.nearest:
             doc["nearest"] = [CitizenRef(label, name).row(kb=kb,
                                                           branch=branch)
@@ -462,16 +478,68 @@ def census_claims(draft_text):
                for row in markdown_table_claims(draft_text)])
 
 
-def census(draft_text, graph, invented=(), consulted=None):
+def link_index(links):
+    """Recorded links keyed by their claim's normalized text. Later rows
+    supersede earlier rows for the same claim — the ledger's fold order
+    is the ruling order, and the ruling that stands is the last one."""
+    index = {}
+    for row in links:
+        index[normalize(row["claim"])] = row
+    return index
+
+
+def audit_link(row, graph, source_claims=None):
+    """One recorded link's verdict — the audit, not the matcher. The
+    record is checked on both ends: every linked citizen must still
+    stand in canon (else LINK_BROKEN — canon moved), and the claim must
+    still be among its source's current claims (else LINK_STALE — the
+    source moved). ``source_claims(source)`` returns the source's
+    current claims, or None when the source cannot be consulted here —
+    then the link counts as recorded with ``attested`` None (counted,
+    never nagged: the receipts rule)."""
+    claim = row["claim"]
+    citizens = [(label, name) for label, name in row["citizens"]]
+    if any((label, name) not in graph.nodes for label, name in citizens):
+        return Attribution(claim=claim, verdict=LINK_BROKEN,
+                           citizens=citizens, evidence=[EV_RECORD])
+    attested = None
+    if source_claims is not None:
+        current = source_claims(row.get("source", ""))
+        if current is not None:
+            attested = normalize(claim) in {normalize(text)
+                                            for text in current}
+            if not attested:
+                return Attribution(claim=claim, verdict=LINK_STALE,
+                                   citizens=citizens,
+                                   evidence=[EV_RECORD], attested=False)
+    return Attribution(claim=claim, verdict=RECORDED, citizens=citizens,
+                       score=1.0, evidence=[EV_RECORD], attested=attested)
+
+
+def census(draft_text, graph, invented=(), consulted=None, links=None,
+           source_claims=None):
     """Every draft claim attributed. `invented` is parity's verdict —
     the normalized claims the judge called INVENTED; a homeless claim
     splits on it: invented → the named red; otherwise → a canon gap
     (parity proved it present in the original, so the hole is the
-    graph's). Returns [Attribution] in draft order."""
+    graph's). Returns [Attribution] in draft order.
+
+    ``links`` is the line's recorded attribution (the ledger's rows): a
+    claim with a recorded link never meets the matcher — the audit
+    verifies the record instead (audit_link), and lexical matching
+    serves only the claims no round has recorded, the frontier."""
     index = CanonIndex(graph)
+    recorded = link_index(links) if links else {}
     invented = {normalize(text) for text in invented}
     results = []
     for claim in census_claims(draft_text):
+        link = recorded.get(normalize(claim))
+        if link is not None:
+            verdict = audit_link(link, graph,
+                                 source_claims=source_claims)
+            verdict.claim = claim  # the draft's own wording, draft order
+            results.append(verdict)
+            continue
         verdict = index.attribute(claim, consulted=consulted)
         if verdict.verdict == CANON_GAP and \
                 normalize(claim) in invented:
@@ -501,6 +569,30 @@ def render_census(results):
               f"{by_rung[PROSE]} prose-only, the soup) · "
               f"{len(gaps)} canon gaps · "
               f"{len(inventions)} unattributed inventions**", ""]
+    recorded = [r for r in results if r.verdict == RECORDED]
+    stale = [r for r in results if r.verdict == LINK_STALE]
+    broken = [r for r in results if r.verdict == LINK_BROKEN]
+    if recorded or stale or broken:
+        lines += [f"**{len(recorded)} claims recorded by provenance — "
+                  "audited against the record, never re-guessed"
+                  + (f" · {len(stale)} moved sources" if stale else "")
+                  + (f" · {len(broken)} broken links" if broken else "")
+                  + "**", ""]
+    if stale:
+        lines += ["### Moved sources (the record names the claim, and "
+                  "the source's current text no longer says it — a "
+                  "named event, never a silent re-guess)", ""]
+        lines += [f"- {r.claim} — recorded home: "
+                  + ", ".join(f"({label}) {name}"
+                              for label, name in r.citizens)
+                  for r in stale] + [""]
+    if broken:
+        lines += ["### Broken links (the record names a citizen canon "
+                  "no longer holds)", ""]
+        lines += [f"- {r.claim} — recorded home: "
+                  + ", ".join(f"({label}) {name}"
+                              for label, name in r.citizens)
+                  for r in broken] + [""]
     if inventions:
         lines += ["### Unattributed inventions (red — presented, "
                   "never hidden)", ""]
