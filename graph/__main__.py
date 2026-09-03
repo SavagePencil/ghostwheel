@@ -55,7 +55,9 @@ def cmd_validate(base_dir, write_files=True):
     _, graph, findings = validate_mod.run(base_dir)
     report_path = base_dir / "graph" / "reports" / "validation.md"
     if write_files:
-        validate_mod.write_report(findings, graph, report_path)
+        # the markdown and, beside it, the record it renders from
+        validate_mod.write_report(findings, graph, report_path,
+                                  base_dir=base_dir)
     print(f"Validation: {validate_mod.summarize(findings)}")
     if graph is not None:
         print(f"Graph: {len(graph.nodes)} nodes, {len(graph.edges)} edges")
@@ -1180,12 +1182,15 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     roster_advisories = []
     if ontology is not None:
         advisory = bool(branch)
+        # a typed pass-through: the finding's own code, remedy, and
+        # particulars ride into the gate verdict (no string collapse)
         roster_verdicts = [
             report_mod.Verdict(
-                code="roster-gap", message=f.detail,
+                code=f.verdict_code, message=f.detail, remedy=f.remedy,
                 severity=(report_mod.ADVISORY if advisory
                           else report_mod.REFUSAL),
-                data={"file": f.file, "location": f.location})
+                data={"file": f.file, "location": f.location,
+                      "category": str(f.category)})
             for f in procedure_roster_findings(ontology, scratch)]
         if advisory:
             # A branch mid-rebuild is incomplete by design: the roster
@@ -1277,17 +1282,22 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     config = load_mod.read_config(base_dir)
     database = _authoring_database(database, branch, config)
     live_canon_database = config["NEO4J_DATABASE"]
-    def bail(code, message, items=(), remedy=""):
+    def bail(code, message, items=(), remedy="", findings=()):
         # the refusal, twice: the stderr block above it prints exactly
         # as it always has; this leaves the same facts as a durable
-        # record (graph/reports/canonize-refusal.json)
+        # record (graph/reports/canonize-refusal.json). Findings ride
+        # as their own rows beside the prose items — a typed
+        # pass-through, never a string collapse.
         from . import report as report_mod
+        data = {}
+        if items:
+            data["items"] = [str(i) for i in items]
+        if findings:
+            data["findings"] = [f.row() for f in findings]
         canonize_mod.write_refusal_report(
             base_dir, branch,
             [report_mod.Verdict(code=code, message=str(message),
-                                remedy=remedy,
-                                data=({"items": [str(i) for i in items]}
-                                      if items else {}))])
+                                remedy=remedy, data=data)])
         return 1
 
     # The target line's canon database: live canon for the default line;
@@ -1506,7 +1516,7 @@ def cmd_canonize(base_dir, database, apply, branch=None):
                  for f in derive_errors]
         for item in items:
             print(f"  ⚠ {item}", file=sys.stderr)
-        return bail("derive-error", text, items)
+        return bail("derive-error", text, items, findings=derive_errors)
     # The stitch mechanism: the stitch lands IN MEMORY, after re-derivation births the
     # round's new citizens and before anything is written — same
     # verify-all-before-apply-any window as everything above
@@ -1747,11 +1757,15 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
         # other derivation error block succession — a finished line only.
         ontology = ontology_from_graph(branch_backup, base_dir)
         _, derive_findings = derive(ontology, strip_derived(branch_backup))
+        derive_error_findings = [f for f in derive_findings
+                                 if f.severity == SEV_ERROR]
         derive_errors = [f"{f.file} {f.location}: {f.detail}"
-                         for f in derive_findings
-                         if f.severity == SEV_ERROR]
+                         for f in derive_error_findings]
+        # the prose problems keep the terminal's voice; the findings
+        # themselves ride the checklist as typed rows
         gates.append(("roster at full strength and re-derivation clean",
-                      "rederivation-error", derive_errors))
+                      "rederivation-error", derive_errors,
+                      derive_error_findings))
         gates.append(("ground-facts lint clean over the branch's full "
                       "line", "line-facts-unclean",
                       succession_mod.line_lint(branch_backup)))
@@ -1767,7 +1781,8 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
                       "anchor-missing", anchor_missing))
 
     failed = []
-    for label, _code, gate_problems in gates:
+    for gate in gates:
+        label, gate_problems = gate[0], gate[2]
         mark = "✓" if not gate_problems else "⚠"
         print(f"  {mark} {label}")
         failed.extend(gate_problems)
@@ -2168,6 +2183,11 @@ def cmd_roundtrip(base_dir, scope, draft, book=False):
     report_path = base_dir / "graph" / "reports" / "roundtrip.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report, encoding="utf-8")
+    # the record the prose renders from, beside it
+    from . import report as report_mod
+    report_mod.write_record(
+        base_dir, roundtrip_mod.ROUNDTRIP_REPORT_FILE,
+        roundtrip_mod.roundtrip_report(result, base_dir=base_dir))
     print(report)
     print(f"Report: {report_path.relative_to(base_dir)}")
 

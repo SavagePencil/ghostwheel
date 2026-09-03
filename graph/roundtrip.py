@@ -93,8 +93,13 @@ class RoundFinding:
         return f"{digest[:16]}"
 
     def row(self):
+        # the kind IS the verdict code; the designer-facing ref rides
+        # beside it (the record shape), and the archive keeps every key
+        # it always had
+        from .report import ref_key
         return {"id": self.identity, "tier": self.tier,
-                "kind": self.kind, "message": self.message,
+                "kind": self.kind, "code": self.kind,
+                "ref": ref_key(self.kind), "message": self.message,
                 "original": self.original,
                 "regenerated": self.regenerated,
                 "section_id": self.section_id,
@@ -828,27 +833,63 @@ def run(base_dir, scope, draft_path, cited_sections=(), cited_specs=(),
     return result
 
 
+ROUNDTRIP_REPORT_FILE = "roundtrip-report.json"
+
+
+def roundtrip_report(result, base_dir=None, kb=None):
+    """The scorecard as one record: scope, the judged artifact's
+    identity, the pass flag, one row per tier with its findings as
+    rows, the judged-surface sentence, and the census as rows. The
+    prose scorecard is a rendering of this — the doctrine already
+    said so; now the code does."""
+    from .report import record_header
+    doc: dict = (record_header(base_dir, "roundtrip-report") if base_dir
+                 else {"kind": "roundtrip-report"})
+    kb = kb or doc.get("kb")
+    doc.update(scope=result.scope, fingerprint=result.fingerprint,
+               passed=result.passed)
+    doc["tiers"] = [{"tier": tier.tier, "passed": tier.passed,
+                     "checked": tier.checked, "approved": tier.approved,
+                     "findings": [f.row() for f in tier.findings]}
+                    for tier in result.tiers]
+    if result.surface:
+        doc["surface"] = result.surface
+    if result.attribution:
+        doc["census"] = [r.row(kb=kb) for r in result.attribution]
+        counts = {}
+        for r in result.attribution:
+            counts[r.verdict] = counts.get(r.verdict, 0) + 1
+        doc["census_counts"] = counts
+    return doc
+
+
 def render_report(result):
-    lines = [f"# Round-trip parity scorecard — {result.scope}", ""]
-    lines.append("**" + ("PASS" if result.passed else "FAIL") + "** — "
+    """The prose scorecard, rendered FROM the record: the summary line
+    from the tier rows, each failing tier's findings from its rows, the
+    surface sentence, and the census (whose renderer already reads its
+    own rows)."""
+    doc = roundtrip_report(result)
+    lines = [f"# Round-trip parity scorecard — {doc['scope']}", ""]
+    lines.append("**" + ("PASS" if doc["passed"] else "FAIL") + "** — "
                  + " · ".join(
-                     f"{tier.tier}: "
-                     + ("green" if tier.passed else f"{len(tier.findings)} red")
-                     + (f" ({tier.approved} approved omission"
-                        + ("s)" if tier.approved != 1 else ")")
-                        if tier.approved else "")
-                     for tier in result.tiers))
+                     f"{tier['tier']}: "
+                     + ("green" if tier["passed"]
+                        else f"{len(tier['findings'])} red")
+                     + (f" ({tier['approved']} approved omission"
+                        + ("s)" if tier["approved"] != 1 else ")")
+                        if tier["approved"] else "")
+                     for tier in doc["tiers"]))
     lines.append("")
-    for tier in result.tiers:
-        if tier.passed:
+    for tier in doc["tiers"]:
+        if tier["passed"]:
             continue
-        lines += [f"## {tier.tier} — the differences, named", ""]
-        lines += [f"- {finding}" for finding in tier.findings] + [""]
-    if result.passed:
+        lines += [f"## {tier['tier']} — the differences, named", ""]
+        lines += [f"- {row['message']}" for row in tier["findings"]] + [""]
+    if doc["passed"]:
         lines += ["Zero inventions, zero distortions, zero unapproved "
                   "omissions, zero cell-level loss.", ""]
-    if result.surface:
-        lines += [result.surface, ""]
+    if doc.get("surface"):
+        lines += [doc["surface"], ""]
     if result.attribution:
         from . import attribution as attribution_mod
         lines += [attribution_mod.render_census(result.attribution), ""]
