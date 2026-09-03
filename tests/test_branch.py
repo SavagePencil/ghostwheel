@@ -548,3 +548,33 @@ def test_live_apply_still_blocks_on_an_incomplete_roster(driven_kb, capsys):
     err = capsys.readouterr().err
     assert "no Ritual citizen" in err
     assert not read_applied_log(base)         # nothing landed
+
+
+def test_branch_round_cut_stamps_a_working_copy_over_the_cli(driven_kb):
+    # The flow the branch-cut guidance PRINTS: the branch's own backup
+    # into its own authoring copy. That is the branch's round cut — it
+    # stamps a working copy (carrying the branch), pins the branch
+    # round, and the round gate accepts the copy it minted.
+    base, fake, _ = driven_kb
+    branch = "rebuild"
+    assert main_mod.cmd_restore(base, branch=branch, base="schema-only") == 0
+    assert main_mod.cmd_restore(
+        base, database=f"{branch}-scratch",
+        from_dir=str(export_dir(base, branch))) == 0
+    stamp = fake.read_stamp({"NEO4J_DATABASE": f"{branch}-scratch"})
+    assert stamp["role"] == "working-copy"
+    assert stamp["branch"] == branch
+    assert (current_dir(base, branch) / BASE_FILE).exists()
+    assert main_mod.cmd_delta(base, None, branch=branch) == 0
+
+
+def test_a_foreign_export_still_loads_as_inspection(driven_kb):
+    # --from with anything that is not a branch's own backup into that
+    # branch's own copy keeps inspection semantics: no working-copy
+    # stamp, and a round refuses to run against it by name.
+    base, fake, _ = driven_kb
+    assert main_mod.cmd_restore(
+        base, database="peek", from_dir=str(export_dir(base))) == 0
+    stamp = fake.read_stamp({"NEO4J_DATABASE": "peek"})
+    assert stamp["role"] == "inspection"
+    assert "branch" not in stamp
