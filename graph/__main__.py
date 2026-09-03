@@ -368,6 +368,17 @@ def _restore_branch(base_dir, branch, base, database):
                         proposal_mod.base_identity(seed),
                         git_ref(base_dir), branch=branch)
     pin_round(base_dir, seed, target, branch)
+    # the fork annotation: where canon's log stood at this cut — the
+    # fork point succession's divergence advisory enumerates from
+    from datetime import datetime, timezone
+    canon_log = proposal_mod.read_applied_log(base_dir)
+    proposal_mod.write_branch_fork(base_dir, branch, {
+        "base": base,
+        "canon_sequence": canon_log[-1][0] if canon_log else 0,
+        "canon_chain_tip": canon_log[-1][5] if canon_log else "genesis",
+        "cut_at": datetime.now(timezone.utc).isoformat(
+            timespec="seconds"),
+    })
     print(f"Branch '{branch}' cut. Clone its authoring copy "
           f"(python -m graph restore --from "
           f"{branch_export.relative_to(base_dir)} --database "
@@ -1507,6 +1518,34 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
         for problem in failed:
             print(f"  ⚠ {problem}", file=sys.stderr)
         return 1
+
+    # The divergence advisory (never a refusal — adopting past
+    # divergence is legitimate, but the owner rules with it in view):
+    # rounds the line being superseded applied AFTER this branch's fork
+    # do not ride the adoption.
+    fork_known, diverged = succession_mod.post_fork_rounds(base_dir,
+                                                           branch)
+    if not fork_known:
+        print("  ⚠ advisory — this branch records no fork point (it was "
+              "cut before birth records existed): the line being "
+              "superseded may carry rounds applied after the fork, and "
+              "they cannot be enumerated. After adoption, diff the "
+              "successor against the superseded archive to find any "
+              "rulings that must carry forward.")
+    elif diverged:
+        ids = ", ".join(delta_hash[:12] for _seq, delta_hash in diverged)
+        plural = "s" if len(diverged) != 1 else ""
+        print(f"  ⚠ advisory — the line being superseded carries "
+              f"{len(diverged)} round{plural} applied after this "
+              f"branch's fork ({ids}): their content does NOT ride the "
+              "adoption. Carry-forward is its own gated round against "
+              "the superseded archive; the adoption record's "
+              f"{succession_mod.DIVERGENCE_FILE} enumerates the "
+              "worklist.")
+    else:
+        print("  ✓ no rounds landed on the line being superseded after "
+              "this branch's fork")
+
     if not apply:
         print(f"Ready. Adopt with: python -m graph succession --branch "
               f"{branch} --apply")
@@ -1581,6 +1620,7 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
         "adopted_by": ruled_by,
         "adopted_at": ruled_at,
         "sequence": sequence,
+        "post_fork_rounds": len(diverged) if fork_known else "unrecorded",
         "branch_rounds": len(branch_log),
         "branch_chain_tip": branch_log[-1][5] if branch_log else "genesis",
         "branch_export_identity": proposal_mod.base_identity(branch_backup),
@@ -1590,11 +1630,21 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
     }
     text, record_hash = succession_mod.serialize_record(record)
     round_dir = proposal_mod.proposals_dir(base_dir) / record_hash[:12]
+    # the enumerated worklist for the carry-forward round — computed
+    # from the archived round dirs before anything is overwritten
+    divergence_rows = (succession_mod.divergence_summary(base_dir,
+                                                         diverged)
+                       if fork_known and diverged else [])
     try:
         export_mod.write_export(dumped, proposal_mod.export_dir(base_dir))
         round_dir.mkdir(parents=True, exist_ok=True)
         (round_dir / succession_mod.ADOPTION_FILE).write_text(
             text, encoding="utf-8")
+        if divergence_rows:
+            (round_dir / succession_mod.DIVERGENCE_FILE).write_text(
+                json.dumps(divergence_rows, ensure_ascii=False,
+                           indent=2, sort_keys=True) + "\n",
+                encoding="utf-8")
         if proposal_mod.next_log_sequence(base_dir) != sequence:
             raise RuntimeError(
                 "the event log moved under the ceremony (the adoption "

@@ -622,3 +622,105 @@ def test_restore_branch_on_adopted_branch_refuses_as_provenance(driven_kb,
     err = capsys.readouterr().err
     assert "provenance, not a working line" in err
     assert "remove it deliberately to re-cut" not in err
+
+
+# -- 7. THE DIVERGENCE ADVISORY: the superseded line's post-fork rounds ----
+
+
+def _land_canon_round(base, node_name):
+    """One post-fork round on CANON's line, the durable way the feature
+    reads it: a chained log entry plus the archived round dir with its
+    changeset. Returns the round's delta hash."""
+    from graph.delta import Delta
+    delta = Delta(nodes_added=[("Character", node_name, {})])
+    text = proposal_mod.serialize_delta(delta)
+    delta_hash = content_hash(text)
+    round_dir = proposals_dir(base) / delta_hash[:12]
+    round_dir.mkdir(parents=True, exist_ok=True)
+    (round_dir / "delta.json").write_text(text, encoding="utf-8")
+    proposal_mod.append_applied_log(base, delta_hash, "before-id",
+                                    "after-id")
+    return delta_hash
+
+
+def test_branch_cut_records_its_fork_point(driven_kb):
+    base, fake, _ = driven_kb
+    _author_and_canonize_branch(base, fake, "rebuild")
+    fork = proposal_mod.read_branch_fork(base, "rebuild")
+    assert fork is not None
+    assert fork["base"] == "schema-only"
+    assert fork["canon_sequence"] == 0         # fresh canon: no rounds yet
+    assert fork["canon_chain_tip"] == "genesis"
+    # the annotation is chain-inert: the branch's own round chained
+    # beneath it and the chain still verifies
+    assert verify_applied_log(base, "rebuild") == []
+    assert len(read_applied_log(base, "rebuild")) == 1
+
+
+def test_succession_names_the_superseded_lines_post_fork_rounds(
+        driven_kb, capsys):
+    base, fake, _ = driven_kb
+    branch = "rebuild"
+    _author_and_canonize_branch(base, fake, branch)
+    # the superseded line moves on after the fork: two rounds, one with
+    # an archived changeset and one whose archive is gone
+    first = _land_canon_round(base, "Latecomer")
+    second = _land_canon_round(base, "Straggler")
+    shutil.rmtree(proposals_dir(base) / second[:12])
+    _mount_live_canon(base, fake)
+    capsys.readouterr()
+
+    assert main_mod.cmd_succession(base, branch=branch, apply=False) == 0
+    out = capsys.readouterr().out
+    assert "2 rounds applied after this branch's fork" in out
+    assert first[:12] in out and second[:12] in out
+    assert "does NOT ride the adoption" in out
+
+    assert main_mod.cmd_succession(base, branch=branch, apply=True,
+                                   by="owner") == 0
+    record = read_adoption(base, branch)
+    assert record is not None
+    assert record["post_fork_rounds"] == 2
+    round_dir = proposals_dir(base) / \
+        serialize_record({k: v for k, v in record.items()})[1][:12]
+    rows = read_json(round_dir / "divergence.json")
+    by_id = {row["id"]: row for row in rows}
+    assert by_id[first[:12]]["summary"]["nodes_added"] == 1
+    assert by_id[second[:12]]["summary"] is None  # archive gone: id-only
+
+
+def test_a_clean_fork_reads_clean(driven_kb, capsys):
+    base, fake, _ = driven_kb
+    _author_and_canonize_branch(base, fake, "rebuild")
+    _mount_live_canon(base, fake)
+    capsys.readouterr()
+    assert main_mod.cmd_succession(base, branch="rebuild",
+                                   apply=False) == 0
+    out = capsys.readouterr().out
+    assert "no rounds landed on the line being superseded" in out
+
+
+def test_a_branch_without_birth_record_degrades_honestly(driven_kb,
+                                                         capsys):
+    base, fake, _ = driven_kb
+    branch = "rebuild"
+    _author_and_canonize_branch(base, fake, branch)
+    # a branch cut before fork annotations existed: strip the line
+    log_path = proposal_mod.applied_log_path(base, branch)
+    kept = [line for line in
+            log_path.read_text(encoding="utf-8").splitlines()
+            if not line.startswith(proposal_mod.FORK_PREFIX)]
+    log_path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+    _mount_live_canon(base, fake)
+    capsys.readouterr()
+
+    assert main_mod.cmd_succession(base, branch=branch, apply=False) == 0
+    out = capsys.readouterr().out
+    assert "records no fork point" in out
+    assert "diff the successor against the superseded archive" in out
+
+    assert main_mod.cmd_succession(base, branch=branch, apply=True,
+                                   by="owner") == 0
+    record = read_adoption(base, branch)
+    assert record is not None
+    assert record["post_fork_rounds"] == "unrecorded"
