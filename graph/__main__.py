@@ -1174,7 +1174,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     # The orphan-procedure check: a registered procedure file with no citizen in scratch is
     # invisible to the body-sync scan (which walks existing nodes) — the
     # roster check names it before the round reaches canonize.
-    from .extract import procedure_roster_findings
+    from .extract import gate_roster_findings
     from .ontology import ontology_from_graph
     # The schema is reconstructed FROM canon's backup (the schema-delta ceremony): `base` is the
     # committed graph read above; ontology.yaml is bootstrap-only now.
@@ -1191,7 +1191,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                           else report_mod.REFUSAL),
                 data={"file": f.file, "location": f.location,
                       "category": str(f.category)})
-            for f in procedure_roster_findings(ontology, scratch)]
+            for f in gate_roster_findings(scratch, base_dir)]
         if advisory:
             # A branch mid-rebuild is incomplete by design: the roster
             # census blocks only a finished line. Advisory here; full

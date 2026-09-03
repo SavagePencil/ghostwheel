@@ -179,6 +179,8 @@ REF_KEYS = {
     "answer-key-invalid": "check-declaration-invalid",
     "answer-key-unreadable": "check-declaration-unreadable",
     "answer-key-procedure-missing": "checked-program-missing",
+    "source-unregistered": "program-files-released",
+    "source-unregistration-refused": "program-files-still-needed",
     "render-mapping-edited": "table-layout-edited",
     "render-mapping-unreadable": "table-layout-unreadable",
     "render-mapping-invalid": "table-layout-invalid",
@@ -373,8 +375,8 @@ def render_markdown(report):
                   "The rows below change the graph's OWN SCHEMA. They "
                   "are within the ceremony's permitted classes (new "
                   "declared concepts, label births, doc edits, added "
-                  "aliases, render-mapping edits, taxonomy declarations, "
-                  "unreferenced removals); "
+                  "aliases, render-mapping edits, source unregistration, "
+                  "taxonomy declarations, unreferenced removals); "
                   "approving this round is the ceremony ruling that "
                   "makes them schema.", ""]
         lines += [f"- ⚑ {item}" for item in report.ceremony] + [""]
