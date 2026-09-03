@@ -660,6 +660,52 @@ def append_applied_log(base_dir, delta_hash, base_before, base_after,
     return chain
 
 
+def log_head_divergence(base_dir, base, branch=None):
+    """The chain's head against the backup it is about to build on —
+    the check every appender runs BEFORE writing. The log's last entry
+    must have left the base the backup now IS (its base_after equals
+    the backup's identity) and the backup's Ontology anchor must carry
+    that entry's sequence; otherwise a new entry would chain off a
+    stale predecessor and corrupt the tamper-evident chain quietly.
+    Returns the problem as one sentence naming both heads, or None. An
+    empty log is judged only by the anchor: a bootstrap version is not
+    a sequence, so an unrounded canon passes."""
+    from .ontology import ARCHETYPE_LABEL
+    entries = read_applied_log(base_dir, branch)
+    if not entries:
+        return None
+    seq, _delta_hash, _before, base_after, _prev, chain = entries[-1]
+    identity = base_identity(base)
+    anchor = base.nodes.get((ARCHETYPE_LABEL, "Ontology")) or {}
+    raw_version = anchor.get("version")
+    try:
+        version = int(raw_version) if raw_version is not None else None
+    except (TypeError, ValueError):
+        version = None
+    problems = []
+    if base_after != identity:
+        problems.append(
+            f"its last entry (round {seq}, chain {chain[:12]}) left the "
+            f"base at {base_after[:12]}, but the backup's identity is "
+            f"{identity[:12]}")
+    if version is not None and version != seq:
+        problems.append(
+            f"its last entry is round {seq}, but the backup's anchor says "
+            f"round {version} was applied")
+    if not problems:
+        return None
+    try:
+        rel = applied_log_path(base_dir, branch).relative_to(base_dir)
+    except ValueError:
+        rel = applied_log_path(base_dir, branch)
+    return (f"the event log ({rel}) disagrees with the backup it would "
+            "build on: " + "; ".join(problems) + ". A new entry chained "
+            "here would corrupt the tamper-evident chain. Restore the log "
+            "lines the backup describes (each archived round under "
+            "proposals/ carries its entry's facts), or restore the backup "
+            "the log describes, then rerun.")
+
+
 def verify_applied_log(base_dir, branch=None):
     """The chain, re-derived and compared — a broken link is named."""
     problems = []

@@ -627,6 +627,10 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
               "existing canon; a fresh knowledge base seeds the current "
               "kernel at init.", file=sys.stderr)
         return 1
+    out_of_step = proposal_mod.log_head_divergence(base_dir, base)
+    if out_of_step:
+        print(f"kernel-migrate refused — {out_of_step}", file=sys.stderr)
+        return 1
     seed, findings = km.fresh_kernel(base_dir, metaontology_path)
     if seed is None:
         print("Attempted to read the installed engine's kernel. Failed "
@@ -1368,6 +1372,17 @@ def cmd_canonize(base_dir, database, apply, branch=None):
             print(f"--apply refused — {skew}", file=sys.stderr)
             return bail("kernel-skew", skew)
         print(f"Advisory: {skew}", file=sys.stderr)
+    # The chain's head against the backup it would build on: an entry
+    # chained off a stale predecessor corrupts the tamper-evident chain
+    # quietly, so the disagreement refuses by name before any write.
+    out_of_step = proposal_mod.log_head_divergence(base_dir, base, branch)
+    if out_of_step:
+        if apply:
+            print(f"--apply refused — {out_of_step}", file=sys.stderr)
+            return bail("log-head-diverged", out_of_step,
+                        remedy="Restore the log lines the backup describes, "
+                               "or the backup the log describes, then rerun.")
+        print(f"Advisory: {out_of_step}", file=sys.stderr)
     config = dict(config)
     config["NEO4J_DATABASE"] = database
     identity = _working_copy_check(base_dir, config, database, branch)
@@ -1775,6 +1790,20 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
     gates.append((f"branch '{branch}''s event-log chain verifies unbroken",
                   "branch-chain-broken",
                   proposal_mod.verify_applied_log(base_dir, branch)))
+    # each line's log head agrees with the backup it describes: the
+    # adoption chains an entry onto canon's log and reads the branch's,
+    # so either head out of step refuses before anything moves
+    if canon_backup is not None:
+        problem = proposal_mod.log_head_divergence(base_dir, canon_backup)
+        gates.append(("canon's event log agrees with its backup",
+                      "canon-log-head-diverged",
+                      [problem] if problem else []))
+    if branch_backup is not None:
+        problem = proposal_mod.log_head_divergence(base_dir, branch_backup,
+                                                   branch)
+        gates.append((f"branch '{branch}''s event log agrees with its "
+                      "backup", "branch-log-head-diverged",
+                      [problem] if problem else []))
 
     if branch_backup is not None:
         # The advisory era ends at this gate: the roster census and every

@@ -638,8 +638,17 @@ def _land_canon_round(base, node_name):
     round_dir = proposals_dir(base) / delta_hash[:12]
     round_dir.mkdir(parents=True, exist_ok=True)
     (round_dir / "delta.json").write_text(text, encoding="utf-8")
+    # the entry leaves the base where canon's backup actually stands —
+    # an appender checks the log's head against the backup before it
+    # chains, and a fictional after-image would be the disagreement it
+    # refuses
+    from graph.canonize import stamp_ontology_anchor
+    canon = read_export(export_dir(base))
+    assert stamp_ontology_anchor(
+        canon, proposal_mod.next_log_sequence(base)) == []
+    export_mod.write_export(canon, export_dir(base))
     proposal_mod.append_applied_log(base, delta_hash, "before-id",
-                                    "after-id")
+                                    base_identity(canon))
     return delta_hash
 
 
