@@ -86,6 +86,28 @@ REF_KEYS = {
     "attribution-file-unreadable": "unreadable-file",
     "attribution-row-malformed": "misrecorded-evidence",
     "attribution-home-missing": "evidence-without-home",
+    # the health checks (the durable-record work): every verdict a
+    # check surface produces, PASS rows included
+    "check-passed": "held",
+    "check-failed": "integrity-broken",
+    "check-findings": "for-the-record",
+    "check-unreachable": "store-unreachable",
+    "check-none": "nothing-to-check",
+    "floor-held": "held",
+    "floor-failed": "approval-broken",
+    "floor-guard-missing": "protection-lost",
+    "corpus-uncollectable": "suite-not-runnable",
+    "seal-verified": "sealed-intact",
+    "seal-broken": "seal-broken",
+    "seal-none": "nothing-sealed",
+    "seal-file-unreadable": "unreadable-file",
+    "drill-passed": "backup-faithful",
+    "drill-failed": "backup-mismatch",
+    "restore-load-failed": "store-unreachable",
+    "restore-guard": "cannot-begin",
+    "receipt-verified": "evidence-found",
+    "receipt-source-gone": "evidence-source-gone",
+    "receipt-unverifiable": "evidence-by-ruling",
     # the succession checklist's gate codes (the durable-checklist work)
     "canon-backup-unreadable": "unreadable-backup",
     "branch-backup-unreadable": "unreadable-backup",
@@ -131,6 +153,50 @@ def ref_key(code):
     """The designer-facing reference number for a verdict code — falls
     back to the code itself so a ref always exists."""
     return REF_KEYS.get(code, code)
+
+
+# -- the record shape's shared plumbing ------------------------------------
+#
+# Every durable record a command leaves beside graph/reports/ (canonize's
+# refusal, succession's checklist, the health checks) opens the same
+# way — kind, the line of truth (kb + branch, per the reference rules) —
+# and is written the same way: canonical JSON, best-effort, because a
+# record that cannot be written must never mask the outcome it describes.
+
+def record_header(base_dir, kind, branch=None):
+    from .refs import kb_name_from_export
+    doc = {"kind": kind, "kb": kb_name_from_export(base_dir)}
+    if branch:
+        doc["branch"] = branch
+    return doc
+
+
+def record_path(base_dir, filename):
+    from pathlib import Path
+    return Path(base_dir) / "graph" / "reports" / filename
+
+
+def write_record(base_dir, filename, doc):
+    """Write one record under graph/reports/. Returns the text written,
+    or None when the write failed (best-effort by doctrine)."""
+    try:
+        path = record_path(base_dir, filename)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        text = json.dumps(doc, ensure_ascii=False, indent=2,
+                          sort_keys=True) + "\n"
+        path.write_text(text, encoding="utf-8")
+        return text
+    except OSError:
+        return None
+
+
+def clear_record(base_dir, filename):
+    """A clean run retires an outcome-only artifact — the report
+    reflects the latest outcome, never a stale one."""
+    try:
+        record_path(base_dir, filename).unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 @dataclass

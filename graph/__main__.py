@@ -199,13 +199,20 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
     if branch is not None or base is not None:
         return _restore_branch(base_dir, branch, base, database)
 
-    if from_dir and not database:
-        print("Attempted to restore from a custom export with no "
-              "target database. Failed due to: --from loads a "
-              "workspace database and must name it with --database — "
-              "the live canon database only ever restores from the "
-              "canonical backup.", file=sys.stderr)
+    def guard(text, **facts):
+        # a run refused before any write: the record names the guard
+        print(text, file=sys.stderr)
+        _file_restore(base_dir, code="restore-guard", status="refused",
+                      database=database, from_dir=from_dir,
+                      problems=[text], **facts)
         return 1
+
+    if from_dir and not database:
+        return guard("Attempted to restore from a custom export with no "
+                     "target database. Failed due to: --from loads a "
+                     "workspace database and must name it with "
+                     "--database — the live canon database only ever "
+                     "restores from the canonical backup.")
     export_dir = (Path(from_dir) if from_dir else
                   base_dir / "graph" / "export")
     if from_dir and not export_dir.is_absolute():
@@ -213,8 +220,7 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
     try:
         graph = restore_mod.read_export(export_dir)
     except (FileNotFoundError, ValueError, OSError) as exc:
-        print(exc, file=sys.stderr)
-        return 1
+        return guard(str(exc))
     if not from_dir:
         from .kernel_migrate import kernel_skew
         skew = kernel_skew(graph)
@@ -222,14 +228,14 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
             print(f"Advisory: {skew}", file=sys.stderr)
     config = load_mod.read_config(base_dir)
     if from_dir and database == config["NEO4J_DATABASE"]:
-        print(f"Attempted to load {from_dir} into the live canon "
-              f"database ('{database}'). Failed due to: live canon "
-              "only ever restores from the canonical backup at "
-              "graph/export — pick a workspace database (e.g. "
-              "scratch).", file=sys.stderr)
-        return 1
+        return guard(f"Attempted to load {from_dir} into the live canon "
+                     f"database ('{database}'). Failed due to: live canon "
+                     "only ever restores from the canonical backup at "
+                     "graph/export — pick a workspace database (e.g. "
+                     "scratch).")
     if database:
         config["NEO4J_DATABASE"] = database
+    target = config["NEO4J_DATABASE"]
     print(f"Restoring {config['NEO4J_URI']} "
           f"(database '{config['NEO4J_DATABASE']}') from the "
           f"{'export' if from_dir else 'backup'} at "
@@ -238,9 +244,13 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
         summary = load_mod.load(graph, config)
         dumped = restore_mod.dump_db(config)
     except Exception as exc:  # driver errors: auth, unreachable, etc.
-        print(f"Restore failed: {exc}", file=sys.stderr)
+        text = f"Restore failed: {exc}"
+        print(text, file=sys.stderr)
         print("Is the Neo4j Desktop DBMS running, and does .env match its "
               "credentials?", file=sys.stderr)
+        _file_restore(base_dir, code="restore-load-failed",
+                      status="failed", database=target, from_dir=from_dir,
+                      problems=[text])
         return 1
     print(f"Restored {summary['loaded_nodes']} nodes, "
           f"{summary['loaded_edges']} edges.")
@@ -251,9 +261,14 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
         print("DRILL FAILED — the database was rebuilt but does not match "
               "the backup. The backup files are untouched; git holds the "
               "truth.", file=sys.stderr)
+        _file_restore(base_dir, code="drill-failed", status="failed",
+                      database=target, from_dir=from_dir, loaded=summary,
+                      problems=problems)
         return 1
     print("DRILL PASSED — the database re-serializes byte-identical to "
           "the backup it was restored from.")
+    _file_restore(base_dir, code="drill-passed", status="passed",
+                  database=target, from_dir=from_dir, loaded=summary)
     from . import proposal as proposal_mod
     from . import workspace as workspace_mod
     copy_of = (_branch_copy_of(base_dir, export_dir, database, config)
@@ -324,14 +339,19 @@ def _restore_branch(base_dir, branch, base, database):
                 "act; remove it deliberately to re-cut.")
     if problems:
         print("\n".join(problems), file=sys.stderr)
+        _file_restore(base_dir, code="restore-guard", status="refused",
+                      branch=branch, problems=problems)
         return 1
 
     target = branch  # a branch's database IS its name — no override
     try:
         canon = restore_mod.read_export(proposal_mod.export_dir(base_dir))
     except (FileNotFoundError, ValueError, OSError) as exc:
-        print("Attempted to read canon's committed backup to seed branch "
-              f"'{branch}'. Failed due to: {exc}.", file=sys.stderr)
+        text = ("Attempted to read canon's committed backup to seed branch "
+                f"'{branch}'. Failed due to: {exc}.")
+        print(text, file=sys.stderr)
+        _file_restore(base_dir, code="restore-guard", status="refused",
+                      branch=branch, problems=[text])
         return 1
 
     seed = schema_only(canon)
@@ -347,9 +367,13 @@ def _restore_branch(base_dir, branch, base, database):
         summary = load_mod.load(seed, config)
         dumped = restore_mod.dump_db(config)
     except Exception as exc:  # driver errors: auth, unreachable, etc.
-        print(f"Branch cut failed: {exc}", file=sys.stderr)
+        text = f"Branch cut failed: {exc}"
+        print(text, file=sys.stderr)
         print("Is the Neo4j Desktop DBMS running, and does .env match its "
               "credentials?", file=sys.stderr)
+        _file_restore(base_dir, code="restore-load-failed",
+                      status="failed", database=target, branch=branch,
+                      problems=[text])
         return 1
     print(f"Loaded {summary['loaded_nodes']} nodes, "
           f"{summary['loaded_edges']} edges into the branch.")
@@ -360,9 +384,14 @@ def _restore_branch(base_dir, branch, base, database):
         print("DRILL FAILED — the branch database was built but does not "
               "match its backup. The backup files are untouched.",
               file=sys.stderr)
+        _file_restore(base_dir, code="drill-failed", status="failed",
+                      database=target, branch=branch, loaded=summary,
+                      problems=drill)
         return 1
     print("DRILL PASSED — the branch database re-serializes byte-identical "
           "to its freshly-written backup.")
+    _file_restore(base_dir, code="drill-passed", status="passed",
+                  database=target, branch=branch, loaded=summary)
     from . import workspace as workspace_mod
     workspace_mod.stamp(config, "branch",
                         proposal_mod.base_identity(seed),
@@ -387,19 +416,70 @@ def _restore_branch(base_dir, branch, base, database):
     return 0
 
 
+SEAL_REPORT_FILE = "seal-report.json"
+RESTORE_REPORT_FILE = "restore-report.json"
+
+
+def restore_report(base_dir, code, status, database=None, branch=None,
+                   from_dir=None, loaded=None, problems=()):
+    """The drill's verdict as a record: which database was rebuilt from
+    what, how much landed, and whether it re-serialized faithfully —
+    or, for a run refused before any write, the collated guard."""
+    from . import report as report_mod
+    doc = report_mod.record_header(base_dir, "restore-report", branch)
+    doc.update(code=code, ref=report_mod.ref_key(code), status=status)
+    if database:
+        doc["database"] = database
+    if from_dir:
+        doc["from"] = str(from_dir)
+    if loaded:
+        doc["loaded"] = {"nodes": loaded["loaded_nodes"],
+                         "edges": loaded["loaded_edges"]}
+    if problems:
+        doc["problems"] = [str(p) for p in problems]
+    return doc
+
+
+def _file_restore(base_dir, **kwargs):
+    from . import report as report_mod
+    report_mod.write_record(base_dir, RESTORE_REPORT_FILE,
+                            restore_report(base_dir, **kwargs))
+
+
 def cmd_verify_seal(base_dir, exam_path):
     """The grading-day handshake (D5): hash a produced exam file
     and check it against the sealed citizen in canon's backup. The
     content is never read as text — only hashed."""
     import hashlib
     import json as json_mod
+    from . import report as report_mod
 
     path = Path(exam_path)
+
+    def file_seal(code, status, problem=None, digest=None, matched=None,
+                  candidates=()):
+        # the handshake's verdict as a record: which file, what it
+        # hashed to, what it matched or what canon held instead
+        doc = report_mod.record_header(base_dir, "seal-report")
+        doc.update(file=str(exam_path), code=code,
+                   ref=report_mod.ref_key(code), status=status)
+        if digest:
+            doc["digest"] = digest
+        if problem:
+            doc["problem"] = problem
+        if matched:
+            doc["matched"] = matched
+        if candidates:
+            doc["candidates"] = list(candidates)
+        report_mod.write_record(base_dir, SEAL_REPORT_FILE, doc)
+
     try:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError as exc:
-        print(f"Attempted to verify the seal on {exam_path}. Failed due "
-              f"to: {exc}.", file=sys.stderr)
+        text = (f"Attempted to verify the seal on {exam_path}. Failed due "
+                f"to: {exc}.")
+        print(text, file=sys.stderr)
+        file_seal("seal-file-unreadable", "unreadable", problem=text)
         return 1
     nodes_path = base_dir / "graph" / "export" / "nodes.jsonl"
     seals = []
@@ -409,10 +489,18 @@ def cmd_verify_seal(base_dir, exam_path):
             if record["label"] == "Sealed Exam":
                 seals.append(record)
     if not seals:
-        print("Attempted to verify a seal, but canon holds no Sealed "
-              "Exam citizens yet. The seal row lands via the delta path "
-              "once the exam is authored and hashed.", file=sys.stderr)
+        text = ("Attempted to verify a seal, but canon holds no Sealed "
+                "Exam citizens yet. The seal row lands via the delta path "
+                "once the exam is authored and hashed.")
+        print(text, file=sys.stderr)
+        file_seal("seal-none", "nothing-sealed", problem=text,
+                  digest=digest)
         return 1
+    candidates = [{"name": record["name"],
+                   "fingerprint": record["properties"].get("fingerprint",
+                                                           "?")[:16],
+                   "sealed_on": record["properties"].get("sealed_on", "?")}
+                  for record in seals]
     for record in seals:
         if record["properties"].get("fingerprint") == digest:
             print(f"SEAL VERIFIED — {path.name} matches "
@@ -421,6 +509,12 @@ def cmd_verify_seal(base_dir, exam_path):
                   f"{record['properties'].get('authored_by', '?')}). "
                   "The file is byte-identical to what was sealed before "
                   "ingest began.")
+            file_seal("seal-verified", "verified", digest=digest,
+                      matched={"name": record["name"],
+                               "sealed_on": record["properties"].get(
+                                   "sealed_on", "?"),
+                               "authored_by": record["properties"].get(
+                                   "authored_by", "?")})
             return 0
     print(f"SEAL BROKEN — {path.name} hashes to {digest[:16]}…, which "
           "matches no sealed exam. Canon holds:", file=sys.stderr)
@@ -431,6 +525,10 @@ def cmd_verify_seal(base_dir, exam_path):
               file=sys.stderr)
     print("Either the file changed after sealing, or this is not the "
           "sealed file. Neither is gradeable.", file=sys.stderr)
+    file_seal("seal-broken", "broken", digest=digest,
+              problem=("Either the file changed after sealing, or this "
+                       "is not the sealed file. Neither is gradeable."),
+              candidates=candidates)
     return 1
 
 
@@ -808,47 +906,109 @@ def parse_check(text, fallback_name=""):
     return description, expect_empty
 
 
-def cmd_check(base_dir):
-    from . import load as load_mod  # deferred: needs the neo4j driver
-    from neo4j import GraphDatabase
+CHECK_REPORT_FILE = "check-report.json"
+CHECK_SAMPLE = 20  # rows shown per check, on screen and on the record
+
+
+def run_checks(session, check_files):
+    """Every check file run against one session, as records: one row
+    per check — its description, mode, row count, a capped sample, and
+    the verdict (code + designer-facing ref). Pure over the session:
+    the CLI prints from these rows and files them, so the screen and
+    the record can never disagree."""
+    from .report import ref_key
+    records = []
+    for path in check_files:
+        text = path.read_text(encoding="utf-8")
+        description, expect_empty = parse_check(text, path.stem)
+        rows = list(session.run(text))
+        if expect_empty:
+            code = "check-passed" if not rows else "check-failed"
+            status = "pass" if not rows else "fail"
+            mode = "assertion"
+        else:
+            code, status, mode = "check-findings", "findings", "informational"
+        records.append({"check": path.stem, "description": description,
+                        "mode": mode, "rows": len(rows),
+                        "sample": [dict(row) for row in rows[:CHECK_SAMPLE]],
+                        "code": code, "ref": ref_key(code),
+                        "status": status})
+    return records
+
+
+def check_report(base_dir, records=None, guard=None):
+    from .report import record_header, ref_key
+    doc = record_header(base_dir, "check-report")
+    if guard is not None:
+        code, problem = guard
+        doc["guard"] = {"code": code, "ref": ref_key(code),
+                        "problem": problem}
+        return doc
+    doc["checks"] = list(records or [])
+    doc["counts"] = {"checks": len(doc["checks"]),
+                     "failed": sum(1 for r in doc["checks"]
+                                   if r["status"] == "fail"),
+                     "findings": sum(r["rows"] for r in doc["checks"]
+                                     if r["status"] == "findings")}
+    return doc
+
+
+def cmd_check(base_dir, driver_factory=None):
+    """Run every canned check against the live store and record the
+    verdicts. ``driver_factory`` (the neo4j driver constructor by
+    default) is injectable so the CLI's orchestration is provable
+    without a driver installed — the suite is DB-free by doctrine."""
+    from . import load as load_mod
+    from . import report as report_mod
+
+    def file_check(**kwargs):
+        # the durable record beside the screen: what was checked and
+        # how it came out, PASS rows included; a run that never reached
+        # the store records the guard that stopped it
+        report_mod.write_record(base_dir, CHECK_REPORT_FILE,
+                                check_report(base_dir, **kwargs))
 
     checks_dir = base_dir / "graph" / "cypher" / "checks"
     check_files = sorted(checks_dir.glob("*.cypher"))
     if not check_files:
-        print(f"No checks found in {checks_dir}", file=sys.stderr)
+        text = f"No checks found in {checks_dir}"
+        print(text, file=sys.stderr)
+        file_check(guard=("check-none", text))
         return 2
     config = load_mod.read_config(base_dir)
-    finding_rows = 0
-    failed_assertions = []
-    driver = GraphDatabase.driver(
-        config["NEO4J_URI"],
-        auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))
+    if driver_factory is None:
+        from neo4j import GraphDatabase  # deferred: only DB access needs it
+        driver_factory = GraphDatabase.driver
     try:
+        driver = driver_factory(
+            config["NEO4J_URI"],
+            auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))
         with driver, driver.session(
                 database=config["NEO4J_DATABASE"]) as session:
-            for path in check_files:
-                text = path.read_text(encoding="utf-8")
-                description, expect_empty = parse_check(text, path.stem)
-                rows = list(session.run(text))
-                if expect_empty:
-                    status = "PASS" if not rows else "FAIL"
-                    if rows:
-                        failed_assertions.append(path.stem)
-                    print(f"\n== {path.stem}: {status} (assertion; "
-                          f"{len(rows)} rows)")
-                else:
-                    finding_rows += len(rows)
-                    print(f"\n== {path.stem}: {len(rows)} findings")
-                print(f"   {description}")
-                for row in rows[:20]:
-                    print(f"   {dict(row)}")
-                if len(rows) > 20:
-                    print(f"   ... and {len(rows) - 20} more")
+            records = run_checks(session, check_files)
     except Exception as exc:
-        print(f"Check run failed: {exc}", file=sys.stderr)
+        text = f"Check run failed: {exc}"
+        print(text, file=sys.stderr)
         print("Is the Neo4j Desktop DBMS running, and does .env match its "
               "credentials? (see .env.example)", file=sys.stderr)
+        file_check(guard=("check-unreachable", text))
         return 1
+    for record in records:
+        if record["mode"] == "assertion":
+            print(f"\n== {record['check']}: {record['status'].upper()} "
+                  f"(assertion; {record['rows']} rows)")
+        else:
+            print(f"\n== {record['check']}: {record['rows']} findings")
+        print(f"   {record['description']}")
+        for row in record["sample"]:
+            print(f"   {row}")
+        if record["rows"] > CHECK_SAMPLE:
+            print(f"   ... and {record['rows'] - CHECK_SAMPLE} more")
+    failed_assertions = [r["check"] for r in records
+                         if r["status"] == "fail"]
+    finding_rows = sum(r["rows"] for r in records
+                       if r["status"] == "findings")
+    file_check(records=records)
     print(f"\nChecks complete: {len(check_files)} checks, "
           f"{len(failed_assertions)} failed assertions, "
           f"{finding_rows} finding rows (informational)")
@@ -864,21 +1024,34 @@ def cmd_corpus(base_dir):
     must still exist in the suite and still pass. Reds name the
     blessing they break; a vanished guard is a red, never a silence."""
     from . import corpus as corpus_mod
+    from . import report as report_mod
+
+    def file_corpus(**kwargs):
+        report_mod.write_record(base_dir, corpus_mod.CORPUS_REPORT_FILE,
+                                corpus_mod.corpus_report(base_dir, **kwargs))
 
     floors = corpus_mod.load_floors(corpus_mod.floors_path(base_dir))
     if not floors:
         print(corpus_mod.render_report([], [], []))
+        file_corpus(records=[])
         return 0
     collected = corpus_mod.collect_guards(base_dir)
     if not collected:
-        print("Attempted to re-collect the corpus's guards with pytest. "
-              "Failed due to: the collection returned nothing — the "
-              "test suite itself is not runnable here; fix that before "
-              "trusting any floor.", file=sys.stderr)
+        text = ("Attempted to re-collect the corpus's guards with pytest. "
+                "Failed due to: the collection returned nothing — the "
+                "test suite itself is not runnable here; fix that before "
+                "trusting any floor.")
+        print(text, file=sys.stderr)
+        file_corpus(records=[], guard_problem=text)
         return 1
-    missing = corpus_mod.missing_guards(floors, collected)
-    failures = corpus_mod.run_floors(base_dir, floors, collected)
+    failed_ids = corpus_mod.failed_floor_ids(base_dir, floors, collected)
+    records = corpus_mod.floor_records(floors, collected, failed_ids)
+    missing = [r["problem"] for r in records
+               if r["status"] == corpus_mod.FLOOR_GUARD_MISSING]
+    failures = [r["problem"] for r in records
+                if r["status"] == corpus_mod.FLOOR_FAILED]
     print(corpus_mod.render_report(floors, missing, failures))
+    file_corpus(records=records)
     return 1 if (missing or failures) else 0
 
 
@@ -2344,12 +2517,17 @@ def cmd_receipts(base_dir, branch=None):
         print("Attempted to read the committed backup for the receipt "
               f"sweep. Failed due to: {exc}.", file=sys.stderr)
         return 1
+    from . import report as report_mod
     result = receipts_mod.sweep(base_dir, base)
     report = receipts_mod.render_report(result)
     reports_dir = base_dir / "graph" / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
     report_path = reports_dir / "receipts.md"
     report_path.write_text(report, encoding="utf-8")
+    # the same sweep as records beside the prose — one row per quote
+    report_mod.write_record(base_dir, receipts_mod.RECEIPTS_REPORT_FILE,
+                            receipts_mod.sweep_report(base_dir, result,
+                                                      branch))
     print(report)
     print(f"Report: {report_path.relative_to(base_dir)}")
     return 0

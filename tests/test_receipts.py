@@ -170,3 +170,17 @@ def test_the_cli_sweeps_and_files_the_report(tmp_path, monkeypatch,
     out = capsys.readouterr().out
     assert "2 stale" in out
     assert (tmp_path / "graph" / "reports" / "receipts.md").is_file()
+    # the same sweep as records beside the prose: one row per quote,
+    # stale rows carrying their beneath-verdict, the gate's own code
+    # reused for stale (same meaning), verified rows recorded too
+    import json
+    doc = json.loads((tmp_path / "graph" / "reports"
+                      / "receipts-report.json").read_text(encoding="utf-8"))
+    assert doc["kind"] == "receipts-report"
+    assert doc["counts"]["stale"] == 2
+    stale_rows = [r for r in doc["receipts"] if r["status"] == "stale"]
+    assert len(stale_rows) == 2
+    assert all(r["code"] == "receipt-stale" and r["ref"] == "evidence-moved"
+               and r["beneath"] for r in stale_rows)
+    assert all("subject" in r and "quote" in r for r in doc["receipts"])
+    assert sum(doc["counts"].values()) == len(doc["receipts"])

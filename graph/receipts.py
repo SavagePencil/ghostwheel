@@ -176,6 +176,59 @@ def sweep(base_dir, graph):
     return result
 
 
+RECEIPTS_REPORT_FILE = "receipts-report.json"
+
+
+def receipt_code(receipt):
+    """One receipt's verdict code — the same voices the prose report
+    speaks. A stale quote reuses the gate's own code (same meaning:
+    the quote no longer appears in its source's current bytes)."""
+    if receipt.kind == SOURCE_GONE:
+        return "receipt-source-gone"
+    if receipt.kind == UNVERIFIABLE:
+        return "receipt-unverifiable"
+    return "receipt-stale" if receipt.stale else "receipt-verified"
+
+
+def sweep_report(base_dir, result, branch=None):
+    """The sweep as one durable record: one row per carried quote
+    (verified rows too — the sweep is evidence of what was checked),
+    each addressed by its citizen (the CitizenRef ruling), plus the
+    per-source rollup the prose report leads with."""
+    from .report import record_header, ref_key
+    doc = record_header(base_dir, "receipts-report", branch)
+    rows = []
+    per_source = {}
+    for receipt in result.receipts:
+        code = receipt_code(receipt)
+        row = {"subject": CitizenRef(receipt.label,
+                                     receipt.name).row(kb=doc["kb"],
+                                                       branch=branch),
+               "quote": receipt.quote, "source": receipt.source,
+               "code": code, "ref": ref_key(code),
+               "status": (receipt.kind if receipt.kind != READABLE
+                          else ("stale" if receipt.stale
+                                else "verified"))}
+        if receipt.stale:
+            row["beneath"] = receipt.beneath
+        rows.append(row)
+        rollup = per_source.setdefault(
+            receipt.source if receipt.kind != READABLE
+            else receipt.relpath,
+            {"verified": 0, "stale": 0, "source-gone": 0,
+             "unverifiable": 0})
+        rollup[row["status"]] += 1
+    doc["receipts"] = rows
+    doc["sources"] = per_source
+    doc["counts"] = {"verified": len(result.verified),
+                     "stale": len(result.stale),
+                     "source-gone": sum(1 for r in result.receipts
+                                        if r.kind == SOURCE_GONE),
+                     "unverifiable": sum(1 for r in result.receipts
+                                         if r.kind == UNVERIFIABLE)}
+    return doc
+
+
 def render_report(result):
     """The owner-facing sweep report: rollups per source artifact, every
     stale receipt named with its beneath-verdict, the unverifiable and
