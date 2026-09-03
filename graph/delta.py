@@ -19,8 +19,8 @@ from .extract import GraphData, make_edge
 from .ontology import (ARCHETYPE_LABEL, MACHINE_LABELS, MEMBERSHIP_EDGE_TYPE,
                        RENDERED_VIEWS_PROP, SCHEMA_EDGE_TYPES, SCHEMA_LABELS,
                        STRATIFIED_EDGE_TYPES, UNAUTHORABLE_EDGE_TYPES,
-                       UNAUTHORABLE_LABELS, is_concept_archetype,
-                       is_derived_edge, rendered_views_problems)
+                       UNAUTHORABLE_LABELS, Reader, is_concept_archetype,
+                       is_derived_edge, node_reader, rendered_views_problems)
 from .refs import KB_NAME_PROP, CitizenRef, ONTOLOGY_ANCHOR, connection_ref
 from .report import CeremonyItem, Verdict
 
@@ -174,7 +174,8 @@ CEREMONY_RENDER_PROPS = frozenset({RENDERED_VIEWS_PROP})
 _OUT_OF_CLASS = (
     "this schema change is outside the ceremony's classes (new declared "
     "concepts, label births, doc edits, added aliases, render-mapping "
-    "edits, removal of unreferenced rows) — changes to an EXISTING label "
+    "edits, source unregistration, removal of unreferenced rows) — "
+    "changes to an EXISTING label "
     "or spec move data underneath them and ride the migration charter. "
     "Propose the change to the owner at the plan gate instead.")
 
@@ -258,6 +259,60 @@ def _alias_additions(before, after):
     return added or None
 
 
+def _source_unregistration(before, after):
+    """True when a spec_json change does exactly one thing: drops the
+    `source` registration of a program label (reader procedure_yaml),
+    leaving the reader explicit so the lift still knows the label — the
+    files released, the bodies the citizens carry now the only copy.
+    Anything else stays out of class."""
+    if not isinstance(before, str) or not isinstance(after, str):
+        return False
+    try:
+        b, a = json.loads(before), json.loads(after)
+    except ValueError:
+        return False
+    if not isinstance(b, dict) or not isinstance(a, dict):
+        return False
+    if "source" not in b or "source" in a:
+        return False
+    if node_reader(b) != Reader.PROCEDURE_YAML:
+        return False
+    released = {key: value for key, value in b.items() if key != "source"}
+    return released == a and node_reader(a) == Reader.PROCEDURE_YAML
+
+
+def _citizens_still_needing_files(label_name, delta, base):
+    """The citizens under a program label that could NOT live without
+    its files after this round: those left without a carried body, or
+    still citing a file (source_path). Each is named with its reason;
+    the round's own edits and removals are applied before judging."""
+    removed = {(label, name) for label, name, _ in delta.nodes_removed}
+    changed = {(label, name): changes
+               for label, name, changes in delta.nodes_changed}
+    after = {}
+    if base is not None:
+        for (label, name), props in base.nodes.items():
+            if label != label_name or (label, name) in removed:
+                continue
+            props = dict(props or {})
+            for prop, (_was, now) in changed.get((label, name), {}).items():
+                if now is None:
+                    props.pop(prop, None)
+                else:
+                    props[prop] = now
+            after[name] = props
+    for label, name, props in delta.nodes_added:
+        if label == label_name:
+            after[name] = dict(props or {})
+    problems = []
+    for name, props in sorted(after.items(), key=str):
+        if not props.get("body"):
+            problems.append(f"'{name}' carries no program body")
+        if props.get("source_path"):
+            problems.append(f"'{name}' still cites {props['source_path']}")
+    return problems
+
+
 def _alias_target_exists(row_name, target, delta, base):
     """Does the target citizen exist under the row's label — in the base,
     or born by this same round?"""
@@ -282,6 +337,11 @@ def ceremony_records(delta, base=None):
       toward the charter; base=None refuses births outright, like
       removals, since emptiness-underneath can't be verified);
     - a DOC EDIT: a schema row change touching only CEREMONY_DOC_PROPS;
+    - a SOURCE UNREGISTRATION: a program label (reader procedure_yaml)
+      drops its `source` file list and nothing else, permitted when
+      every citizen under it — after this round's own edits — carries a
+      program body and cites no file; the files are released, the
+      bodies are the only copy, nothing moves underneath;
     - a RENDER-MAPPING EDIT: a label row's render mappings (the view
       list beside its spec, CEREMONY_RENDER_PROPS) added, changed, or
       removed — loader- and derive-inert, so nothing moves underneath;
@@ -469,6 +529,8 @@ def ceremony_records(delta, base=None):
             continue
         alias_added = _alias_additions(*changes["spec_json"]) \
             if "spec_json" in changes else None
+        unregistered = "spec_json" in changes and \
+            _source_unregistration(*changes["spec_json"])
         # KB-name adoption: the one non-doc property edit the ceremony
         # admits, on exactly the Ontology anchor — a knowledge base
         # declaring (or changing) its own name through a gated round.
@@ -477,7 +539,7 @@ def ceremony_records(delta, base=None):
         kb_named = ((label, name) == (ARCHETYPE_LABEL, ONTOLOGY_ANCHOR)
                     and bool(changes.get(KB_NAME_PROP, ("", ""))[1]))
         permitted_props = CEREMONY_DOC_PROPS | CEREMONY_RENDER_PROPS \
-            | ({"spec_json"} if alias_added else set()) \
+            | ({"spec_json"} if alias_added or unregistered else set()) \
             | ({KB_NAME_PROP} if kb_named else set())
         out_of_class = sorted(set(changes) - permitted_props)
         if out_of_class:
@@ -492,6 +554,37 @@ def ceremony_records(delta, base=None):
                        "instead.",
                 data={"properties": out_of_class}))
             continue
+        if unregistered:
+            if base is None:
+                violations.append(Verdict(
+                    code="source-unregistration-refused",
+                    subject=CitizenRef(label, name),
+                    message=(
+                        f"Attempted to release the program files of "
+                        f"'{name}' ({label}) with no base graph to verify "
+                        "against. Failed due to: releasing a label's files "
+                        "is permitted only when every citizen under it "
+                        "carries its own body, which cannot be checked "
+                        "without the base."),
+                    remedy="Re-run with the base graph available."))
+                continue
+            needing = _citizens_still_needing_files(name, delta, base)
+            if needing:
+                violations.append(Verdict(
+                    code="source-unregistration-refused",
+                    subject=CitizenRef(label, name),
+                    message=(
+                        f"Attempted to release the program files of "
+                        f"'{name}' ({label}). Failed due to: "
+                        + "; ".join(needing) + ". Every citizen under the "
+                        "label must carry its own program body and cite "
+                        "no file before the registration leaves — land "
+                        "the bodies and drop source_path in this round, "
+                        "or keep the files registered."),
+                    remedy="Land every body and drop every source_path in "
+                           "this round, or keep the files registered.",
+                    data={"citizens": needing}))
+                continue
         if RENDERED_VIEWS_PROP in changes:
             now = changes[RENDERED_VIEWS_PROP][1]
             # the label's live spec: the base row's, or this round's own
@@ -547,6 +640,19 @@ def ceremony_records(delta, base=None):
         permitted_nodes.add((label, name))
         for prop, (before, after) in changes.items():
             if prop == "spec_json" and alias_added:
+                continue
+            if prop == "spec_json" and unregistered:
+                files = json.loads(before).get("source")
+                files = [files] if isinstance(files, str) else list(files)
+                items.append(CeremonyItem(
+                    code="source-unregistered",
+                    subject=CitizenRef(label, name),
+                    message=(f"PROGRAM FILES RELEASED from '{name}' — "
+                             f"{len(files)} registered file"
+                             f"{'s' if len(files) != 1 else ''} leave the "
+                             "spec; every citizen carries its own program "
+                             "body from here on"),
+                    data={"property": prop, "files": files}))
                 continue
             if prop == RENDERED_VIEWS_PROP:
                 was_n = len(json.loads(before)) if before else 0

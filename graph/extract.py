@@ -255,9 +255,14 @@ class Extractor:
 
     def rebuild_pending_procedures(self):
         """Derive-era worklist: reconstruct each procedure's spec from
-        the body its own node carries — the graph is the source now."""
+        the body its own node carries — the graph is the source now. A
+        program label needs only its READER to qualify: one that still
+        registers files lifts the bodies its citizens carry from them,
+        and one that registers none (graph-resident program bodies —
+        the files released, the body a ground prop on each citizen)
+        lifts exactly the same way."""
         for label, spec in self.ontology.nodes.items():
-            if not isinstance(spec, dict) or not spec.get("source") or \
+            if not isinstance(spec, dict) or \
                     node_reader(spec) != Reader.PROCEDURE_YAML:
                 continue
             for (node_label, name), props in sorted(self.graph.nodes.items()):
@@ -1658,6 +1663,17 @@ def procedure_roster_findings(ontology, graph):
                 code="roster-gap",
                 remedy="Land the citizen through the delta path."))
     return findings
+
+
+def gate_roster_findings(scratch, base_dir):
+    """The roster as the delta gate runs it: against the schema the
+    round itself carries (reconstructed from scratch), so a round that
+    releases a program label's files — every citizen carrying its body,
+    the registration leaving the spec — is not accused of shipping files
+    without their citizens by the schema it is retiring."""
+    from .ontology import ontology_from_graph
+    ontology = ontology_from_graph(scratch, base_dir)
+    return procedure_roster_findings(ontology, scratch)
 
 
 def derive(ontology, graph):
