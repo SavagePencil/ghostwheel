@@ -24,6 +24,7 @@ from graph.attribution import (ATTRIBUTED, CANON_GAP, EV_RECORD,
 from graph.delta import Delta, attribution_verdicts
 from graph.extract import GraphData, make_edge
 from graph.proposal import (ATTRIBUTION_FILE, append_attribution_log,
+                            proposals_dir,
                             attribution_log_path, attribution_row,
                             content_hash, current_dir, divergence,
                             export_dir, parse_delta,
@@ -363,6 +364,34 @@ def test_a_recorded_round_folds_into_the_ledger(driven_kb, capsys):
     assert row["sequence"] == read_applied_log(base, branch)[-1][0]
     # canon's own ledger never moved
     assert not attribution_log_path(base).exists()
+    # the declaration file left current WITH its round: the archive
+    # holds it, and the next cut starts with an empty slate — a file
+    # left behind would ride the next round's delta as if declared there
+    assert not (current_dir(base, branch) / ATTRIBUTION_FILE).exists()
+    [archive] = [d for d in (proposals_dir(base, branch)).iterdir()
+                 if d.is_dir() and d.name != "current"
+                 and (d / ATTRIBUTION_FILE).exists()]
+    assert json.loads((archive / ATTRIBUTION_FILE).read_text("utf-8")) == \
+        [link]
+
+
+def test_a_cut_names_a_declaration_file_left_by_an_unapplied_round(
+        tmp_path, capsys):
+    from graph.extract import GraphData
+    graph = GraphData()
+    graph.ensure_node("Character", "Ember")
+    main_mod.pin_round(tmp_path, graph, "scratch")
+    assert "never applied" not in capsys.readouterr().out
+    _declare_links(tmp_path, None, [_link(), _link(claim="Twice.")])
+    main_mod.pin_round(tmp_path, graph, "scratch")
+    out = capsys.readouterr().out
+    assert ("note: graph/proposals/current/attribution.json carries 2 "
+            "links declared by a round that was never applied") in out
+    assert "unless you remove or rewrite the file" in out
+    # a file the reader cannot parse is still named, without a count
+    (current_dir(tmp_path) / ATTRIBUTION_FILE).write_text("[{", "utf-8")
+    main_mod.pin_round(tmp_path, graph, "scratch")
+    assert "carries links declared by a round" in capsys.readouterr().out
 
 
 def test_a_link_to_nowhere_refuses_at_the_gate(driven_kb, capsys):

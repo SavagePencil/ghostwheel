@@ -684,8 +684,11 @@ def archive_round(base_dir, delta_id, branch=None):
     src = current_dir(base_dir, branch)
     dst = proposals_dir(base_dir, branch) / delta_id[:12]
     dst.mkdir(parents=True, exist_ok=True)
+    # the round's declaration files (stitch, attribution) leave current
+    # WITH the round: a file left behind would ride the next round's
+    # delta as if declared there
     for name in (BASE_FILE, DELTA_FILE, APPROVAL_FILE, APPLIED_FILE,
-                 INVERSE_FILE, STITCH_FILE):
+                 INVERSE_FILE, STITCH_FILE, ATTRIBUTION_FILE):
         path = src / name
         if path.exists():
             (dst / name).write_text(path.read_text(encoding="utf-8"),
