@@ -594,6 +594,33 @@ def lint_verdicts(delta, base=None):
                     "citizen needs one. Give it a name property or delete it "
                     "from scratch."),
                 remedy="Give it a name property or delete it from scratch."))
+    # the row-receipt retirement: a receipt is a sentence-grain source
+    # quote; a table row is presentation, and its facts belong in
+    # structured properties — authoring one refuses by name, whether the
+    # row arrives on a new citizen or lands on an existing one
+    def _row_receipt_verdict(label, name):
+        return Verdict(
+            code="row-receipt-authored",
+            subject=CitizenRef(label, name),
+            message=(
+                f"({label}) '{name}' carries a table ROW in from_text — "
+                "a receipt is a sentence-grain source quote, and a row "
+                "is presentation, not a sentence. Store the cell's "
+                "facts as structured properties; a quoted sentence may "
+                "stay in from_text."),
+            remedy="Store the cell's facts as structured properties; "
+                   "keep only sentence-grain quotes in from_text.")
+
+    from .comprehension import is_row_text
+    for label, name, props in delta.nodes_added:
+        receipt = (props or {}).get("from_text")
+        if receipt and is_row_text(receipt):
+            violations.append(_row_receipt_verdict(label, name))
+    for label, name, changes in delta.nodes_changed:
+        if "from_text" in changes:
+            _before, after = changes["from_text"]
+            if after and is_row_text(after):
+                violations.append(_row_receipt_verdict(label, name))
     # Schema node edits and removals are fully adjudicated by
     # ceremony_records above — permitted classes itemize for the gate,
     # everything else is already refused by name. Schema EDGES outside a

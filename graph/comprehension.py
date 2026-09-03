@@ -375,6 +375,16 @@ def _clean_cell(value):
     return " ".join(str(value or "").split())
 
 
+def is_row_text(text):
+    """Is this text a table ROW rather than prose — every non-empty line
+    a markdown table row? A row is presentation, not a sentence: it
+    never serves as a receipt (the row-receipt retirement — a cell's
+    facts land as structured properties; the census refuses to index a
+    row as a carried quote, and the delta gate refuses to author one)."""
+    lines = [line for line in str(text).splitlines() if line.strip()]
+    return bool(lines) and all(MD_TABLE_ROW.match(line) for line in lines)
+
+
 def grid_claims(columns, rows, fingerprint="", key_column=None,
                 path_prefix=""):
     """Fact-grain claims from one table grid: header names + body rows
