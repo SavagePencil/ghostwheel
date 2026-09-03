@@ -304,3 +304,31 @@ def test_whole_book_unit_produces_one_scorecard(make_repo):
     [homed] = [r for r in result.attribution
                if r.verdict == ATTRIBUTED]
     assert homed.rung == PROPERTIES
+
+
+def test_row_shaped_receipts_are_retired_from_the_index():
+    # A table row in from_text is presentation, not a sentence — it
+    # indexes as nothing, so the honest home beneath it (here the
+    # description prop, a prose home) surfaces instead of being
+    # outranked by the receipt rung.
+    g = GraphData()
+    g.ensure_node("Beast", "Ox",
+                  description="A slow beast of the fens.",
+                  from_text="| Ox | 3 | A slow beast of the fens. |")
+    verdict = CanonIndex(g).attribute(
+        "The Description of Beast Ox is A slow beast of the fens.")
+    assert verdict.verdict == ATTRIBUTED and verdict.rung == PROSE
+    assert "receipt" not in verdict.evidence
+
+
+def test_multi_line_row_receipts_retire_and_sentences_stay():
+    g = GraphData()
+    g.ensure_node("Beast", "Wisp",
+                  from_text="| Wisp | 2 |\n| Wisp | dusk only |")
+    g.ensure_node("Terrain", "Bog",
+                  from_text="A Bog Beast suffers -2 to defense.")
+    index = CanonIndex(g)
+    rows = index.attribute("Wisp is active at dusk only.")
+    assert rows.verdict == CANON_GAP  # the rows index as nothing
+    quote = index.attribute("A Bog Beast suffers -2 to defense.")
+    assert quote.verdict == ATTRIBUTED  # sentence-grain receipts stay

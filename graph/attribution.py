@@ -16,7 +16,10 @@ ambiguity:
 - ``properties``: the claim matches a citizen's name plus its
   structured property values — the fact is first-class.
 - ``receipt``: the claim is found in a citizen's carried sentence
-  receipts (from_text) — sentence-grain prose owned by a citizen.
+  receipts (from_text) — sentence-grain prose owned by a citizen. A
+  row-shaped from_text is never indexed (the row-receipt retirement):
+  a table row is presentation, its facts belong in structured
+  properties, and skipping it lets the honest homes beneath surface.
 - ``prose``: the claim is found only in long-prose properties
   (description / doc / text / body / notes) — the soup rung: an honest
   home, and a named intake debt.
@@ -77,7 +80,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 
-from .comprehension import markdown_table_claims
+from .comprehension import is_row_text, markdown_table_claims
 from .judge import claims_of, normalize
 from .ontology import UNAUTHORABLE_EDGE_TYPES
 from .refs import CitizenRef
@@ -230,6 +233,13 @@ class CanonIndex:
                         s for s in (normalize(t) for t in
                                     claims_of(str(value))) if s)
                 elif key in RECEIPT_TEXT_PROPS:
+                    if is_row_text(value):
+                        # a table row is not a sentence — the
+                        # row-receipt retirement: rows are presentation,
+                        # never a carried quote, so they index as
+                        # nothing and the honest homes beneath them
+                        # (structured properties, prose props) surface
+                        continue
                     receipt_sentences += [normalize(s) for s in
                                           claims_of(str(value))]
                 elif key in PROSE_PROPS:

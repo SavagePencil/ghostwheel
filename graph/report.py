@@ -55,6 +55,7 @@ REF_KEYS = {
     "schema-edge-modified": "structure-change",
     # ground facts
     "machine-label-authored": "machine-made-kind",
+    "row-receipt-authored": "row-as-receipt",
     "node-unnamed": "unnamed",
     "edge-endpoint-unnamed": "unnamed",
     "derived-edge-authored": "machine-managed-link",

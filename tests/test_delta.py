@@ -426,3 +426,21 @@ def test_instance_shadow_edge_removal_still_never_itemizes():
     d = diff(base, scratch)
     assert d.edges_removed == []
     assert lint(d) == []
+
+
+def test_authoring_a_row_shaped_receipt_refuses_by_name():
+    # the row-receipt retirement: a receipt is a sentence-grain quote;
+    # a table row's facts belong in structured properties — refused on
+    # a new citizen and on an existing one alike, sentences untouched
+    from graph.delta import Delta, lint_verdicts
+    delta = Delta(
+        nodes_added=[("Beast", "Ox",
+                      {"from_text": "| Ox | 3 | slow |", "wear": 3})],
+        nodes_changed=[("Beast", "Wisp",
+                        {"from_text": ("", "| Wisp | 2 |")})])
+    codes = [v.code for v in lint_verdicts(delta)]
+    assert codes.count("row-receipt-authored") == 2
+    fine = Delta(nodes_added=[
+        ("Beast", "Elk", {"from_text": "The Elk fords the river at dawn."})])
+    assert "row-receipt-authored" not in [
+        v.code for v in lint_verdicts(fine)]
