@@ -174,6 +174,9 @@ REF_KEYS = {
     "new-label": "new-catalog",
     "doc-edit": "description-edit",
     "alias-added": "spelling-added",
+    "render-mapping-edited": "table-layout-edited",
+    "render-mapping-unreadable": "table-layout-unreadable",
+    "render-mapping-invalid": "table-layout-invalid",
     "removed-concept": "removed-concept",
 }
 
@@ -365,8 +368,8 @@ def render_markdown(report):
                   "The rows below change the graph's OWN SCHEMA. They "
                   "are within the ceremony's permitted classes (new "
                   "declared concepts, label births, doc edits, added "
-                  "aliases, taxonomy declarations, unreferenced "
-                  "removals); "
+                  "aliases, render-mapping edits, taxonomy declarations, "
+                  "unreferenced removals); "
                   "approving this round is the ceremony ruling that "
                   "makes them schema.", ""]
         lines += [f"- ⚑ {item}" for item in report.ceremony] + [""]
