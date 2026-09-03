@@ -152,3 +152,60 @@ def archive_line(base_dir, archive_branch):
                 dst_rounds.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(entry, dst_rounds / entry.name)
     return home
+
+
+# -- the gate checklist as a durable record -------------------------------
+#
+# The verify phase's pass/warn checklist used to vanish with the scroll
+# — a ruling made on evidence that kept no record. Every ceremony run
+# (dry and apply alike) now writes the checklist as a report beside the
+# other renderings, and an applied adoption archives it beside the
+# adoption record. Best-effort, like canonize's refusal record: a
+# report that cannot be written never masks the ceremony's own outcome.
+
+CHECKLIST_REPORT_FILE = "succession-report.json"
+
+
+def checklist_report(base_dir, branch, gates, fork_known, diverged,
+                     guard_problems=None):
+    """The ceremony's evidence as one document: kind, the lines of
+    truth involved, one row per verify gate (PASS rows recorded too —
+    a checklist is evidence of what was checked, not only of what
+    failed), the divergence advisory's facts, and — when the ceremony
+    refused before the gates even ran — the guard's collated problems.
+    ``gates`` rows are (label, code, problems)."""
+    from .report import ref_key
+    from .refs import kb_name_from_export
+    doc = {"kind": "succession-report",
+           "kb": kb_name_from_export(base_dir),
+           "branch": branch}
+    if guard_problems is not None:
+        doc["guard"] = {"code": "ceremony-guard",
+                        "ref": ref_key("ceremony-guard"),
+                        "problems": [str(p) for p in guard_problems]}
+        return doc
+    doc["gates"] = [
+        {"gate": label, "code": code, "ref": ref_key(code),
+         "status": "pass" if not problems else "fail",
+         **({"problems": [str(p) for p in problems]} if problems else {})}
+        for label, code, problems in gates]
+    doc["divergence"] = (
+        {"fork_known": True,
+         "post_fork_rounds": [{"sequence": seq, "id": delta_hash[:12]}
+                              for seq, delta_hash in diverged]}
+        if fork_known else {"fork_known": False})
+    return doc
+
+
+def write_checklist_report(base_dir, doc):
+    from pathlib import Path
+    try:
+        path = (Path(base_dir) / "graph" / "reports"
+                / CHECKLIST_REPORT_FILE)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        text = json.dumps(doc, ensure_ascii=False, indent=2,
+                          sort_keys=True) + "\n"
+        path.write_text(text, encoding="utf-8")
+        return text
+    except OSError:
+        return None
