@@ -89,28 +89,61 @@ def has_errors(findings):
     return any(f.severity == ERROR for f in findings)
 
 
-def write_report(findings, graph, path):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    lines = ["# Graph validation report", ""]
-    lines.append(f"**Summary:** {summarize(findings)}")
+VALIDATION_REPORT_FILE = "validation-report.json"
+
+
+def graph_summary(graph):
+    """The graph's shape as a record: node count, counts per label,
+    edge count, placeholders."""
+    label_counts = Counter(label for label, _ in graph.nodes)
+    return {"nodes": len(graph.nodes),
+            "by_label": dict(sorted(label_counts.items())),
+            "edges": len(graph.edges),
+            "placeholders": sum(1 for props in graph.nodes.values()
+                                if props.get("placeholder"))}
+
+
+def validation_report(findings, graph, base_dir=None):
+    """The validation verdict as one record: severity counts, the
+    graph's shape (when extraction ran), and one row per finding in
+    the record shape — the markdown report is a rendering of this."""
+    from .report import record_header
+    doc: dict = (record_header(base_dir, "validation-report") if base_dir
+                 else {"kind": "validation-report"})
+    counts = Counter(f.severity for f in findings)
+    doc["counts"] = {"errors": counts.get(ERROR, 0),
+                     "warnings": counts.get(WARNING, 0),
+                     "info": counts.get(INFO, 0)}
     if graph is not None:
-        label_counts = Counter(label for label, _ in graph.nodes)
-        placeholder_count = sum(
-            1 for props in graph.nodes.values() if props.get("placeholder"))
-        node_summary = ", ".join(
-            f"{label}: {count}" for label, count in sorted(label_counts.items()))
-        lines.append(f"**Graph:** {len(graph.nodes)} nodes ({node_summary}), "
-                     f"{len(graph.edges)} edges, "
-                     f"{placeholder_count} placeholder nodes")
+        doc["graph"] = graph_summary(graph)
+    doc["findings"] = [f.row(kb=doc.get("kb")) for f in findings]
+    return doc
+
+
+def render_report(doc):
+    """The human-readable validation report, rendered FROM the record:
+    summary line, graph line, one section per category (the known
+    sections in their fixed order, unknown categories after them in
+    name order), one table row per finding."""
+    lines = ["# Graph validation report", ""]
+    counts = doc["counts"]
+    lines.append(f"**Summary:** {counts['errors']} errors · "
+                 f"{counts['warnings']} warnings · {counts['info']} info")
+    if "graph" in doc:
+        shape = doc["graph"]
+        node_summary = ", ".join(f"{label}: {count}"
+                                 for label, count in shape["by_label"].items())
+        lines.append(f"**Graph:** {shape['nodes']} nodes ({node_summary}), "
+                     f"{shape['edges']} edges, "
+                     f"{shape['placeholders']} placeholder nodes")
     lines.append("")
 
     by_category = {}
-    for finding in findings:
-        by_category.setdefault(finding.category, []).append(finding)
+    for row in doc["findings"]:
+        by_category.setdefault(row["category"], []).append(row)
 
-    known = {key for key, _ in REPORT_SECTIONS}
-    sections = list(REPORT_SECTIONS) + [
+    known = {str(key) for key, _ in REPORT_SECTIONS}
+    sections = [(str(key), title) for key, title in REPORT_SECTIONS] + [
         (key, key) for key in sorted(by_category) if key not in known]
 
     for key, title in sections:
@@ -121,13 +154,26 @@ def write_report(findings, graph, path):
         lines.append("")
         lines.append("| Severity | File | Location | Detail |")
         lines.append("| --- | --- | --- | --- |")
-        for finding in section:
-            detail = finding.detail.replace("|", "\\|")
-            lines.append(f"| {finding.severity} | {finding.file} "
-                         f"| {finding.location} | {detail} |")
+        for row in section:
+            detail = row["message"].replace("|", "\\|")
+            lines.append(f"| {row['severity']} | {row['file']} "
+                         f"| {row['location']} | {detail} |")
         lines.append("")
 
-    if not findings:
+    if not doc["findings"]:
         lines.append("No findings. The graph is clean.")
         lines.append("")
-    path.write_text("\n".join(lines), encoding="utf-8")
+    return "\n".join(lines)
+
+
+def write_report(findings, graph, path, base_dir=None):
+    """Write the markdown report (a rendering of the record) and, when
+    the base directory is known, the record itself beside it."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    doc = validation_report(findings, graph, base_dir)
+    path.write_text(render_report(doc), encoding="utf-8")
+    if base_dir is not None:
+        from .report import write_record
+        write_record(base_dir, VALIDATION_REPORT_FILE, doc)
+    return doc

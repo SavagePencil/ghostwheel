@@ -80,11 +80,41 @@ ENUM_TYPE_PREFIX = "enum:"
 
 @dataclass
 class Finding:
+    """One validation/extraction/derivation finding, in the record
+    shape: its category IS its verdict code unless a site names a finer
+    one (a category hiding materially different meanings earns one —
+    the roster gap is the known case), and a remedy stands apart from
+    the detail wherever the site has one to give."""
     severity: str
     category: str
     file: str
     location: str
     detail: str
+    code: str = ""      # defaults to the category (category-as-code)
+    remedy: str = ""
+
+    @property
+    def verdict_code(self):
+        return self.code or str(self.category)
+
+    def row(self, kb=None, branch=None):
+        """The finding as a record — the same keys a gate verdict's row
+        carries (code, ref, severity, message), plus the finding's own
+        particulars (category, file, location)."""
+        from .report import ref_key
+        doc = {"code": self.verdict_code,
+               "ref": ref_key(self.verdict_code),
+               "severity": str(self.severity),
+               "category": str(self.category),
+               "file": self.file, "location": self.location,
+               "message": self.detail}
+        if self.remedy:
+            doc["remedy"] = self.remedy
+        if kb:
+            doc["kb"] = kb
+        if branch:
+            doc["branch"] = branch
+        return doc
 
 
 KNOWN_TOP_KEYS = {"version", "tag", "enums", "defaults", "concepts",

@@ -179,7 +179,10 @@ def checklist_report(base_dir, branch, gates, fork_known, diverged,
     a checklist is evidence of what was checked, not only of what
     failed), the divergence advisory's facts, and — when the ceremony
     refused before the gates even ran — the guard's collated problems.
-    ``gates`` rows are (label, code, problems)."""
+    ``gates`` rows are (label, code, problems) or, when a gate's
+    problems are findings, (label, code, problems, findings): the prose
+    problems keep the terminal's voice and the findings ride as typed
+    rows beside them."""
     from .report import record_header, ref_key
     doc = record_header(base_dir, "succession-report", branch)
     if guard_problems is not None:
@@ -187,11 +190,19 @@ def checklist_report(base_dir, branch, gates, fork_known, diverged,
                         "ref": ref_key("ceremony-guard"),
                         "problems": [str(p) for p in guard_problems]}
         return doc
-    doc["gates"] = [
-        {"gate": label, "code": code, "ref": ref_key(code),
-         "status": "pass" if not problems else "fail",
-         **({"problems": [str(p) for p in problems]} if problems else {})}
-        for label, code, problems in gates]
+    rows = []
+    for gate in gates:
+        label, code, problems = gate[0], gate[1], gate[2]
+        findings = gate[3] if len(gate) > 3 else ()
+        row = {"gate": label, "code": code, "ref": ref_key(code),
+               "status": "pass" if not problems else "fail"}
+        if problems:
+            row["problems"] = [str(p) for p in problems]
+        if findings:
+            row["findings"] = [f.row(kb=doc["kb"], branch=branch)
+                               for f in findings]
+        rows.append(row)
+    doc["gates"] = rows
     doc["divergence"] = (
         {"fork_known": True,
          "post_fork_rounds": [{"sequence": seq, "id": delta_hash[:12]}

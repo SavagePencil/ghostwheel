@@ -68,6 +68,14 @@ class Verdict:
     def red(self):
         return self.verdict in RED_VERDICTS
 
+    def row(self):
+        """The verdict as a record: its verdict IS its code, with the
+        designer-facing ref beside it and both claims as particulars."""
+        from .report import ref_key
+        return {"code": self.verdict, "ref": ref_key(self.verdict),
+                "red": self.red, "original": self.original,
+                "regenerated": self.regenerated}
+
 
 @dataclass
 class Scorecard:
@@ -83,6 +91,21 @@ class Scorecard:
     @property
     def passed(self):
         return not self.red
+
+    def rows(self):
+        return [v.row() for v in self.verdicts]
+
+    def report(self, title="Claim-diff verdict"):
+        """The scorecard as one record: counts per verdict, the pass
+        flag, and every verdict as a row — the prose report renders
+        from this."""
+        return {"kind": "claim-diff-report", "title": title,
+                "passed": self.passed,
+                "counts": {verdict: self.count(verdict)
+                           for verdict in (MATCHED, DISTORTED,
+                                           OMITTED_UNAPPROVED,
+                                           OMITTED_APPROVED, INVENTED)},
+                "verdicts": self.rows()}
 
 
 def claims_of(text):
@@ -190,30 +213,36 @@ def judge(original_text, regenerated_text, approved_omissions=()):
 
 
 def render_report(scorecard, title="Claim-diff verdict"):
-    """The human-facing verdict: counts first, every red named."""
-    lines = [f"# {title}", ""]
+    """The human-facing verdict: counts first, every red named — a
+    rendering of the scorecard's record (Scorecard.report)."""
+    doc = scorecard.report(title) if isinstance(scorecard, Scorecard) \
+        else scorecard
+    counts = doc["counts"]
+    lines = [f"# {doc['title']}", ""]
     lines.append(
-        f"**{scorecard.count(MATCHED)} matched · "
-        f"{scorecard.count(DISTORTED)} distorted · "
-        f"{scorecard.count(OMITTED_UNAPPROVED)} omitted (unapproved) · "
-        f"{scorecard.count(OMITTED_APPROVED)} omitted (approved) · "
-        f"{scorecard.count(INVENTED)} invented**")
+        f"**{counts[MATCHED]} matched · "
+        f"{counts[DISTORTED]} distorted · "
+        f"{counts[OMITTED_UNAPPROVED]} omitted (unapproved) · "
+        f"{counts[OMITTED_APPROVED]} omitted (approved) · "
+        f"{counts[INVENTED]} invented**")
     lines.append("")
-    if scorecard.passed:
+    if doc["passed"]:
         lines += ["PASS — every claim accounted for.", ""]
         return "\n".join(lines)
     lines += ["FAIL — the differences, named:", ""]
-    for verdict in scorecard.red:
-        if verdict.verdict == DISTORTED:
-            lines.append(f"- DISTORTED — original: \"{verdict.original}\" "
-                         f"→ regenerated: \"{verdict.regenerated}\"")
-        elif verdict.verdict == OMITTED_UNAPPROVED:
+    for row in doc["verdicts"]:
+        if not row["red"]:
+            continue
+        if row["code"] == DISTORTED:
+            lines.append(f"- DISTORTED — original: \"{row['original']}\" "
+                         f"→ regenerated: \"{row['regenerated']}\"")
+        elif row["code"] == OMITTED_UNAPPROVED:
             lines.append(f"- OMITTED (no approval on record): "
-                         f"\"{verdict.original}\" — approve the omission "
+                         f"\"{row['original']}\" — approve the omission "
                          "(a row in data/approved-omissions.csv) or "
                          "restore the content")
         else:
             lines.append(f"- INVENTED (the original never says this): "
-                         f"\"{verdict.regenerated}\"")
+                         f"\"{row['regenerated']}\"")
     lines.append("")
     return "\n".join(lines)

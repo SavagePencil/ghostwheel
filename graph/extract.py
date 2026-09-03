@@ -1646,7 +1646,12 @@ def procedure_roster_findings(ontology, graph):
                 f"{len(registered)} registered program files. Failed: "
                 f"{relpath} has no {label} citizen — the file shipped "
                 "without its node. Land the citizen through the delta "
-                "path."))
+                "path.",
+                # the roster category's one earned finer code: a gap is
+                # a registered file with no citizen, and the delta gate
+                # already speaks this code
+                code="roster-gap",
+                remedy="Land the citizen through the delta path."))
     return findings
 
 
