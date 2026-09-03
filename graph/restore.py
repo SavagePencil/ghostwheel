@@ -31,9 +31,13 @@ def read_export(export_dir):
                 "'python -m graph export' first, or restore the file "
                 "from git.")
     for line in nodes_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue  # a zero-row file serializes as a lone newline
         record = json.loads(line)
         graph.nodes[(record["label"], record["name"])] = record["properties"]
     for line in edges_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
         record = json.loads(line)
         graph.edges.append(make_edge(
             record["type"],
