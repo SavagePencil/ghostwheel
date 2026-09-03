@@ -7,10 +7,9 @@ of them still reached for the YAML schema, the poison would fire. The
 DB-bound commands (rederive, delta, canonize) cannot run without a live
 Neo4j in the unit suite, so their repoint is proven by source inspection:
 they name `ontology_from_graph` and never `load_ontology`. The parity
-paths (roundtrip, render-tables) are the mirror image — they MUST keep
-`load_ontology` because they consume the render-only mappings the graph
-deliberately does not carry. The canonize version-stamp wiring is proven
-present and correctly ordered.
+paths (roundtrip, render-tables) read the graph too: the render mappings
+they consume ride each label row beside its spec. The canonize
+version-stamp wiring is proven present and correctly ordered.
 
 The fixture backup is a from-sources build of a small imaginary corpus —
 a Gem catalog, a cited Program, a prose Chronicle — decorated with the
@@ -185,8 +184,10 @@ def test_terms_suppresses_ruled_rejects_with_no_yaml_read(canon, monkeypatch,
 # -- the DB-bound repoints, proven by source inspection --------------------
 
 REPOINTED = ("cmd_rederive", "cmd_delta", "cmd_canonize",
-             "cmd_export_lensed", "cmd_generate", "canon_term_index")
-PARITY = ("cmd_roundtrip", "cmd_render_tables")
+             "cmd_export_lensed", "cmd_generate", "canon_term_index",
+             # the parity paths joined once the render mappings gained
+             # their canon home (a label row's rendered_views_json)
+             "cmd_roundtrip", "cmd_render_tables")
 
 
 @pytest.mark.parametrize("fn_name", REPOINTED)
@@ -196,14 +197,6 @@ def test_repointed_commands_read_the_graph_not_yaml(fn_name):
     assert "load_ontology" not in src, (
         f"{fn_name} still reads ontology.yaml via load_ontology")
 
-
-@pytest.mark.parametrize("fn_name", PARITY)
-def test_parity_paths_keep_the_yaml(fn_name):
-    # The parity/render paths consume rendered_view/rendered_views, which
-    # are deliberately not embedded on the graph — they retire at
-    # succession, not at the inversion.
-    src = inspect.getsource(getattr(main_mod, fn_name))
-    assert "load_ontology" in src, fn_name
 
 
 # -- the canonize version-stamp wiring is present and ordered --------------

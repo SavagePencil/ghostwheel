@@ -31,15 +31,20 @@ from graph.restore import read_export
 STORYBOOK = Path(__file__).resolve().parent / "fixtures" / "storybook"
 
 # rendered_view / rendered_views are loader- AND derive-inert render-only
-# mappings; they stay in ontology.yaml (their consumers read them there)
-# and are deliberately not embedded on the schema node, so spec-for-spec
-# comparison folds them out of both sides.
+# mappings; they ride each label row BESIDE its spec (rendered_views_json)
+# and reconstruct as the spec's list form, so spec-for-spec comparison
+# folds the two spellings out and compares the views as one list.
 RENDER_ONLY = ("rendered_view", "rendered_views")
 
 
 def _without_render_only(spec):
-    return {key: value for key, value in spec.items()
-            if key not in RENDER_ONLY}
+    from graph.ontology import rendered_views_of
+    folded = {key: value for key, value in spec.items()
+              if key not in RENDER_ONLY}
+    views = rendered_views_of(spec)
+    if views:
+        folded["rendered_views"] = views
+    return folded
 
 
 @pytest.fixture(scope="module")

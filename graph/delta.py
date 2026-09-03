@@ -17,9 +17,10 @@ from dataclasses import dataclass, field
 from . import report as report_mod
 from .extract import GraphData, make_edge
 from .ontology import (ARCHETYPE_LABEL, MACHINE_LABELS, MEMBERSHIP_EDGE_TYPE,
-                       SCHEMA_EDGE_TYPES, SCHEMA_LABELS, STRATIFIED_EDGE_TYPES,
-                       UNAUTHORABLE_EDGE_TYPES, UNAUTHORABLE_LABELS,
-                       is_concept_archetype, is_derived_edge)
+                       RENDERED_VIEWS_PROP, SCHEMA_EDGE_TYPES, SCHEMA_LABELS,
+                       STRATIFIED_EDGE_TYPES, UNAUTHORABLE_EDGE_TYPES,
+                       UNAUTHORABLE_LABELS, is_concept_archetype,
+                       is_derived_edge, rendered_views_problems)
 from .refs import KB_NAME_PROP, CitizenRef, ONTOLOGY_ANCHOR, connection_ref
 from .report import CeremonyItem, Verdict
 
@@ -164,13 +165,69 @@ def diff(base, scratch):
 # The schema ceremony: property classes an owner-gated round may touch on
 # a schema row. Everything else on the schema stratum stays out of class.
 CEREMONY_DOC_PROPS = frozenset({"doc"})
+# The render-mapping class: a label row's render mappings (the view
+# list beside its spec) may be added, changed, or removed by a gated
+# round — the loader and deriver never read the prop, so nothing moves
+# underneath. The value is linted for shape at the gate.
+CEREMONY_RENDER_PROPS = frozenset({RENDERED_VIEWS_PROP})
 
 _OUT_OF_CLASS = (
     "this schema change is outside the ceremony's classes (new declared "
-    "concepts, label births, doc edits, added aliases, removal of "
-    "unreferenced rows) — changes to an EXISTING label or spec move data "
-    "underneath them and ride the migration charter. "
+    "concepts, label births, doc edits, added aliases, render-mapping "
+    "edits, removal of unreferenced rows) — changes to an EXISTING label "
+    "or spec move data underneath them and ride the migration charter. "
     "Propose the change to the owner at the plan gate instead.")
+
+
+def _render_mapping_verdict(label, name, value, spec_json):
+    """The refusal a render-mapping value earns, or None when it is
+    well-formed (or absent — a removal). The value must parse as a JSON
+    list of view mappings; the label's own embedded spec (spec_json)
+    supplies the row-source rule, and a row that carries no spec at all
+    is not a label and cannot render through a view."""
+    if value is None:
+        return None
+    if not isinstance(spec_json, str):
+        return Verdict(
+            code="render-mapping-invalid",
+            subject=CitizenRef(label, name),
+            message=(
+                f"Attempted to set the render mappings on '{name}' "
+                f"({label}). Failed due to: the row is not a label (it "
+                "carries no spec), and a render mapping belongs on the "
+                "label whose table it lays out. Move the mapping to the "
+                "label's row, or delete it from scratch."),
+            remedy="Move the mapping to the label's row, or delete it "
+                   "from scratch.")
+    try:
+        views = json.loads(value)
+        spec = json.loads(spec_json)
+    except (ValueError, TypeError):
+        return Verdict(
+            code="render-mapping-unreadable",
+            subject=CitizenRef(label, name),
+            message=(
+                f"Attempted to set the render mappings on '{name}' "
+                f"({label}). Failed due to: the value does not parse as "
+                "JSON — the mappings are what the table renderer and the "
+                "parity judge read, and they must be a JSON list of view "
+                "mappings. Fix the value in scratch."),
+            remedy="Fix the value in scratch: a JSON list of view mappings.")
+    problems = rendered_views_problems(
+        views, spec if isinstance(spec, dict) else None)
+    if not problems:
+        return None
+    return Verdict(
+        code="render-mapping-invalid",
+        subject=CitizenRef(label, name),
+        message=(
+            f"Attempted to set the render mappings on '{name}' ({label}). "
+            "Failed due to: " + "; ".join(problems) + ". Fix the mapping "
+            "in scratch — each view names its source table and key, uses "
+            "only the known view keys, and sits on a label without a row "
+            "source."),
+        remedy="Fix the mapping in scratch.",
+        data={"problems": problems})
 
 
 def _alias_additions(before, after):
@@ -225,6 +282,11 @@ def ceremony_records(delta, base=None):
       toward the charter; base=None refuses births outright, like
       removals, since emptiness-underneath can't be verified);
     - a DOC EDIT: a schema row change touching only CEREMONY_DOC_PROPS;
+    - a RENDER-MAPPING EDIT: a label row's render mappings (the view
+      list beside its spec, CEREMONY_RENDER_PROPS) added, changed, or
+      removed — loader- and derive-inert, so nothing moves underneath;
+      the value is linted for shape (a JSON list of views, each naming
+      its source table, on a label without a row source);
     - an ADDED ALIAS: a spec_json change whose parsed before/after differ
       only by new entries under aliases — each new surface spelling reads
       as a citizen of that label that exists in the base or is born by
@@ -325,6 +387,13 @@ def ceremony_records(delta, base=None):
                     "be valid JSON. Fix the spec_json in scratch."),
                 remedy="Fix the spec_json in scratch."))
             continue
+        # a born label may arrive with its render mappings; they are
+        # linted like any render-mapping edit
+        verdict = _render_mapping_verdict(
+            label, name, props.get(RENDERED_VIEWS_PROP), props.get("spec_json"))
+        if verdict is not None:
+            violations.append(verdict)
+            continue
         permitted_nodes.add(key)
         parents = [e.to_name for e in delta.edges_added
                    if e.type == "INSTANCE_OF"
@@ -407,7 +476,7 @@ def ceremony_records(delta, base=None):
         # hands at a gate, never quietly vanish.
         kb_named = ((label, name) == (ARCHETYPE_LABEL, ONTOLOGY_ANCHOR)
                     and bool(changes.get(KB_NAME_PROP, ("", ""))[1]))
-        permitted_props = CEREMONY_DOC_PROPS \
+        permitted_props = CEREMONY_DOC_PROPS | CEREMONY_RENDER_PROPS \
             | ({"spec_json"} if alias_added else set()) \
             | ({KB_NAME_PROP} if kb_named else set())
         out_of_class = sorted(set(changes) - permitted_props)
@@ -423,6 +492,33 @@ def ceremony_records(delta, base=None):
                        "instead.",
                 data={"properties": out_of_class}))
             continue
+        if RENDERED_VIEWS_PROP in changes:
+            now = changes[RENDERED_VIEWS_PROP][1]
+            # the label's live spec: the base row's, or this round's own
+            # alias-carrying edit of it
+            if "spec_json" in changes:
+                spec_json = changes["spec_json"][1]
+            elif base is not None:
+                spec_json = (base.nodes.get((label, name)) or {}).get(
+                    "spec_json")
+            else:
+                spec_json = None
+            if now is not None and base is None and "spec_json" not in changes:
+                violations.append(Verdict(
+                    code="render-mapping-invalid",
+                    subject=CitizenRef(label, name),
+                    message=(
+                        f"Attempted to set the render mappings on '{name}' "
+                        f"({label}) with no base graph to verify against. "
+                        "Failed due to: a render mapping is checked against "
+                        "the label's own spec, which cannot be read without "
+                        "the base."),
+                    remedy="Re-run with the base graph available."))
+                continue
+            verdict = _render_mapping_verdict(label, name, now, spec_json)
+            if verdict is not None:
+                violations.append(verdict)
+                continue
         if alias_added:
             missing = {}
             for alias, target in sorted(alias_added.items()):
@@ -451,6 +547,21 @@ def ceremony_records(delta, base=None):
         permitted_nodes.add((label, name))
         for prop, (before, after) in changes.items():
             if prop == "spec_json" and alias_added:
+                continue
+            if prop == RENDERED_VIEWS_PROP:
+                was_n = len(json.loads(before)) if before else 0
+                now_n = len(json.loads(after)) if after else 0
+                verb = ("REMOVED" if after is None
+                        else "ADDED" if before is None else "EDITED")
+                items.append(CeremonyItem(
+                    code="render-mapping-edited",
+                    subject=CitizenRef(label, name),
+                    message=(f"RENDER MAPPING {verb} on '{name}' — the "
+                             f"table layout it renders through: {now_n} "
+                             f"view{'s' if now_n != 1 else ''} (was "
+                             f"{was_n})"),
+                    data={"property": prop, "before_views": was_n,
+                          "after_views": now_n}))
                 continue
             if kb_named and prop == KB_NAME_PROP:
                 was = f"'{before}'" if before else "unnamed until now"

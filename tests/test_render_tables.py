@@ -13,7 +13,7 @@ import textwrap
 
 from graph import comprehension, render_tables, roundtrip
 from graph.extract import extract
-from graph.ontology import load_ontology
+from graph.ontology import RENDERED_VIEWS_PROP, load_ontology
 
 # One source-mapped label with a property AND an edge-carried column, plus
 # a second label reached only by that edge. `Boost` shares an edge type
@@ -196,9 +196,16 @@ def test_rendered_view_is_loader_inert(make_repo):
     # DATA (every other node) and all edges must be byte-identical — proof
     # the extractor never reads rendered_view
     def data_nodes(graph):
-        return {key: props for key, props in graph.nodes.items()
+        return {key: {p: v for p, v in props.items()
+                      if p != RENDERED_VIEWS_PROP}
+                for key, props in graph.nodes.items()
                 if key != ("Archetype", "Ontology")}
     assert data_nodes(plain_graph) == data_nodes(viewed_graph)
+    # the view's one footprint is its canon home beside the spec on the
+    # label's own row — spec_json untouched, no citizen touched
+    part = viewed_graph.nodes[("Archetype", "Part")]
+    assert part["spec_json"] == plain_graph.nodes[("Archetype", "Part")]["spec_json"]
+    assert RENDERED_VIEWS_PROP in part
     assert set(plain_graph.edges) == set(viewed_graph.edges)
 
 

@@ -1,7 +1,7 @@
 {
   "agentic-approach": "e13d3c676b0fc283257ae06eeaa02991473c5630f46206676eab29ff4916a54c",
-  "agentic-etl": "96d8350d0167faebaf75d3dba9dbd917cebccbe8f91e85a00b97f4fbad3c15cc",
-  "agentic-intake": "f8969eb6b4894f6d374ee968caa6f1aae39e8315b6cf18a88dc437a072313366",
+  "agentic-etl": "e442bc437495d9352ad15209f0bd9f805e7091298bc89192ad2780c81c235365",
+  "agentic-intake": "689a474064f6207c010bc2a17067cf9ae3cc8ed1fc03309a12c569fb9da0f55e",
   "engine-as-corpus": "3803c68e7f8ae0d42238d0010dbd0ffbaaf5bfcd42c77d5a4835572af937ad82",
   "front-door": "e8c5e53fa9557ab273998315c9f39d83b78e85e0b8a3552e057805d3efa242e8",
   "front-door-tenets": "cb11eba94481d65c5701beea26cea7bfe9cd544623a114c4a810f8276f3b5298",
@@ -9,7 +9,7 @@
   "graph-query": "24edf4148061068bbaceb159c540aedff8a73f7c60958df1ddca0b2fe2c21f01",
   "lenses": "f90f3de976e0e6b330943e688a02d31613d3a766a5f641fed6ab7e8523c4ecf8",
   "north-star-workflow": "aaa263e8061ba25d8e84342e6d66aeeae300070a39f28edf04438a43c957aa85",
-  "ontology-doctrine": "32cf3fa46bf39f2733ae59e62da1bb345d6f45c171d0357cdfd6b431ecb38a35",
+  "ontology-doctrine": "e9ebac5ba9f91ae84b21d00138b2c246b7fc5a6a5356c8510c8c46542164e724",
   "ontology-intake": "c02e9b184487f910747b805f2628e5a12136d3f191c935633dbc038ccae327e5",
   "procedure-intake": "f92476df607aeca5c02143b4c821085c1e98334ad3ff211f3d6c2d4222784f64",
   "rebuild-graph": "16e7d8138c6e62213898cf207e2d2ee8217d0913b8529df58269f598e451042e"

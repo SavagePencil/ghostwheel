@@ -2159,13 +2159,18 @@ def cmd_roundtrip(base_dir, scope, draft, book=False):
         print("\n".join(problems), file=sys.stderr)
         return 2
     cited, specs = _procedure_citations(base_dir)
-    # Not repointed to the graph by design: the parity harness reads the
-    # original-era YAML because it consumes the render-only rendered_view/
-    # rendered_views mappings, deliberately NOT embedded on the graph. It
-    # retires at succession, not at the inversion.
-    from . import ontology as ontology_mod
-    ontology, _ = ontology_mod.load_ontology(
-        base_dir / "graph" / "ontology.yaml", base_dir)
+    # The table tier's column typing and aliases come from canon's
+    # committed backup (the render mappings ride each label row beside
+    # its spec). No backup means nothing declares a column's type, and
+    # every table column compares byte-exact — said aloud, never silent.
+    from .ontology import ontology_from_graph
+    try:
+        ontology = ontology_from_graph(canon_base(base_dir), base_dir)
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        ontology = None
+        print("No committed backup to read the table declarations from "
+              f"({exc}): every table column compares byte-exact.",
+              file=sys.stderr)
     if book:
         cited_sections = set().union(*cited.values()) if cited else set()
         cited_specs = [pair for pairs in specs.values() for pair in pairs]
@@ -2258,20 +2263,15 @@ def cmd_render_tables(base_dir, scope, out):
         print(f"Attempted to render the tables of {scope}. Failed due to: "
               "no such artifact in the repo.", file=sys.stderr)
         return 2
-    # Not repointed to the graph by design: column typing consumes the
-    # render-only rendered_view/rendered_views mappings, deliberately NOT
-    # embedded on the graph. It retires at succession, not at the inversion.
-    ontology, findings = ontology_mod.load_ontology(
-        base_dir / "graph" / "ontology.yaml", base_dir)
-    if ontology is None:
-        for finding in findings:
-            print(f"{finding.severity}: {finding.detail}", file=sys.stderr)
-        return 1
     try:
         graph = render_tables.load_backup(base_dir)
     except FileNotFoundError as exc:
         print(exc, file=sys.stderr)
         return 1
+    # The schema — and the render mappings beside it — come from canon's
+    # committed backup: a label's rendered_views_json reconstructs as its
+    # spec's view list, so no bootstrap file is read.
+    ontology = ontology_mod.ontology_from_graph(graph, base_dir)
     chapter = render_tables.render_chapter(base_dir, scope, graph, ontology)
 
     if out:

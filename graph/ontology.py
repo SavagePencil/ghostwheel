@@ -168,6 +168,14 @@ KNOWN_RENDERED_VIEW_KEYS = {"source", "key", "name_template",
                            # multi-label view), and a `matrix:` grammar name
                            # for whole-table matrix inversions.
                            "display", "labels", "matrix"}
+# The render mappings' canon home: one JSON list of view mappings on the
+# label's Archetype row, BESIDE spec_json (never inside it). The loader
+# and the deriver read only spec_json, so the mapping stays inert by
+# construction; render_tables, the round-trip judge's column typing, and
+# a corpus's own instruments read it back through ontology_from_graph as
+# the spec's `rendered_views` list. Editing it is a schema-ceremony
+# class of its own (add, change, or remove — nothing moves underneath).
+RENDERED_VIEWS_PROP = "rendered_views_json"
 # One contributor of a multi-label rendered_view: a label plus its own maps,
 # an optional membership filter (names: explicit subset, or only_with: render
 # only citizens carrying at least one of these properties), and its own
@@ -231,6 +239,50 @@ def rendered_views_of(spec):
         if isinstance(view, dict):
             views.append(view)
     return views
+
+
+def rendered_views_problems(views, spec=None):
+    """The structural lint of a label's render mappings — what the
+    schema ceremony checks when a round edits the render prop, the same
+    shape rules the yaml loader applies (file-level checks — the source
+    table exists, its header carries the columns — belong to render
+    time, where the table is read). Returns the problems as strings,
+    collated; an empty list means the mappings are well-formed.
+
+    `spec` is the label's own spec (the embedded one) when known: a
+    rendered view is for a label WITHOUT a row source."""
+    problems = []
+    if not isinstance(views, list):
+        return ["the render mappings must be a list of view mappings"]
+    if isinstance(spec, dict) and spec.get("source"):
+        problems.append("rendered_view is for labels WITHOUT a row-source "
+                        "(a source label renders from its own mapping)")
+    for index, view in enumerate(views):
+        where = f"view[{index}]"
+        if not isinstance(view, dict):
+            problems.append(f"{where}: a view must be a mapping")
+            continue
+        for key in view:
+            if key not in KNOWN_RENDERED_VIEW_KEYS:
+                problems.append(f"{where}: unknown key '{key}'")
+        if not view.get("source"):
+            problems.append(f"{where}: rendered_view needs a source CSV")
+        template = view.get("name_template")
+        if template is not None and (
+                not isinstance(template, str) or "{key}" not in template):
+            problems.append(f"{where}: name_template must be a string "
+                            "containing '{key}'")
+        for eindex, entry in enumerate(view.get("labels") or []):
+            ewhere = f"{where}.labels[{eindex}]"
+            if not isinstance(entry, dict):
+                problems.append(f"{ewhere}: a labels entry must be a mapping")
+                continue
+            for key in entry:
+                if key not in KNOWN_VIEW_ENTRY_KEYS:
+                    problems.append(f"{ewhere}: unknown key '{key}'")
+            if not entry.get("label"):
+                problems.append(f"{ewhere}: a labels entry needs a label")
+    return problems
 
 
 def _referenced_tables(obj):
@@ -645,9 +697,10 @@ def ontology_from_graph(graph, base_dir):
     from their spec_json embeddings, concepts from their Archetype props
     and the tower/taxonomy edges, and the top-level sections from the
     Ontology/Metaontology anchor props. What derive() consumes is
-    reconstructed faithfully; validate/load-only sections the migration
-    did not embed (content_roots, answer_keys, rejected_terms) come back
-    empty by design.
+    reconstructed faithfully, and so are the render mappings (a label
+    row's rendered_views_json comes back as the spec's `rendered_views`
+    list); validate/load-only sections the migration did not embed
+    (content_roots, answer_keys) come back empty by design.
 
     Reconstruction sources, per citizen kind:
     - nodes: Archetype nodes carrying spec_json -> json.loads(spec_json).
@@ -696,6 +749,11 @@ def ontology_from_graph(graph, base_dir):
     for name, props in archetype.items():
         if "spec_json" in props:
             nodes[name] = json.loads(props["spec_json"])
+            # the render mappings live beside the spec, never inside it;
+            # the reconstruction hands them back as the spec's list form
+            if props.get(RENDERED_VIEWS_PROP):
+                nodes[name]["rendered_views"] = json.loads(
+                    props[RENDERED_VIEWS_PROP])
 
     concepts = {}
     for name, props in archetype.items():

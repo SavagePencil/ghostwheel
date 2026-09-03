@@ -20,8 +20,9 @@ from .ontology import (ANY_LABEL, ARCHETYPE_LABEL, ENUM_TYPE_PREFIX, ERROR,
                        WARNING, INFO, Category, Finding, KERNEL_PROCEDURE_LABEL,
                        MEMBERSHIP_EDGE_TYPE,
                        OnMissing, ORDERED_CONCEPT, OUTCOME_LABEL, PropType,
-                       Reader, RelParser, STEP_LABEL, concept_bindings,
-                       is_concept_archetype, node_reader, source_files_of)
+                       Reader, RelParser, RENDERED_VIEWS_PROP, STEP_LABEL,
+                       concept_bindings, is_concept_archetype, node_reader,
+                       rendered_views_of, source_files_of)
 
 
 @dataclass(frozen=True)
@@ -1572,12 +1573,13 @@ def embed_schema_stratum(ontology, graph):
     - each label Archetype citizen gets its nodes.<label> spec as spec_json
       (sorted keys), minus the render-only keys rendered_view /
       rendered_views: those are loader- AND derive-inert (the extractor
-      ignores them; render_tables and the round-trip judge read them from
-      ontology.yaml directly), so embedding them would make a render-only
-      mapping change a schema node — the loader-inertness the render tests
-      guarantee. Everything the graph-driven loader/deriver consumes rides;
-      the render-only mapping stays in ontology.yaml where its consumers
-      look for it.
+      ignores them), so they ride BESIDE the spec instead — the row's
+      rendered_views_json, one JSON list of every view the label
+      declares. The loader and deriver never read that prop, which is
+      what keeps a render-mapping change inert; render_tables, the
+      round-trip judge's column typing, and a corpus's instruments read
+      it back through ontology_from_graph. A label declaring no view
+      carries no such prop.
     - each concept Archetype gets its surface_forms / pending_instances —
       the term-index inputs that are not otherwise ground on the graph
       (doc/stub/temporal/recursive already ride as props, subtypes as
@@ -1595,6 +1597,9 @@ def embed_schema_stratum(ontology, graph):
             embedded = {key: value for key, value in spec.items()
                         if key not in ("rendered_view", "rendered_views")}
             node["spec_json"] = json.dumps(embedded, sort_keys=True)
+            views = rendered_views_of(spec)
+            if views:
+                node[RENDERED_VIEWS_PROP] = json.dumps(views, sort_keys=True)
     for concept, spec in ontology.concepts.items():
         spec = spec or {}
         node = graph.nodes.get((ARCHETYPE_LABEL, concept))
