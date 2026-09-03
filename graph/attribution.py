@@ -469,7 +469,9 @@ def census_claims(draft_text):
     into claims — each cell one fact in the domain's terms, censused by
     the same instrument as prose). A `{{csv:}}` embed reference is
     structure, never a claim; a headerless table names no properties
-    and stays structure too."""
+    and stays structure too; a list item that is nothing but a link (a
+    table of contents, a navigation list) points at content and
+    asserts nothing — claims_of drops it before it can be counted."""
     prose_lines = [line for line in draft_text.splitlines()
                    if not line.lstrip().startswith("|")
                    and "{{csv:" not in line]

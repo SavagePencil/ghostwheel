@@ -104,3 +104,35 @@ def test_abbreviations_do_not_split_sentences():
 def test_horizontal_rules_are_structure_not_claims():
     claims = claims_of("A real claim.\n\n---\n\nAnother claim.")
     assert claims == ["a real claim", "another claim"]
+
+
+def test_a_pure_link_bullet_is_structure_not_a_claim():
+    # a generated table of contents: every bullet points at content and
+    # asserts nothing — both anchor forms, numbered or not, and a bare
+    # image, all vanish; the real claim beneath survives alone
+    text = ("## Contents\n\n"
+            "- [Frost and Thaw](#frost-and-thaw)\n"
+            "- [Reconciling virtue and combat](reconciling-virtue-and-combat)\n"
+            "1. [The Ledger](ledger.md), [The Annex](annex.md)\n"
+            "* ![the map](map.png)\n\n"
+            "[Back to the top](#contents)\n\n"
+            "Frost settles for 1 turn.\n")
+    assert claims_of(text) == ["frost settles for 1 turn"]
+
+
+def test_an_inline_link_folds_to_its_text():
+    # a link inside prose is wording plus a pointer: the wording stays,
+    # the pointer never reaches the claim
+    assert claims_of("See [the ledger](ledger.md#rules) for the rule.") == \
+        ["see the ledger for the rule"]
+    assert claims_of("- [Frost](#frost) settles for 1 turn.") == \
+        ["frost settles for 1 turn"]
+
+
+def test_a_star_bullet_is_a_list_item_like_any_other():
+    # the marker is read before the markup fold, so star bullets start
+    # their own unit instead of being glued to the item before them
+    assert claims_of("* Frost settles\n* Thaw follows\n") == \
+        ["frost settles", "thaw follows"]
+    assert claims_of("*Frost* settles for 1 turn.") == \
+        ["frost settles for 1 turn"]
