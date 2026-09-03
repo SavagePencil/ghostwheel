@@ -578,3 +578,44 @@ def test_a_foreign_export_still_loads_as_inspection(driven_kb):
     stamp = fake.read_stamp({"NEO4J_DATABASE": "peek"})
     assert stamp["role"] == "inspection"
     assert "branch" not in stamp
+
+
+def test_a_taxonomy_declaration_rides_a_round_and_survives_rederivation(
+        driven_kb, capsys):
+    # The consumer's lost-link scenario, end to end: a round declares a
+    # data citizen a KIND of a concept (an authored SUBTYPE_OF), the
+    # gate itemizes it as ceremony, and — the fact that makes the class
+    # sound — the applied edge survives canonize's strip/re-derive
+    # cycle because reconstruction reads the taxonomy FROM the graph.
+    base, fake, _ = driven_kb
+    branch = "rebuild"
+    assert main_mod.cmd_restore(base, branch=branch, base="schema-only") == 0
+    seed = read_export(export_dir(base, branch))
+    authored = clone(seed)
+    authored.ensure_node("Character", "Ember", temperament="bright")
+    authored.edges.append(make_edge(
+        "SUBTYPE_OF", "Character", "Ember", "Archetype", "Story Concept"))
+    fake.databases[f"{branch}-scratch"] = authored
+
+    capsys.readouterr()
+    assert main_mod.cmd_delta(base, None, branch=branch) == 0
+    out = capsys.readouterr().out
+    assert "TAXONOMY DECLARED" in out
+    assert "Schema changes — the ceremony" in out
+    assert main_mod.cmd_approve(base, "owner", branch=branch) == 0
+    assert main_mod.cmd_canonize(base, None, apply=True, branch=branch) == 0
+
+    def taxonomy_edges(graph):
+        return {(e.from_label, e.from_name, e.to_name)
+                for e in graph.edges if e.type == "SUBTYPE_OF"}
+
+    landed = read_export(export_dir(base, branch))
+    assert ("Character", "Ember", "Story Concept") in taxonomy_edges(landed)
+    # and a fresh re-derivation over the landed line KEEPS the
+    # declaration — the graph is the declaration, round-tripped
+    from graph.extract import derive, strip_derived
+    from graph.ontology import ontology_from_graph
+    ontology = ontology_from_graph(landed, base)
+    rederived, _findings = derive(ontology, strip_derived(landed))
+    assert ("Character", "Ember", "Story Concept") \
+        in taxonomy_edges(rederived)

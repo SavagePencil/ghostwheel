@@ -228,7 +228,11 @@ def ceremony_records(delta, base=None):
     - an UNREFERENCED REMOVAL: a concept row with no spec_json and, in the
       base, no inbound edges (no members, no anchors) and no outbound
       edges beyond its own declaration — verified against the base, so
-      base=None refuses removals outright.
+      base=None refuses removals outright;
+    - a TAXONOMY DECLARATION: an authored SUBTYPE_OF into a concept
+      Archetype whose endpoints both exist (base or this round) — the
+      graph is the taxonomy's declaration, so nothing moves underneath;
+      removals and missing endpoints still refuse by name.
 
     Returns (items, violations, permitted_node_keys, permitted_edge_ids):
     items are CeremonyItem records for the report's ceremony section,
@@ -534,6 +538,54 @@ def ceremony_records(delta, base=None):
             if (edge.from_label, edge.from_name) == key \
                     and edge.type in ("DECLARED_IN", "INSTANCE_OF"):
                 permitted_edges.add(id(edge))
+
+    # A TAXONOMY DECLARATION: an authored SUBTYPE_OF whose target is a
+    # concept Archetype and whose endpoints both exist — in the base,
+    # or born by this same round. The graph IS the taxonomy's
+    # declaration (reconstruction reads these edges back into the
+    # specs), so declaring one moves no data underneath: a ceremony
+    # act, not a migration. A lost genuine-taxonomy link had no
+    # sanctioned way home before this class — reconstruction only
+    # re-emits edges that exist, and authoring refused. Removals stay
+    # refused toward the migration charter; base=None refuses like the
+    # other existence-checked classes (the freeze refusal stands).
+    if base is not None:
+        born = {(label, name) for label, name, _ in delta.nodes_added}
+        for edge in delta.edges_added:
+            if edge.type != "SUBTYPE_OF" or id(edge) in permitted_edges \
+                    or edge.to_label != ARCHETYPE_LABEL:
+                continue
+            missing = [
+                (lbl, name) for lbl, name in
+                ((edge.from_label, edge.from_name),
+                 (edge.to_label, edge.to_name))
+                if (lbl, name) not in base.nodes and (lbl, name) not in born]
+            if missing:
+                names = ", ".join(f"({lbl}) '{name}'"
+                                  for lbl, name in missing)
+                violations.append(Verdict(
+                    code="taxonomy-endpoint-missing",
+                    subject=connection_ref(edge),
+                    message=(
+                        f"Attempted to declare ({edge.from_name}) a kind "
+                        f"of ({edge.to_name}). Failed due to: {names} "
+                        "exists neither in the base nor in this round — "
+                        "a taxonomy declaration needs both of its "
+                        "citizens. Author the missing citizen in this "
+                        "round, or fix the name."),
+                    remedy="Author the missing citizen in this round, "
+                           "or fix the name."))
+                # adjudicated here by name — suppress the generic freeze
+                permitted_edges.add(id(edge))
+                continue
+            permitted_edges.add(id(edge))
+            items.append(CeremonyItem(
+                code="taxonomy-declared",
+                subject=connection_ref(edge),
+                message=(f"TAXONOMY DECLARED — ({edge.from_name}) is a "
+                         f"kind of ({edge.to_name}); the graph carries "
+                         "the declaration itself, and reconstruction "
+                         "reads it back")))
 
     return items, violations, permitted_nodes, permitted_edges
 
