@@ -444,3 +444,82 @@ def test_authoring_a_row_shaped_receipt_refuses_by_name():
         ("Beast", "Elk", {"from_text": "The Elk fords the river at dawn."})])
     assert "row-receipt-authored" not in [
         v.code for v in lint_verdicts(fine)]
+
+
+# -- the taxonomy declaration (ceremony class) ---------------------------
+
+
+def _taxonomy_round(edge, base=None, extra_nodes=()):
+    from graph.delta import ceremony_records, lint_verdicts
+    delta = Delta(nodes_added=list(extra_nodes), edges_added=[edge])
+    items, violations, _nodes, _edges = ceremony_records(delta, base)
+    return items, violations, lint_verdicts(delta, base)
+
+
+def test_declaring_taxonomy_with_existing_endpoints_is_ceremony():
+    base = base_graph()
+    base.ensure_node("Archetype", "Story Concept", doc="a concept")
+    edge = make_edge("SUBTYPE_OF", "Knack", "Pounce",
+                     "Archetype", "Story Concept")
+    items, violations, verdicts = _taxonomy_round(edge, base)
+    assert [i.code for i in items] == ["taxonomy-declared"]
+    assert "is a kind of" in str(items[0])
+    assert violations == []
+    # the freeze refusal stands down: the edge was adjudicated by name
+    assert "schema-edge-authored" not in [v.code for v in verdicts]
+
+
+def test_archetype_sided_taxonomy_declares_the_same_way():
+    base = base_graph()
+    base.ensure_node("Archetype", "Knack", doc="the knack concept")
+    edge = make_edge("SUBTYPE_OF", "Archetype", "Knack",
+                     "Archetype", "Terrain")
+    items, violations, verdicts = _taxonomy_round(edge, base)
+    assert [i.code for i in items] == ["taxonomy-declared"]
+    assert "schema-edge-authored" not in [v.code for v in verdicts]
+
+
+def test_a_born_endpoint_counts_as_existing():
+    base = base_graph()
+    base.ensure_node("Archetype", "Story Concept", doc="a concept")
+    edge = make_edge("SUBTYPE_OF", "Knack", "Silent Paw",
+                     "Archetype", "Story Concept")
+    items, violations, _ = _taxonomy_round(
+        edge, base, extra_nodes=[("Knack", "Silent Paw", {})])
+    assert [i.code for i in items] == ["taxonomy-declared"]
+    assert violations == []
+
+
+def test_a_missing_endpoint_refuses_by_name_once():
+    base = base_graph()
+    base.ensure_node("Archetype", "Story Concept", doc="a concept")
+    edge = make_edge("SUBTYPE_OF", "Knack", "Nobody",
+                     "Archetype", "Story Concept")
+    items, violations, verdicts = _taxonomy_round(edge, base)
+    assert items == []
+    assert [v.code for v in violations] == ["taxonomy-endpoint-missing"]
+    assert "'Nobody'" in violations[0].message
+    # named refusal, not the generic freeze — and never both
+    codes = [v.code for v in verdicts]
+    assert codes.count("taxonomy-endpoint-missing") == 1
+    assert "schema-edge-authored" not in codes
+
+
+def test_non_archetype_targets_and_removals_still_freeze():
+    base = base_graph()
+    sideways = make_edge("SUBTYPE_OF", "Knack", "Pounce",
+                         "Terrain", "Marsh")
+    _items, _violations, verdicts = _taxonomy_round(sideways, base)
+    assert "schema-edge-authored" in [v.code for v in verdicts]
+    from graph.delta import lint_verdicts
+    removal = Delta(edges_removed=[make_edge(
+        "SUBTYPE_OF", "Knack", "Pounce", "Archetype", "Terrain")])
+    assert "schema-edge-removed" in [v.code for v in
+                                     lint_verdicts(removal, base)]
+
+
+def test_without_a_base_the_freeze_refusal_stands():
+    edge = make_edge("SUBTYPE_OF", "Knack", "Pounce",
+                     "Archetype", "Story Concept")
+    _items, _violations, verdicts = _taxonomy_round(edge, base=None)
+    assert "schema-edge-authored" in [v.code for v in verdicts]

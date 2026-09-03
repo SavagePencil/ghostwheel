@@ -79,6 +79,9 @@ REF_KEYS = {
     "body-file-unreadable": "unreadable-file",
     "body-out-of-sync": "out-of-sync",
     "roster-gap": "missing-entry",
+    # the taxonomy declaration
+    "taxonomy-declared": "kind-of-declared",
+    "taxonomy-endpoint-missing": "missing-citizen",
     # ceremony items
     "kb-named": "name-declared",
     "new-concept": "new-concept",
@@ -128,7 +131,7 @@ class CeremonyItem:
     the round carrying these IS the ceremony ruling."""
     code: str
     message: str
-    subject: "CitizenRef | None" = None
+    subject: "CitizenRef | ConnectionRef | None" = None
     data: dict = field(default_factory=dict)
 
     def __str__(self):
@@ -230,7 +233,8 @@ def render_markdown(report):
                   "The rows below change the graph's OWN SCHEMA. They "
                   "are within the ceremony's permitted classes (new "
                   "declared concepts, label births, doc edits, added "
-                  "aliases, unreferenced removals); "
+                  "aliases, taxonomy declarations, unreferenced "
+                  "removals); "
                   "approving this round is the ceremony ruling that "
                   "makes them schema.", ""]
         lines += [f"- ⚑ {item}" for item in report.ceremony] + [""]
