@@ -54,11 +54,15 @@ scope):
   owning procedure is the step name's prefix before the section mark).
 - **Paraphrase tolerance (properties rung).** Value matching folds
   mechanical normalizations only: a wrapping-parenthesis strip so a
-  name-with-parenthetical's inner words are tokens, a possessive fold,
-  and a numeric canon (strip a leading plus, strip a trailing
-  point-zero) so a claim naming a citizen plus a number homes on the
-  structured value. No spelled-out or signed equivalences — only
-  format.
+  name-with-parenthetical's inner words are tokens, ONE delegated
+  lemma layer (the attribution charter's rung 1: plural, possessive,
+  and verb-form morphology handled by a maintained dictionary
+  lemmatizer, unknown tokens passing unchanged — the engine never
+  rules on a plural again), and a numeric canon (strip a leading
+  plus, strip a trailing point-zero) so a claim naming a citizen plus
+  a number homes on the structured value. Number-bearing tokens skip
+  the lemma. No spelled-out or signed equivalences — only format and
+  morphology.
 - **Fact-grain fidelity (properties rung).** Three guards keep number
   claims honest: a numeric value that echoes the citizen's own name
   ("Might 7" whose cap is 7) stays matchable, but only when the claim
@@ -79,6 +83,9 @@ Pure logic, driver-free; canon is read from the committed export.
 import re
 from collections import Counter
 from dataclasses import dataclass, field
+from functools import lru_cache
+
+import simplemma
 
 from .comprehension import is_row_text, markdown_table_claims
 from .judge import claims_of, normalize
@@ -165,17 +172,33 @@ class Attribution:
         return doc
 
 
+@lru_cache(maxsize=None)
+def _lemma(token):
+    """Rung 1 of the attribution charter: morphology is DELEGATED to a
+    maintained lemmatizer, never ruled case by case again — plurals
+    (irregulars included), possessives, verb forms all fold through
+    one dictionary layer, and a token the dictionary does not know
+    passes through unchanged (conservative by construction: false
+    homes are worse than misses). Number-bearing tokens never enter
+    the lemma at all — the numeric canon below owns them, so '-2'
+    stays '-2' and no signed equivalence arrives through a back
+    door."""
+    if any(ch.isdigit() for ch in token):
+        return token
+    return simplemma.lemmatize(token, lang="en")
+
+
 def _canon(token):
     """Mechanical token canon for structured matching (rung 1 only):
     strip wrapping parentheses/brackets so "(cut)" tokenizes as
-    "cut", fold a possessive so "bog's" and "bog" home together, then
+    "cut", pass the token through the delegated lemma layer (plural,
+    possessive, verb-form morphology — one layer, no fold pile), then
     normalize a number's format — drop a leading plus, drop a trailing
     point-zero — so "+2" and "2", "3.0" and "3" home together. No
     signed or spelled-out equivalence: "-2" stays "-2", "minus" stays
-    a word. Idempotent; a plain token is returned unchanged."""
-    token = token.strip("()[]")
-    if token.endswith("'s") or token.endswith("’s"):
-        token = token[:-2]
+    a word. Idempotent; an unknown plain token is returned
+    unchanged."""
+    token = _lemma(token.strip("()[]"))
     if _NUMBER.match(token):
         if token.startswith("+"):
             token = token[1:]
@@ -186,6 +209,12 @@ def _canon(token):
 
 def _canon_set(tokens):
     return {_canon(t) for t in tokens if t}
+
+
+# the guard set closes under the lemma: claim tokens arrive lemmatized
+# ("is"/"are"/"was" all fold to "be"), so the grammar words must too
+_FUNCTION_WORDS = frozenset(_FUNCTION_WORDS
+                            | {_lemma(w) for w in _FUNCTION_WORDS})
 
 
 def _tokens(text):
@@ -254,15 +283,15 @@ class CanonIndex:
                     value_tokens |= _tokens(str(value))
                     prop_words |= {w for w in key.lower().split("_") if w}
             name_canon = _canon_set(name_tokens)
-            # a numeric value that echoes the citizen's own name stays a
-            # value ("Might 7" whose cap is 7); only the WORD tokens of
-            # the name are subtracted — a name alone attests subject,
-            # not content
-            name_words = {t for t in name_canon if not _NUMBER.match(t)}
+            # a value that echoes the citizen's own name stays a value —
+            # numeric ("Might 7" whose cap is 7) and word alike (a name
+            # carrying the value word in parentheses). The say-it-twice
+            # multiplicity guard at the anchor is what keeps a bare name
+            # mention from attesting content; no token is subtracted.
             entry = {
                 "key": (label, str(name)),
                 "name_canon": name_canon,
-                "value_canon": _canon_set(value_tokens) - name_words,
+                "value_canon": _canon_set(value_tokens),
                 "prop_canon": _canon_set(prop_words),
                 "receipts": [s for s in receipt_sentences if s],
                 "step_lifts": [],
@@ -302,7 +331,11 @@ class CanonIndex:
                 "to_key": (edge.to_label, str(edge.to_name)),
                 "from_canon": from_canon,
                 "to_canon": to_canon,
-                "type_words": {w for w in etype.lower().split("_") if w},
+                # the type's own words fold through the same canon the
+                # claim's tokens do — the lemma layer is symmetric,
+                # never one-sided
+                "type_words": {_canon(w) for w in etype.lower().split("_")
+                               if w},
             })
 
     def _text_matches(self, claim_norm, claim_tokens, surfaces):

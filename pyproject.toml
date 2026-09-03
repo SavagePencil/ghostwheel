@@ -6,10 +6,15 @@
 # (See README, "Why the package is called `graph`".)
 [project]
 name = "ghostwheel"
-version = "0.42.0"
+version = "0.43.0"
 description = "Ghostwheel: a project-agnostic knowledge-graph engine — two-layer ontology, deterministic export/restore, reviewed delta rounds with a diff gate, a chained event log, and visibility lenses."
 requires-python = ">=3.11"
-dependencies = ["pyyaml", "neo4j"]
+# simplemma is PINNED EXACT: the lemma dictionary is part of the
+# attribution ruler, and census floors ride its behavior — an
+# unpinned upgrade could shift lemmas and move consumer baselines
+# with zero engine changes. Policy: a lemma-dictionary bump IS an
+# engine version bump (every one costs consumers a re-base gate).
+dependencies = ["pyyaml", "neo4j", "simplemma==2.0.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
