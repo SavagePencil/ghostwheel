@@ -160,7 +160,15 @@ def claims_of(text):
 
 
 def normalize(sentence):
-    words = sentence.strip().rstrip(".!?").split()
+    """The comparison key: case, whitespace, and trailing punctuation
+    fold away — and so does link markup, the same fold extraction
+    applies. The rule this encodes: any fold that lands in extraction
+    must land here too, because extraction changes a claim's IDENTITY
+    and recorded provenance is keyed by that identity. A claim recorded
+    under an older grain (its brackets intact) and the same claim read
+    today (its link folded) must compare equal, or a record would go
+    stale when nothing but the extractor moved."""
+    words = _LINK.sub(r"\1", sentence).strip().rstrip(".!?").split()
     return " ".join(word.lower() for word in words)
 
 

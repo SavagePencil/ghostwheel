@@ -300,6 +300,31 @@ def test_render_census_without_links_is_byte_identical():
                                                                 graph))
 
 
+def test_a_link_recorded_under_the_old_grain_still_holds():
+    # the regression the first consumer found: a claim sealed with an
+    # inline link BEFORE extraction learned to fold links keeps its
+    # brackets in the record, while the source's current extraction
+    # folds them. Staleness compares through normalize, so the fold
+    # must live there too — the record holds when only the extractor
+    # moved, and goes stale only when the SOURCE moves.
+    from graph.judge import normalize
+    graph = _canon()
+    old_grain = "see [the falchion](the-falchion) for the reach rule."
+    links = [_link(claim=old_grain, source="artifacts/blades.md")]
+    current_source = {"artifacts/blades.md":
+                      ["see the falchion for the reach rule"]}
+    assert normalize(old_grain) == "see the falchion for the reach rule"
+    draft = "See [the Falchion](#the-falchion) for the reach rule."
+    [result] = census(draft, graph, links=links,
+                      source_claims=current_source.get)
+    assert result.verdict == RECORDED
+    assert result.attested is True
+    # and a source that really moved still reads stale
+    moved = {"artifacts/blades.md": ["see the sabre for the reach rule"]}
+    [result] = census(draft, graph, links=links, source_claims=moved.get)
+    assert result.verdict == LINK_STALE
+
+
 def test_audit_link_verifies_every_citizen():
     graph = _canon()
     row = _link(citizens=(("Blade", "Falchion"), ("Herb", "Ghostroot")))
