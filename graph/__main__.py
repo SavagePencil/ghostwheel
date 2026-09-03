@@ -1084,6 +1084,19 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     config = load_mod.read_config(base_dir)
     database = _authoring_database(database, branch, config)
     live_canon_database = config["NEO4J_DATABASE"]
+    def bail(code, message, items=(), remedy=""):
+        # the refusal, twice: the stderr block above it prints exactly
+        # as it always has; this leaves the same facts as a durable
+        # record (graph/reports/canonize-refusal.json)
+        from . import report as report_mod
+        canonize_mod.write_refusal_report(
+            base_dir, branch,
+            [report_mod.Verdict(code=code, message=str(message),
+                                remedy=remedy,
+                                data=({"items": [str(i) for i in items]}
+                                      if items else {}))])
+        return 1
+
     # The target line's canon database: live canon for the default line;
     # the branch's own database (= its name) for a branch. The hard guard
     # — a branch can NEVER write to live canon, nor read it as its
@@ -1101,21 +1114,22 @@ def cmd_canonize(base_dir, database, apply, branch=None):
             base_dir, branch, "a canonize round")
         guard = list(guard) + [p for p in (read_problem, adopted) if p]
     if guard:
-        print("--apply refused — a branch is hard-isolated from canon:"
-              if apply else
-              "REFUSED — a branch is hard-isolated from canon:",
-              file=sys.stderr)
+        header = ("--apply refused — a branch is hard-isolated from canon:"
+                  if apply else
+                  "REFUSED — a branch is hard-isolated from canon:")
+        print(header, file=sys.stderr)
         for problem in guard:
             print(f"  ⚠ {problem}", file=sys.stderr)
-        return 1
+        return bail("branch-isolation", header, guard)
     try:
         base = canon_base(base_dir, branch)
     except FileNotFoundError as exc:
-        print("Attempted to load the schema from the committed "
-              f"backup ({proposal_mod.export_dir(base_dir, branch).relative_to(base_dir)}). "
-              f"Failed due to: {exc}. For a from-sources bootstrap, use "
-              "the load/validate path.", file=sys.stderr)
-        return 1
+        text = ("Attempted to load the schema from the committed "
+                f"backup ({proposal_mod.export_dir(base_dir, branch).relative_to(base_dir)}). "
+                f"Failed due to: {exc}. For a from-sources bootstrap, use "
+                "the load/validate path.")
+        print(text, file=sys.stderr)
+        return bail("backup-unreadable", text)
     from .kernel_migrate import kernel_skew
     skew = kernel_skew(base)
     if skew:
@@ -1125,7 +1139,7 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         # mid-rebuild the finding stays advisory.
         if apply and branch is None:
             print(f"--apply refused — {skew}", file=sys.stderr)
-            return 1
+            return bail("kernel-skew", skew)
         print(f"Advisory: {skew}", file=sys.stderr)
     config = dict(config)
     config["NEO4J_DATABASE"] = database
@@ -1133,27 +1147,30 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     if identity:
         print(("--apply refused: " if apply else "REFUSED: ") + identity,
               file=sys.stderr)
-        return 1
+        return bail("workspace-identity", identity)
     try:
         scratch = delta_mod.read_graph(config)
     except Exception as exc:
-        print(f"cannot read '{database}': {exc}", file=sys.stderr)
-        return 1
+        text = f"cannot read '{database}': {exc}"
+        print(text, file=sys.stderr)
+        return bail("scratch-unreadable", text)
     changes = delta_mod.diff(base, scratch)
     try:
         changes.stitch = proposal_mod.read_stitch(base_dir, branch)
     except (ValueError, KeyError) as exc:
-        print("REFUSED: the round's stitch file is unreadable — "
-              f"{exc}", file=sys.stderr)
-        return 1
+        text = f"REFUSED: the round's stitch file is unreadable — {exc}"
+        print(text, file=sys.stderr)
+        return bail("stitch-file-unreadable", text)
     violations = delta_mod.lint(changes, base)
     violations += delta_mod.lint_stitch(changes, scratch)
     if violations:
-        print("REFUSED: the delta has ground-facts lint violations — "
-              "fix scratch first (python -m graph delta):", file=sys.stderr)
+        text = ("REFUSED: the delta has ground-facts lint violations — "
+                "fix scratch first (python -m graph delta):")
+        print(text, file=sys.stderr)
         for violation in violations:
             print(f"  ⚠ {violation}", file=sys.stderr)
-        return 1
+        return bail("ground-facts-lint", text, violations,
+                    remedy="Fix scratch first (python -m graph delta).")
 
     current = proposal_mod.current_dir(base_dir, branch)
     approval_path = current / proposal_mod.APPROVAL_FILE
@@ -1176,41 +1193,52 @@ def cmd_canonize(base_dir, database, apply, branch=None):
                  "approve"))
         print(f"Dry run — python -m graph canonize --apply applies the "
               f"approved changeset to {target_label}.")
+        canonize_mod.clear_refusal_report(base_dir)
         return 0
 
     # --- the approval freeze: apply replays only what was approved ------
     if not approval_path.exists():
-        print("--apply refused: no approval on record for this round. "
-              "Review the delta at the diff gate, then record the "
-              "approval (python -m graph approve).", file=sys.stderr)
-        return 1
+        text = ("no approval on record for this round. Review the delta "
+                "at the diff gate, then record the approval "
+                "(python -m graph approve).")
+        print("--apply refused: " + text, file=sys.stderr)
+        return bail("approval-missing", text,
+                    remedy="Review at the diff gate, then python -m "
+                           "graph approve.")
     approval = proposal_mod.read_json(approval_path)
     pinned_text = delta_path.read_text(encoding="utf-8") \
         if delta_path.exists() else None
     if pinned_text is None or \
             proposal_mod.content_hash(pinned_text) != approval["delta_hash"]:
-        print("--apply refused: the proposal document is missing or does "
-              "not match the approved hash — the round's artifacts were "
-              "tampered with after approval. Re-run python -m graph "
-              "delta and re-review.", file=sys.stderr)
-        return 1
+        text = ("the proposal document is missing or does not match "
+                "the approved hash — the round's artifacts were tampered "
+                "with after approval. Re-run python -m graph delta and "
+                "re-review.")
+        print("--apply refused: " + text, file=sys.stderr)
+        return bail("proposal-tampered", text,
+                    remedy="Re-run python -m graph delta and re-review.")
     if approval.get("base_hash") and \
             approval["base_hash"] != proposal_mod.base_identity(base):
-        print("--apply refused: the base has moved since approval — "
-              "canon's backup changed under the round. Re-cut scratch "
-              "(python -m graph restore --database scratch), re-review, "
-              "and re-approve.", file=sys.stderr)
-        return 1
+        text = ("the base has moved since approval — canon's backup "
+                "changed under the round. Re-cut scratch (python -m "
+                "graph restore --database scratch), re-review, and "
+                "re-approve.")
+        print("--apply refused: " + text, file=sys.stderr)
+        return bail("base-moved", text,
+                    remedy="Re-cut scratch, re-review, re-approve.")
     drift = proposal_mod.divergence(
         proposal_mod.parse_delta(pinned_text), changes)
     if drift:
-        print("--apply refused: scratch has moved since approval — the "
-              "divergence, named:", file=sys.stderr)
+        text = ("scratch has moved since approval — the divergence, "
+                "named:")
+        print("--apply refused: " + text, file=sys.stderr)
         for problem in drift:
             print(f"  ⚠ {problem}", file=sys.stderr)
         print("Re-review (python -m graph delta) and re-approve.",
               file=sys.stderr)
-        return 1
+        return bail("scratch-drift", text, drift,
+                    remedy="Re-review (python -m graph delta) and "
+                           "re-approve.")
 
     # --- the target database must still equal the backup it came from --
     target_export = proposal_mod.export_dir(base_dir, branch)
@@ -1219,28 +1247,30 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     try:
         live = restore_mod.dump_db(target_config)
     except Exception as exc:
-        print(f"--apply refused: cannot read the {target_label} database "
-              f"('{target_database}'): {exc}", file=sys.stderr)
-        return 1
+        text = (f"cannot read the {target_label} database "
+                f"('{target_database}'): {exc}")
+        print("--apply refused: " + text, file=sys.stderr)
+        return bail("database-unreadable", text)
     live_drift = restore_mod.verify_against_backup(live, target_export)
     if live_drift:
-        print(f"--apply refused: the {target_label} database no longer "
-              "matches the backup it was restored from — it moved outside "
-              "the delta path:", file=sys.stderr)
+        text = (f"the {target_label} database no longer matches the "
+                "backup it was restored from — it moved outside the "
+                "delta path:")
+        print("--apply refused: " + text, file=sys.stderr)
         for problem in live_drift:
             print(f"  ⚠ {problem}", file=sys.stderr)
-        return 1
+        return bail("database-drift", text, live_drift)
 
     # --- apply the PINNED artifact to the ground layer, then re-derive -
     pinned_delta = proposal_mod.parse_delta(pinned_text)
     ground = strip_derived(base)
     problems = proposal_mod.apply_delta(ground, pinned_delta)
     if problems:
-        print("--apply refused — preconditions failed; nothing was "
-              "written:", file=sys.stderr)
+        text = "preconditions failed; nothing was written:"
+        print("--apply refused — " + text, file=sys.stderr)
         for problem in problems:
             print(f"  ⚠ {problem}", file=sys.stderr)
-        return 1
+        return bail("precondition-failed", text, problems)
     # The schema is reconstructed from the POST-apply ground: a ceremony
     # round's schema changes are already in `ground` here, and derive
     # must see the schema the round produces, not the one it started
@@ -1264,23 +1294,24 @@ def cmd_canonize(base_dir, database, apply, branch=None):
                   "roster check blocks only a finished line and must "
                   "be clean before this branch can succeed canon.")
     if derive_errors:
-        print("--apply refused — re-derivation reported errors; nothing "
-              "was written:", file=sys.stderr)
-        for finding in derive_errors:
-            print(f"  ⚠ {finding.file} {finding.location}: "
-                  f"{finding.detail}", file=sys.stderr)
-        return 1
+        text = "re-derivation reported errors; nothing was written:"
+        print("--apply refused — " + text, file=sys.stderr)
+        items = [f"{f.file} {f.location}: {f.detail}"
+                 for f in derive_errors]
+        for item in items:
+            print(f"  ⚠ {item}", file=sys.stderr)
+        return bail("derive-error", text, items)
     # The stitch mechanism: the stitch lands IN MEMORY, after re-derivation births the
     # round's new citizens and before anything is written — same
     # verify-all-before-apply-any window as everything above
     stitch_problems = proposal_mod.apply_stitch(new_graph,
                                                 pinned_delta.stitch)
     if stitch_problems:
-        print("--apply refused — the stitch cannot land; nothing was "
-              "written:", file=sys.stderr)
+        text = "the stitch cannot land; nothing was written:"
+        print("--apply refused — " + text, file=sys.stderr)
         for problem in stitch_problems:
             print(f"  ⚠ {problem}", file=sys.stderr)
-        return 1
+        return bail("stitch-landing", text, stitch_problems)
 
     # --- stamp the version anchor: the project ontology's version IS the
     # event-log sequence, so a fresh connection's version moves with the
@@ -1290,28 +1321,29 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     version = proposal_mod.next_log_sequence(base_dir, branch)
     stamp_problems = canonize_mod.stamp_ontology_anchor(new_graph, version)
     if stamp_problems:
-        print("--apply refused — the version anchor cannot be stamped; "
-              "nothing was written:", file=sys.stderr)
+        text = "the version anchor cannot be stamped; nothing was written:"
+        print("--apply refused — " + text, file=sys.stderr)
         for problem in stamp_problems:
             print(f"  ⚠ {problem}", file=sys.stderr)
-        return 1
+        return bail("anchor-unstampable", text, stamp_problems)
 
     # --- write: load the target, re-export the backup FROM the database
     try:
         summary = load_mod.load(new_graph, target_config)
         dumped = restore_mod.dump_db(target_config)
     except Exception as exc:
-        print(f"Apply failed mid-write: {exc}. The backup files are "
-              "untouched — python -m graph restore returns the "
-              "database to the last applied state.", file=sys.stderr)
-        return 1
+        text = (f"Apply failed mid-write: {exc}. The backup files are "
+                "untouched — python -m graph restore returns the "
+                "database to the last applied state.")
+        print(text, file=sys.stderr)
+        return bail("write-failed", text)
     if export_mod.serialize(dumped) != export_mod.serialize(new_graph):
-        print("EVENT LOG NOT WRITTEN — the database read back differently "
-              "than what was written (driver round-trip fault). The "
-              "backup files are untouched; python -m graph restore "
-              "returns the database to the last applied state.",
-              file=sys.stderr)
-        return 1
+        text = ("EVENT LOG NOT WRITTEN — the database read back "
+                "differently than what was written (driver round-trip "
+                "fault). The backup files are untouched; python -m graph "
+                "restore returns the database to the last applied state.")
+        print(text, file=sys.stderr)
+        return bail("roundtrip-fault", text)
     export_mod.write_export(dumped, target_export)
 
     # --- the event log: inverse, chained entry, archive ----------------
@@ -1349,6 +1381,7 @@ def cmd_canonize(base_dir, database, apply, branch=None):
                   f"{branch}-scratch")
     print("Ritual: pytest, commit the export + round archive; the next "
           f"round cuts scratch with {ritual_cut}.")
+    canonize_mod.clear_refusal_report(base_dir)
     return 0
 
 

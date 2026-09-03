@@ -5,7 +5,7 @@ no database needed."""
 
 import pytest
 
-from graph.canonize import RECEIPT_PROPS, apply_plan, build_plan, render_report
+from graph.canonize import RECEIPT_PROPS, apply_plan, build_plan
 from graph.delta import diff, lint
 from graph.extract import GraphData, extract, make_edge
 from graph.ontology import (SCHEMA_EDGE_TYPES, is_derived_edge,
@@ -245,17 +245,6 @@ def test_apply_collates_every_problem(make_repo):
     assert "nothing was written" in message
 
 
-def test_report_renders_all_sections(make_repo):
-    base_dir, _, ontology, base = build_base(make_repo)
-    scratch = agent_scratch(base)
-    scratch.ensure_node("Gremlin", "Cave Mouth")
-    plan = build_plan(diff(base, scratch), ontology, base_dir)
-    report = render_report(plan)
-    assert "BLOCKED" in report and "REVIEW REQUIRED" in report
-    assert "CSV rows to append" in report and "Cell edits" in report
-    assert "Overlay entries" in report and "Notices" in report
-
-
 # -- property-table props render as cell edits in their own file ---------------
 
 TABLE_FILES = {
@@ -384,3 +373,65 @@ def test_property_table_prop_edits_its_own_file(make_repo):
     residual = diff(new_base, scratch)
     assert residual.nodes_changed == []
     assert residual.nodes_added == []
+
+
+# -- canonize refusals as durable records (the durable-refusal work) -----
+
+from graph.canonize import (clear_refusal_report, refusal_report_path,
+                            write_refusal_report)
+
+
+def test_refusal_report_writes_coded_rows(tmp_path):
+    from graph.report import Verdict
+    from graph import export as export_mod
+    g = GraphData()
+    g.ensure_node("Terrain", "Bog")
+    export_mod.write_export(g, tmp_path / "graph" / "export")
+    write_refusal_report(tmp_path, None, [Verdict(
+        code="approval-missing", message="no approval on record",
+        remedy="approve first", data={"items": ["a", "b"]})])
+    import json as json_mod
+    doc = json_mod.loads(refusal_report_path(tmp_path).read_text())
+    assert doc["kind"] == "canonize-refusal"
+    assert doc["kb"]  # the line of truth is named
+    row = doc["refusals"][0]
+    assert row["code"] == "approval-missing"
+    assert row["ref"] == "no-approval"     # designer-safe ref key
+    assert row["data"]["items"] == ["a", "b"]
+    # a clean run retires the artifact — never a stale report
+    clear_refusal_report(tmp_path)
+    assert not refusal_report_path(tmp_path).exists()
+
+
+def test_a_refused_apply_leaves_the_artifact(tmp_path, monkeypatch,
+                                             capsys):
+    # the smallest real refusal: an apply with no approval on record —
+    # stderr prints as it always has AND the record lands beside the
+    # round, coded and inspectable
+    from graph import export as export_mod
+    from graph.__main__ import cmd_canonize, cmd_init
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("GHOSTWHEEL_BASE", raising=False)
+    assert cmd_init(tmp_path) == 0
+
+    class Quiet:
+        def __getattr__(self, name):
+            raise AssertionError("no database should be touched")
+
+    # scratch equals the base: dodge the DB by pointing the reader at
+    # the export itself
+    import graph.__main__ as main_mod
+    from graph.restore import read_export
+    monkeypatch.setattr(
+        "graph.delta.read_graph",
+        lambda config: read_export(tmp_path / "graph" / "export"))
+    monkeypatch.setattr("graph.__main__._working_copy_check",
+                        lambda *a, **k: "")
+    assert cmd_canonize(tmp_path, None, apply=True) == 1
+    assert "no approval on record" in capsys.readouterr().err
+    import json as json_mod
+    doc = json_mod.loads(refusal_report_path(tmp_path).read_text())
+    assert [r["code"] for r in doc["refusals"]] == ["approval-missing"]
+    # and a clean dry run clears it
+    assert cmd_canonize(tmp_path, None, apply=False) == 0
+    assert not refusal_report_path(tmp_path).exists()

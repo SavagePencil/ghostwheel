@@ -564,45 +564,48 @@ def apply_plan(plan, base_dir):
     return sorted(set(changed))
 
 
-def render_report(plan):
-    lines = ["# Canonize plan — approved delta → source files", ""]
-    if plan.blocked:
-        lines += ["**BLOCKED: REVIEW-REQUIRED items below — nothing "
-                  "auto-applies until the approver rules.**", ""]
-    if plan.review_required:
-        lines += ["## REVIEW REQUIRED (owner-governed decisions)", ""]
-        for title, draft in plan.review_required:
-            lines += [f"### {title}", "", draft, ""]
-    if plan.csv_appends:
-        lines += ["## CSV rows to append", ""]
-        for relpath, rows in sorted(plan.csv_appends.items()):
-            lines.append(f"**{relpath}**")
-            for row in rows:
-                lines.append("- " + " · ".join(f"{k}: {v}"
-                                               for k, v in row.items() if v))
-            lines.append("")
-    if plan.cell_edits:
-        lines += ["## Cell edits (before → after)", ""]
-        for relpath, _, key, column, old, new, where in plan.cell_edits:
-            pin = "".join(f" [{col}: {val}]"
-                          for col, val in sorted(where.items()))
-            lines.append(f"- {relpath} · **{key}**{pin} · {column}: "
-                         f"'{old}' → '{new}'")
-        lines.append("")
-    if plan.overlay_entries:
-        lines += ["## Overlay entries", ""]
-        for relpath, entries in sorted(plan.overlay_entries.items()):
-            for name, props in sorted(entries.items()):
-                lines.append(f"- {relpath} · **{name}**: {props}")
-        lines.append("")
-    if plan.manual_actions:
-        lines += ["## Manual actions (removals)", ""]
-        lines += [f"- {action}" for action in plan.manual_actions] + [""]
-    if plan.notices:
-        lines += ["## Notices", ""]
-        lines += [f"- {notice}" for notice in plan.notices] + [""]
-    if plan.deterministic_empty and not plan.blocked \
-            and not plan.manual_actions:
-        lines += ["Nothing to render — the delta is empty or entirely "
-                  "notices.", ""]
-    return "\n".join(lines)
+# -- canonize refusals as durable records ---------------------------------
+#
+# Every refusal class prints its collated stderr block exactly as it
+# always has — and additionally leaves an inspectable artifact: the
+# same facts as Verdict records rendered to canonize-refusal.json in
+# graph/reports/. The file is a rendering of the LATEST canonize
+# outcome, so a run that ends cleanly removes it.
+
+REFUSAL_REPORT_FILE = "canonize-refusal.json"
+
+
+def refusal_report_path(base_dir):
+    from pathlib import Path
+    return Path(base_dir) / "graph" / "reports" / REFUSAL_REPORT_FILE
+
+
+def write_refusal_report(base_dir, branch, verdicts):
+    """The refusal record beside the round: kind, the line of truth it
+    was refused on (kb + branch, per the reference rules), and one row
+    per verdict. Best-effort — a report that cannot be written must
+    never mask the refusal it describes."""
+    from .refs import kb_name_from_export
+    doc = {"kind": "canonize-refusal",
+           "kb": kb_name_from_export(base_dir)}
+    if branch:
+        doc["branch"] = branch
+    doc["refusals"] = [v.row(kb=doc["kb"], branch=branch)
+                       for v in verdicts]
+    try:
+        path = refusal_report_path(base_dir)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(doc, ensure_ascii=False, indent=2,
+                                   sort_keys=True) + "\n",
+                        encoding="utf-8")
+    except OSError:
+        pass
+
+
+def clear_refusal_report(base_dir):
+    """A clean run retires the artifact — the report reflects the
+    latest outcome, never a stale one."""
+    try:
+        refusal_report_path(base_dir).unlink(missing_ok=True)
+    except OSError:
+        pass
