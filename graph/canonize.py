@@ -585,27 +585,15 @@ def write_refusal_report(base_dir, branch, verdicts):
     was refused on (kb + branch, per the reference rules), and one row
     per verdict. Best-effort — a report that cannot be written must
     never mask the refusal it describes."""
-    from .refs import kb_name_from_export
-    doc = {"kind": "canonize-refusal",
-           "kb": kb_name_from_export(base_dir)}
-    if branch:
-        doc["branch"] = branch
+    from .report import record_header, write_record
+    doc = record_header(base_dir, "canonize-refusal", branch)
     doc["refusals"] = [v.row(kb=doc["kb"], branch=branch)
                        for v in verdicts]
-    try:
-        path = refusal_report_path(base_dir)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(doc, ensure_ascii=False, indent=2,
-                                   sort_keys=True) + "\n",
-                        encoding="utf-8")
-    except OSError:
-        pass
+    write_record(base_dir, REFUSAL_REPORT_FILE, doc)
 
 
 def clear_refusal_report(base_dir):
     """A clean run retires the artifact — the report reflects the
     latest outcome, never a stale one."""
-    try:
-        refusal_report_path(base_dir).unlink(missing_ok=True)
-    except OSError:
-        pass
+    from .report import clear_record
+    clear_record(base_dir, REFUSAL_REPORT_FILE)

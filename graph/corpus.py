@@ -120,44 +120,100 @@ def collect_guards(base_dir):
     return parse_collected(result.stdout)
 
 
-def missing_guards(floors, collected):
-    """Floors whose guard no longer exists — each named with the
-    blessing it orphans. A deleted guard is a red, never a silence."""
-    problems = []
+# one row per floor: what was checked and how it came out — held rows
+# recorded too, because a corpus verdict is evidence of what was
+# re-checked, not only of what broke
+FLOOR_HELD = "held"
+FLOOR_FAILED = "failed"
+FLOOR_GUARD_MISSING = "guard-missing"
+
+
+def floor_records(floors, collected, failed_ids=()):
+    """The corpus verdict as records: one per floor, in ledger order,
+    with the floor's own facts (check, expectation, provenance), a
+    status, a verdict code with its designer-facing ref, and — for reds
+    — the problem sentence the prose report prints."""
+    from .report import ref_key
+    failed_ids = set(failed_ids)
+    records = []
     for floor in floors:
+        row = {"check": floor["check"],
+               "expectation": floor["expectation"],
+               "provenance": floor["provenance"]}
         if floor["check"] not in collected:
-            problems.append(
+            row.update(status=FLOOR_GUARD_MISSING, code="floor-guard-missing",
+                       problem=(
                 f"the guard {floor['check']} is GONE — it protected "
                 f"\"{floor['expectation']}\" (blessed at "
                 f"{floor['provenance']}). Restore the test or bring "
                 "the floor's retirement to the owner; floors are never "
-                "silently dropped.")
-    return problems
+                "silently dropped."))
+        elif floor["check"] in failed_ids:
+            row.update(status=FLOOR_FAILED, code="floor-failed",
+                       problem=(
+                f"the floor \"{floor['expectation']}\" FAILED its "
+                f"guard ({floor['check']}) — this was blessed at "
+                f"{floor['provenance']}; the current change breaks a "
+                "prior approval. Fix the change, or bring the floor's "
+                "supersession to the owner."))
+        else:
+            row.update(status=FLOOR_HELD, code="floor-held")
+        row["ref"] = ref_key(row["code"])
+        records.append(row)
+    return records
+
+
+def missing_guards(floors, collected):
+    """Floors whose guard no longer exists — each named with the
+    blessing it orphans. A deleted guard is a red, never a silence."""
+    return [row["problem"] for row in floor_records(floors, collected)
+            if row["status"] == FLOOR_GUARD_MISSING]
+
+
+def failed_floor_ids(base_dir, floors, collected):
+    """Run every floor whose guard exists; the ids of the guards that
+    failed (empty when nothing ran)."""
+    checks = [floor["check"] for floor in floors
+              if floor["check"] in collected]
+    if not checks:
+        return set()
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "--tb=no", *checks],
+        cwd=base_dir, capture_output=True, text=True)
+    return {line.split()[1].split("[", 1)[0]
+            for line in result.stdout.splitlines()
+            if line.startswith("FAILED ")}
 
 
 def run_floors(base_dir, floors, collected):
     """Run every floor whose guard exists; return failure lines, each
     tied back to its floor's expectation and provenance."""
-    checks = [floor["check"] for floor in floors
-              if floor["check"] in collected]
-    if not checks:
-        return []
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "--tb=no", *checks],
-        cwd=base_dir, capture_output=True, text=True)
-    failed_ids = {line.split()[1].split("[", 1)[0]
-                  for line in result.stdout.splitlines()
-                  if line.startswith("FAILED ")}
-    problems = []
-    for floor in floors:
-        if floor["check"] in failed_ids:
-            problems.append(
-                f"the floor \"{floor['expectation']}\" FAILED its "
-                f"guard ({floor['check']}) — this was blessed at "
-                f"{floor['provenance']}; the current change breaks a "
-                "prior approval. Fix the change, or bring the floor's "
-                "supersession to the owner.")
-    return problems
+    failed_ids = failed_floor_ids(base_dir, floors, collected)
+    return [row["problem"]
+            for row in floor_records(floors, collected, failed_ids)
+            if row["status"] == FLOOR_FAILED]
+
+
+CORPUS_REPORT_FILE = "corpus-report.json"
+
+
+def corpus_report(base_dir, records, guard_problem=None):
+    """The corpus verdict as one durable record: kind, the line of
+    truth, one row per floor — or, when the suite could not be
+    re-collected at all, the guard that stopped the re-check."""
+    from .report import record_header, ref_key
+    doc = record_header(base_dir, "corpus-report")
+    if guard_problem is not None:
+        doc["guard"] = {"code": "corpus-uncollectable",
+                        "ref": ref_key("corpus-uncollectable"),
+                        "problem": guard_problem}
+        return doc
+    doc["floors"] = list(records)
+    doc["counts"] = {status: sum(1 for r in records
+                                 if r["status"] == status)
+                     for status in (FLOOR_HELD, FLOOR_FAILED,
+                                    FLOOR_GUARD_MISSING)}
+    return doc
 
 
 def render_report(floors, missing, failures):

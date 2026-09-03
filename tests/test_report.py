@@ -323,9 +323,15 @@ def test_every_produced_code_has_a_designer_safe_ref_key():
     import re
 
     import graph.__main__ as main_module
+    import graph.corpus as corpus_module
     import graph.delta as delta_module
+    import graph.receipts as receipts_module
     from graph.report import REF_KEYS, ref_key
-    source = inspect.getsource(delta_module) + inspect.getsource(main_module)
+    # every module that constructs a verdict code the designer may see:
+    # the delta gate, the CLI, and the health surfaces' record builders
+    source = "".join(inspect.getsource(module) for module in
+                     (delta_module, main_module, corpus_module,
+                      receipts_module))
     produced = set(re.findall(r'code="([a-z0-9-]+)"', source))
     assert len(produced) >= 30, produced
     # "unclassified" is the documented wrapper fallback for legacy

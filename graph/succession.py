@@ -180,11 +180,8 @@ def checklist_report(base_dir, branch, gates, fork_known, diverged,
     failed), the divergence advisory's facts, and — when the ceremony
     refused before the gates even ran — the guard's collated problems.
     ``gates`` rows are (label, code, problems)."""
-    from .report import ref_key
-    from .refs import kb_name_from_export
-    doc = {"kind": "succession-report",
-           "kb": kb_name_from_export(base_dir),
-           "branch": branch}
+    from .report import record_header, ref_key
+    doc = record_header(base_dir, "succession-report", branch)
     if guard_problems is not None:
         doc["guard"] = {"code": "ceremony-guard",
                         "ref": ref_key("ceremony-guard"),
@@ -204,14 +201,5 @@ def checklist_report(base_dir, branch, gates, fork_known, diverged,
 
 
 def write_checklist_report(base_dir, doc):
-    from pathlib import Path
-    try:
-        path = (Path(base_dir) / "graph" / "reports"
-                / CHECKLIST_REPORT_FILE)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        text = json.dumps(doc, ensure_ascii=False, indent=2,
-                          sort_keys=True) + "\n"
-        path.write_text(text, encoding="utf-8")
-        return text
-    except OSError:
-        return None
+    from .report import write_record
+    return write_record(base_dir, CHECKLIST_REPORT_FILE, doc)
