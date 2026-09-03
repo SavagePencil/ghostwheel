@@ -322,6 +322,10 @@ OUTCOME_LABEL = "Outcome"
 # The kernel's own concept label for procedures — ground citizens under
 # it may be graph-native (no source file; see link_native_procedures).
 KERNEL_PROCEDURE_LABEL = "Procedure"
+# The kernel's Judgment concept for the fidelity net between a program and
+# its approved table; citizens under it are authored ground, each with a
+# CHECKS edge to the Procedure it holds still (see graph/answer_keys.py).
+KERNEL_ANSWER_KEY_LABEL = "Answer Key"
 # Labels the engine materializes itself; projects may not declare them.
 RESERVED_LABELS = {ARCHETYPE_LABEL: "used by the metamodel concepts: section",
                    STEP_LABEL: "used by the procedure_yaml lift",

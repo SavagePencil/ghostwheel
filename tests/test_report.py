@@ -327,6 +327,7 @@ def test_every_produced_code_has_a_designer_safe_ref_key():
     import graph.delta as delta_module
     import graph.extract as extract_module
     import graph.ontology as ontology_module
+    import graph.answer_keys as answer_keys_module
     import graph.receipts as receipts_module
     import graph.validate as validate_module
     from graph.report import REF_KEYS, ref_key
@@ -336,7 +337,7 @@ def test_every_produced_code_has_a_designer_safe_ref_key():
     source = "".join(inspect.getsource(module) for module in
                      (delta_module, main_module, corpus_module,
                       receipts_module, extract_module, ontology_module,
-                      validate_module))
+                      validate_module, answer_keys_module))
     produced = set(re.findall(r'code="([a-z0-9-]+)"', source))
     assert len(produced) >= 30, produced
     # "unclassified" is the documented wrapper fallback for legacy
