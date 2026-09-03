@@ -926,6 +926,17 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         violations.append(stitch_problem)
     violations += delta_mod.stitch_verdicts(changes, scratch)
     violations += delta_mod.body_sync_verdicts(scratch, base_dir)
+    # the receipt staleness guard: a round that authors a quote its
+    # source does not contain refuses; one that touches a citizen whose
+    # existing quote went stale hears about it (advisory — honesty,
+    # never a build break) while the owner is already looking
+    from . import receipts as receipts_mod
+    receipt_findings = receipts_mod.receipt_verdicts(changes, base,
+                                                     base_dir)
+    violations += [v for v in receipt_findings
+                   if v.severity != report_mod.ADVISORY]
+    receipt_advisories = [v for v in receipt_findings
+                          if v.severity == report_mod.ADVISORY]
     # The orphan-procedure check: a registered procedure file with no citizen in scratch is
     # invisible to the body-sync scan (which walks existing nodes) — the
     # roster check names it before the round reaches canonize.
@@ -971,8 +982,9 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     # The markdown lands FIRST: if the changeset later refuses to
     # serialize, the report that names the offending row is already on
     # disk and on screen.
-    report_model = delta_mod.build_report(changes, violations,
-                                          ceremony_items, roster_advisories)
+    report_model = delta_mod.build_report(
+        changes, violations, ceremony_items,
+        roster_advisories + receipt_advisories)
     report = report_mod.render_markdown(report_model)
     reports_dir = base_dir / "graph" / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -2127,6 +2139,31 @@ def cmd_terms(base_dir):
     return 0
 
 
+def cmd_receipts(base_dir, branch=None):
+    """The receipt sweep: every carried quote in the committed backup
+    checked against its cited source's current bytes. Stale quotes are
+    named with what they were hiding (an honest home beneath, or intake
+    debt); sources that no longer resolve are named; ruling-shaped
+    sources are counted, never nagged. Report-only — staleness is an
+    honesty problem, not a build break, so the exit stays 0."""
+    from . import receipts as receipts_mod
+    try:
+        base = canon_base(base_dir, branch)
+    except FileNotFoundError as exc:
+        print("Attempted to read the committed backup for the receipt "
+              f"sweep. Failed due to: {exc}.", file=sys.stderr)
+        return 1
+    result = receipts_mod.sweep(base_dir, base)
+    report = receipts_mod.render_report(result)
+    reports_dir = base_dir / "graph" / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    report_path = reports_dir / "receipts.md"
+    report_path.write_text(report, encoding="utf-8")
+    print(report)
+    print(f"Report: {report_path.relative_to(base_dir)}")
+    return 0
+
+
 def load_corpus_grammars(base_dir):
     """Corpus grammar loading: if the opened knowledge base carries a
     grammars.py at its root, import it — its @register decorators fill
@@ -2263,6 +2300,14 @@ def main(argv=None):
     sub.add_parser("terms",
                    help="scan all docs for capitalized terms the glossary "
                         "cannot resolve (owner consolidation list)")
+    receipts_parser = sub.add_parser(
+        "receipts",
+        help="sweep every carried quote in canon against its cited "
+             "source — stale quotes named with what they were hiding "
+             "(no DB needed)")
+    receipts_parser.add_argument(
+        "--branch", default=None,
+        help="sweep a branch's own line of truth instead of canon")
     docs_parser = sub.add_parser(
         "docs",
         help="print a packaged engine record — design records (the "
@@ -2444,6 +2489,8 @@ def main(argv=None):
         return cmd_corpus(base_dir)
     if args.command == "terms":
         return cmd_terms(base_dir)
+    if args.command == "receipts":
+        return cmd_receipts(base_dir, branch=args.branch)
     if args.command == "delta":
         return cmd_delta(base_dir, args.database, args.sync_bodies,
                          branch=args.branch)

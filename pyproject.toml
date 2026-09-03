@@ -6,7 +6,7 @@
 # (See README, "Why the package is called `graph`".)
 [project]
 name = "ghostwheel"
-version = "0.38.0"
+version = "0.39.0"
 description = "Ghostwheel: a project-agnostic knowledge-graph engine — two-layer ontology, deterministic export/restore, reviewed delta rounds with a diff gate, a chained event log, and visibility lenses."
 requires-python = ">=3.11"
 dependencies = ["pyyaml", "neo4j"]

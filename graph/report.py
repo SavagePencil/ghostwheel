@@ -56,6 +56,8 @@ REF_KEYS = {
     # ground facts
     "machine-label-authored": "machine-made-kind",
     "row-receipt-authored": "row-as-receipt",
+    "receipt-unverified": "evidence-not-found",
+    "receipt-stale": "evidence-moved",
     "node-unnamed": "unnamed",
     "edge-endpoint-unnamed": "unnamed",
     "derived-edge-authored": "machine-managed-link",
@@ -154,18 +156,33 @@ class DeltaReport:
 
 
 def _advisories_tail(report):
-    """The advisories section, appended after the report body (it renders
-    for empty and non-empty changesets alike)."""
+    """The advisories sections, appended after the report body (they
+    render for empty and non-empty changesets alike). Roster gaps keep
+    their own explanatory frame; every other advisory kind renders
+    under a neutral for-the-record section."""
     if not report.advisories:
         return ""
-    return (
-        "\n## Advisories — the branch's roster, for the record\n\n"
-        "These registered program files have no citizen on this "
-        "branch yet. A branch mid-rebuild is incomplete by design, "
-        "so these do not block its rounds — the roster check "
-        "returns to full strength when the branch stands for "
-        "succession.\n\n"
-        + "".join(f"- {advisory}\n" for advisory in report.advisories))
+    roster = [a for a in report.advisories
+              if getattr(a, "code", "unclassified") in ("roster-gap",
+                                                        "unclassified")]
+    other = [a for a in report.advisories if a not in roster]
+    tail = ""
+    if roster:
+        tail += (
+            "\n## Advisories — the branch's roster, for the record\n\n"
+            "These registered program files have no citizen on this "
+            "branch yet. A branch mid-rebuild is incomplete by design, "
+            "so these do not block its rounds — the roster check "
+            "returns to full strength when the branch stands for "
+            "succession.\n\n"
+            + "".join(f"- {advisory}\n" for advisory in roster))
+    if other:
+        tail += (
+            "\n## Advisories — for the record\n\n"
+            "Nothing below blocks this round; each item is something "
+            "the owner should hear while already looking.\n\n"
+            + "".join(f"- {advisory}\n" for advisory in other))
+    return tail
 
 
 def render_markdown(report):

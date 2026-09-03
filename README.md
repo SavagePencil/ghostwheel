@@ -51,7 +51,10 @@ New here, or wondering what a "floor", "round", or "lens" is? The glossary — a
 lay tier and the working vocabulary beneath it — lives in
 `python -m graph docs north-star-workflow`. A knowledge
 base's own domain terms live on the graph itself (`python -m graph terms`; every
-citizen carries its own doc).
+citizen carries its own doc). Carried source quotes stay honest via
+`python -m graph receipts` — a DB-free sweep that names every stale quote with
+what it was hiding (an honest home beneath, or intake debt), while the delta
+gate refuses a freshly authored quote its cited source does not contain.
 
 ## Why the package is called `graph`
 
