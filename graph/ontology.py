@@ -991,11 +991,23 @@ def check_ontology(ontology):
                 or not all(isinstance(s, str) for s in spec["subtypes"])):
             problem(ERROR, loc, "'subtypes' must be a list of citizen names")
 
+        # A label's citizens come from exactly one place: a source file,
+        # an inline values list, referencing cells (implicit) — or, for a
+        # RELEASED label, from rounds alone: an explicit reader with no
+        # source says the label's files are gone and every citizen
+        # carries its own body (the shape canon holds after a source
+        # unregistration; the lift reads it the same way).
+        released = bool(spec.get("reader")) and not spec.get("source")
         origins = sum(1 for k in ("source", "values", "implicit")
-                      if spec.get(k))
+                      if spec.get(k)) + (1 if released else 0)
         if origins != 1:
             problem(ERROR, loc,
-                    "node needs exactly one of source / values / implicit")
+                    "node needs exactly one of source / values / implicit "
+                    "/ reader-without-source (a released label whose "
+                    "citizens arrive by rounds and carry their own bodies)")
+        if released and spec["reader"] not in KNOWN_READERS:
+            problem(ERROR, loc, f"unknown reader '{spec['reader']}' "
+                    f"(known: {sorted(KNOWN_READERS)})")
 
         header = []
         if spec.get("source"):
