@@ -41,6 +41,7 @@ APPROVAL_FILE = "approval.json"
 APPLIED_FILE = "applied.json"
 INVERSE_FILE = "inverse.json"
 STITCH_FILE = "stitch.json"
+ATTRIBUTION_FILE = "attribution.json"
 
 
 # -- canonical delta document ---------------------------------------------
@@ -76,7 +77,54 @@ def serialize_delta(delta):
         # pre-stitch round's archived document still hashes to the id
         # its event-log entry recorded
         doc["stitch"] = [_edge_doc(e) for e in delta.stitch]
+    if delta.attribution:
+        # Recorded attribution (the provenance-recording rung): present
+        # only when the round declares links, so every earlier round's
+        # archived document still hashes to its recorded id. Riding
+        # inside the approved bytes puts each link under the approval's
+        # tamper coverage and in front of the diff gate.
+        doc["attribution"] = sorted(
+            (attribution_row(r) for r in delta.attribution),
+            key=lambda r: (r["source"], r["locator"], r["claim"]))
     return json.dumps(doc, ensure_ascii=False, sort_keys=True, indent=1)
+
+
+# the keys an attribution row may carry: the claim's home in its source
+# (path, content-addressed locator, the sentence itself as the
+# re-locating quote) and the citizens it attests; surface and grade are
+# historical color from the judgment that proposed the link
+_ATTRIBUTION_REQUIRED = ("source", "locator", "claim", "citizens")
+_ATTRIBUTION_OPTIONAL = ("surface", "grade")
+
+
+def attribution_row(doc):
+    """One claim→citizen link in canonical form. Raises ValueError on a
+    row that cannot be recorded as written — collated by the caller."""
+    if not isinstance(doc, dict):
+        raise ValueError(
+            f"a link must be an object, not a {type(doc).__name__}")
+    for key in _ATTRIBUTION_REQUIRED:
+        if key not in doc:
+            raise ValueError(f"a link is missing its '{key}'")
+    citizens = doc["citizens"]
+    if (not isinstance(citizens, list) or not citizens
+            or not all(isinstance(c, (list, tuple)) and len(c) == 2
+                       and all(isinstance(part, str) and part
+                               for part in c)
+                       for c in citizens)):
+        raise ValueError(
+            "a link's 'citizens' must be a non-empty list of "
+            "[kind, name] pairs")
+    for key in ("source", "locator", "claim"):
+        if not isinstance(doc[key], str) or not doc[key].strip():
+            raise ValueError(f"a link's '{key}' must be non-empty text")
+    row = {"source": doc["source"], "locator": doc["locator"],
+           "claim": doc["claim"],
+           "citizens": [[c[0], c[1]] for c in citizens]}
+    for key in _ATTRIBUTION_OPTIONAL:
+        if doc.get(key):
+            row[key] = str(doc[key])
+    return row
 
 
 def parse_delta(text):
@@ -92,6 +140,7 @@ def parse_delta(text):
                                                 for k, v in c.items()})
                            for d, c in doc["edges_changed"]]
     delta.stitch = [_edge_from_doc(d) for d in doc.get("stitch", [])]
+    delta.attribution = [dict(d) for d in doc.get("attribution", [])]
     return delta
 
 
@@ -265,7 +314,7 @@ def divergence(pinned, current):
     problems = []
     for section in ("nodes_added", "nodes_removed", "nodes_changed",
                     "edges_added", "edges_removed", "edges_changed",
-                    "stitch"):
+                    "stitch", "attribution"):
         pinned_items = {json.dumps(item, ensure_ascii=False, sort_keys=True,
                                    default=list)
                         for item in json.loads(
@@ -430,6 +479,37 @@ def read_stitch(base_dir, branch=None):
     return [_edge_from_doc(d) for d in doc]
 
 
+def read_attribution_file(base_dir, branch=None):
+    """The round's declared claim→citizen links — the author files them
+    at proposals/current/attribution.json (a JSON list of link rows:
+    source, locator, claim, citizens, optional surface/grade) beside
+    the scratch work that used them. Absent file = a round that records
+    no links. Raises ValueError naming every malformed row at once."""
+    path = current_dir(base_dir, branch) / ATTRIBUTION_FILE
+    if not path.exists():
+        return []
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(doc, list):
+        raise ValueError(
+            f"Attempted to read the attribution file ({ATTRIBUTION_FILE}) "
+            "as a list of links. Failed due to: the file holds a "
+            f"{type(doc).__name__} instead — write a JSON list of "
+            "objects with source, locator, claim, citizens, and "
+            "optional surface and grade.")
+    rows, problems = [], []
+    for position, entry in enumerate(doc, start=1):
+        try:
+            rows.append(attribution_row(entry))
+        except ValueError as exc:
+            problems.append(f"link {position}: {exc}")
+    if problems:
+        raise ValueError(
+            f"Attempted to read the attribution file ({ATTRIBUTION_FILE}). "
+            "Failed due to: " + "; ".join(problems)
+            + " — fix each named link, then re-run the delta.")
+    return rows
+
+
 def write_json(path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2,
@@ -519,6 +599,45 @@ def read_branch_fork(base_dir, branch):
             except ValueError:
                 return None
     return None
+
+
+# The attribution ledger: the current recorded claim→citizen links,
+# folded from each applied round's attribution block — an applied.log
+# twin (same home, same archive/succession copy semantics). Rows carry
+# the sequence of the round that recorded them; when the same claim is
+# recorded again, the later row is the ruling that stands.
+ATTRIBUTION_LOG = "attribution.jsonl"
+
+
+def attribution_log_path(base_dir, branch=None):
+    if branch is None:
+        return Path(base_dir) / "graph" / PROPOSALS / ATTRIBUTION_LOG
+    return branch_home(base_dir, branch) / ATTRIBUTION_LOG
+
+
+def read_attribution_log(base_dir, branch=None):
+    """The line's recorded links, in fold order (later rows supersede
+    earlier rows for the same claim — the audit applies that rule)."""
+    path = attribution_log_path(base_dir, branch)
+    if not path.exists():
+        return []
+    return [json.loads(line)
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.startswith("#")]
+
+
+def append_attribution_log(base_dir, rows, sequence, branch=None):
+    """Fold one applied round's links into the ledger, stamped with the
+    round's event-log sequence."""
+    if not rows:
+        return
+    path = attribution_log_path(base_dir, branch)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps({**row, "sequence": sequence},
+                                    ensure_ascii=False, sort_keys=True)
+                         + "\n")
 
 
 def append_applied_log(base_dir, delta_hash, base_before, base_after,

@@ -959,11 +959,31 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                 f"Failed due to: {exc}"),
             remedy="Fix or remove the stitch file, then re-run the delta.",
             data={"path": f"{stitch_rel}/{proposal_mod.STITCH_FILE}"})
+    # recorded attribution: the round's declared claim→citizen links
+    # ride inside the changeset, so the approval covers them and the
+    # gate shows them being ruled
+    attribution_problem = None
+    try:
+        changes.attribution = proposal_mod.read_attribution_file(
+            base_dir, branch)
+    except (ValueError, KeyError) as exc:
+        attribution_rel = proposal_mod.current_dir(
+            base_dir, branch).relative_to(base_dir)
+        attribution_problem = report_mod.Verdict(
+            code="attribution-file-unreadable",
+            message=str(exc),
+            remedy="Fix or remove the attribution file, then re-run "
+                   "the delta.",
+            data={"path": f"{attribution_rel}/"
+                          f"{proposal_mod.ATTRIBUTION_FILE}"})
     violations = delta_mod.lint_verdicts(changes, base)
     ceremony_items = delta_mod.ceremony_records(changes, base)[0]
     if stitch_problem:
         violations.append(stitch_problem)
+    if attribution_problem:
+        violations.append(attribution_problem)
     violations += delta_mod.stitch_verdicts(changes, scratch)
+    violations += delta_mod.attribution_verdicts(changes, base)
     violations += delta_mod.body_sync_verdicts(scratch, base_dir)
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
@@ -1161,8 +1181,18 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         text = f"REFUSED: the round's stitch file is unreadable — {exc}"
         print(text, file=sys.stderr)
         return bail("stitch-file-unreadable", text)
+    try:
+        changes.attribution = proposal_mod.read_attribution_file(
+            base_dir, branch)
+    except (ValueError, KeyError) as exc:
+        text = ("REFUSED: the round's attribution file is unreadable — "
+                f"{exc}")
+        print(text, file=sys.stderr)
+        return bail("attribution-file-unreadable", text)
     violations = delta_mod.lint(changes, base)
     violations += delta_mod.lint_stitch(changes, scratch)
+    violations += [str(v)
+                   for v in delta_mod.attribution_verdicts(changes, base)]
     if violations:
         text = ("REFUSED: the delta has ground-facts lint violations — "
                 "fix scratch first (python -m graph delta):")
@@ -1186,6 +1216,9 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         if changes.stitch:
             counts += (f"; {len(changes.stitch)} stitched (land after "
                        "re-derivation)")
+        if changes.attribution:
+            counts += (f"; {len(changes.attribution)} attribution links "
+                       "recorded")
         print(f"Changeset vs {target_label}: {counts}")
         print("Approval on record: "
               + ("yes" if approval_path.exists() else
@@ -1362,6 +1395,13 @@ def cmd_canonize(base_dir, database, apply, branch=None):
                         base_after, git_ref(base_dir), branch=branch)
     chain = proposal_mod.append_applied_log(
         base_dir, approval["delta_hash"], base_before, base_after, branch)
+    # fold the round's recorded attribution into the line's ledger,
+    # stamped with the round's sequence — the approved links become
+    # the record the census audits
+    if pinned_delta.attribution:
+        sequence = proposal_mod.read_applied_log(base_dir, branch)[-1][0]
+        proposal_mod.append_attribution_log(
+            base_dir, pinned_delta.attribution, sequence, branch)
     proposal_mod.write_json(current / proposal_mod.APPLIED_FILE,
                             {"delta_hash": approval["delta_hash"],
                              "base_after": base_after,
@@ -1709,6 +1749,22 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
                 "version and the log would disagree")
         chain = proposal_mod.append_applied_log(
             base_dir, record_hash, canon_before, canon_after)
+        # the adopted line's recorded attribution rides the adoption.
+        # Unlike the event log (a chain that continues unbroken), the
+        # ledger is current state, like the export: the superseded
+        # line's links describe the superseded line, so they survive
+        # only in the archive — canon's ledger becomes the branch's
+        # rows, re-stamped with the adoption's own sequence (the
+        # adoption IS the round that made those links canon).
+        branch_links = proposal_mod.read_attribution_log(base_dir, branch)
+        canon_ledger = proposal_mod.attribution_log_path(base_dir)
+        canon_ledger.unlink(missing_ok=True)
+        if branch_links:
+            proposal_mod.append_attribution_log(
+                base_dir,
+                [{k: v for k, v in row.items() if k != "sequence"}
+                 for row in branch_links],
+                sequence)
         succession_mod.adoption_marker_path(base_dir, branch).write_text(
             text, encoding="utf-8")
     except Exception as exc:

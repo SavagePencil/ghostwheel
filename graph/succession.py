@@ -24,8 +24,9 @@ import json
 import shutil
 
 from .proposal import (branch_home, content_hash, current_dir, export_dir,
-                       applied_log_path, parse_delta, proposals_dir,
-                       read_applied_log, read_branch_fork, read_json)
+                       applied_log_path, attribution_log_path, parse_delta,
+                       proposals_dir, read_applied_log, read_branch_fork,
+                       read_json)
 
 # The adoption record, twice: adoption.json archived with canon's rounds
 # (the ceremony's durable side), adopted.json in the branch home (the
@@ -139,9 +140,14 @@ def archive_line(base_dir, archive_branch):
     log = applied_log_path(base_dir)
     if log.exists():
         shutil.copy2(log, applied_log_path(base_dir, archive_branch))
+    ledger = attribution_log_path(base_dir)
+    if ledger.exists():
+        shutil.copy2(ledger, attribution_log_path(base_dir,
+                                                  archive_branch))
     src_rounds = proposals_dir(base_dir)
     dst_rounds = proposals_dir(base_dir, archive_branch)
-    skip = {current_dir(base_dir).name, applied_log_path(base_dir).name}
+    skip = {current_dir(base_dir).name, applied_log_path(base_dir).name,
+            attribution_log_path(base_dir).name}
     if src_rounds.is_dir():
         for entry in sorted(src_rounds.iterdir()):
             if entry.name in skip:

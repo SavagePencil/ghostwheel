@@ -44,13 +44,17 @@ class Delta:
     edges_removed: list = field(default_factory=list)  # Edge (props are the before-image)
     edges_changed: list = field(default_factory=list)  # (Edge after, {prop: (before, after)})
     stitch: list = field(default_factory=list)         # Edge — lands after re-derivation (the stitch mechanism)
+    attribution: list = field(default_factory=list)    # claim→citizen link rows (recorded provenance)
 
     @property
     def empty(self):
+        # a links-only round is a real proposal: recording provenance
+        # for already-authored citizens changes no ground but is a
+        # ruling all the same
         return not (self.nodes_added or self.nodes_removed
                     or self.nodes_changed or self.edges_added
                     or self.edges_removed or self.edges_changed
-                    or self.stitch)
+                    or self.stitch or self.attribution)
 
 
 def read_graph(config):
@@ -902,6 +906,47 @@ def stitch_verdicts(delta, scratch):
                     "there like any other ground fact and it will ride the "
                     "main changeset."),
                 remedy="Author it in scratch like any other ground fact."))
+    return violations
+
+
+def attribution_verdicts(delta, base=None):
+    """Recorded-attribution lint: every link the round declares must be
+    recordable as written — well-formed, and naming citizens that will
+    exist in the graph this round produces (present in the base or born
+    by this round's own additions). A link to nowhere refuses by name;
+    provenance recorded against a citizen that is not there would be a
+    guess wearing a record's clothes."""
+    from .proposal import attribution_row
+    violations = []
+    base_nodes = base.nodes if base is not None else {}
+    born = {(label, name) for label, name, _ in delta.nodes_added}
+    for position, row in enumerate(delta.attribution, start=1):
+        try:
+            row = attribution_row(row)
+        except ValueError as exc:
+            violations.append(Verdict(
+                code="attribution-row-malformed",
+                message=(
+                    f"Attempted to record attribution link {position}. "
+                    f"Failed due to: {exc}."),
+                remedy="Fix the link in the attribution file, then "
+                       "re-run the delta."))
+            continue
+        for label, name in row["citizens"]:
+            if (label, name) in base_nodes or (label, name) in born:
+                continue
+            violations.append(Verdict(
+                code="attribution-home-missing",
+                subject=CitizenRef(label, name),
+                message=(
+                    f"Attempted to record that the claim "
+                    f"\"{row['claim']}\" lives with ({label}) {name}. "
+                    "Failed due to: no such citizen exists in the graph "
+                    "this round produces — a recorded link must point at "
+                    "a real home. Author the citizen in this round, or "
+                    "correct the link."),
+                remedy="Author the citizen in this round, or correct "
+                       "the link in the attribution file."))
     return violations
 
 
