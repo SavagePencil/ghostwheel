@@ -256,14 +256,20 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
           "the backup it was restored from.")
     from . import proposal as proposal_mod
     from . import workspace as workspace_mod
-    role = ("inspection" if from_dir
+    copy_of = (_branch_copy_of(base_dir, export_dir, database, config)
+               if from_dir else None)
+    role = (("working-copy" if copy_of else "inspection") if from_dir
             else "working-copy" if database else "canon")
     workspace_mod.stamp(config, role,
                         proposal_mod.base_identity(graph),
-                        git_ref(base_dir))
-    if database and not from_dir:
-        # a custom export is an inspection load, never a round cut
-        pin_round(base_dir, graph, database)
+                        git_ref(base_dir), branch=copy_of)
+    if database and (not from_dir or copy_of):
+        # a custom export is an inspection load, never a round cut —
+        # unless it is a branch's OWN backup entering the branch's OWN
+        # authoring copy: that IS the branch's round cut (the very flow
+        # the branch-cut guidance prints), and the round gate reads the
+        # stamp and base pin this leaves behind.
+        pin_round(base_dir, graph, database, branch=copy_of)
     return 0
 
 
@@ -690,6 +696,28 @@ def _authoring_database(database, branch, config=None):
     named = (config or {}).get("NEO4J_SCRATCH_DATABASE", "").strip()
     default = named or "scratch"
     return default if branch is None else f"{branch}-{default}"
+
+
+def _branch_copy_of(base_dir, export_path, database, config):
+    """The branch whose round this --from cut serves, or None. A cut is a
+    branch's ROUND CUT exactly when it loads the branch's OWN backup into
+    the branch's OWN authoring copy — the flow the branch-cut guidance
+    prints. Every other --from load is an inspection."""
+    from . import proposal as proposal_mod
+    if database is None:
+        return None
+    branches_root = base_dir / "graph" / "branches"
+    if not branches_root.is_dir():
+        return None
+    resolved = Path(export_path).resolve()
+    for home in sorted(branches_root.iterdir()):
+        if not home.is_dir():
+            continue
+        name = home.name
+        if resolved == proposal_mod.export_dir(base_dir, name).resolve() \
+                and database == _authoring_database(None, name, config):
+            return name
+    return None
 
 
 def _working_copy_check(base_dir, config, database, branch):
