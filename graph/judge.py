@@ -48,6 +48,14 @@ _SENTENCE_END = re.compile(
     r"(?<=[.!?])(?<!\bvs\.)(?<!\be\.g\.)(?<!\bi\.e\.)(?<!\betc\.)\s+")
 _MARKUP = re.compile(r"[*_`#>|]")
 _HORIZONTAL_RULE = re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$")
+# a markdown link or image: the text survives the fold as prose, the
+# target never does (a pointer is not wording)
+_LINK = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+# a unit that is nothing but links (a table of contents entry, a
+# navigation list item, a bare image) — structure pointing at content,
+# asserting nothing
+_PURE_LINKS = re.compile(r"^\s*(?:!?\[[^\]]*\]\([^)]*\)\s*[,;:]?\s*)+$")
+_LIST_MARKER = re.compile(r"^\s*(?:[-+*]|\d+\.)\s+(.*)$")
 
 
 @dataclass
@@ -84,7 +92,11 @@ def claims_of(text):
     rejoin within their paragraph (a sentence broken across lines is one
     claim); a list item starts a new unit. Markup folds, whitespace
     collapses, case and trailing punctuation normalize — wording
-    survives, formatting does not (the bar frees formatting)."""
+    survives, formatting does not (the bar frees formatting). A link
+    folds to its text (the target is a pointer, never wording), and a
+    unit that is nothing but links — a table-of-contents entry, a
+    navigation bullet, a bare image — is structure pointing at content
+    and asserts nothing: no claim."""
     units = []
     current = []
 
@@ -98,16 +110,21 @@ def claims_of(text):
                 _HORIZONTAL_RULE.match(raw_line):
             flush()
             continue  # headings and dividers are structure, never claims
-        line = _MARKUP.sub("", raw_line).strip()
+        # the list marker is read on the RAW line, before any fold, so a
+        # star bullet is a list item like a dash bullet (the fold would
+        # otherwise eat the star and glue the item to its neighbour)
+        marker = _LIST_MARKER.match(raw_line)
+        content = marker.group(1) if marker else raw_line
+        if _PURE_LINKS.match(content):
+            flush()
+            continue  # a pure link points at content; it asserts nothing
+        line = _MARKUP.sub("", _LINK.sub(r"\1", content)).strip()
         if not line:
             flush()
             continue
-        marker = re.match(r"^\s*(?:[-+]|\d+\.)\s+(.*)$", line)
         if marker:
             flush()
-            current.append(marker.group(1))
-        else:
-            current.append(line)
+        current.append(line)
     flush()
 
     claims = []
