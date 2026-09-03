@@ -24,13 +24,59 @@ import json
 import shutil
 
 from .proposal import (branch_home, content_hash, current_dir, export_dir,
-                       applied_log_path, proposals_dir, read_json)
+                       applied_log_path, parse_delta, proposals_dir,
+                       read_applied_log, read_branch_fork, read_json)
 
 # The adoption record, twice: adoption.json archived with canon's rounds
 # (the ceremony's durable side), adopted.json in the branch home (the
-# marker the working-round guards read).
+# marker the working-round guards read). Beside the record: the
+# divergence summary — the superseded line's post-fork rounds, so a
+# carry-forward round starts from an enumerated worklist instead of a
+# hand-rolled export diff.
 ADOPTION_FILE = "adoption.json"
 ADOPTION_MARKER = "adopted.json"
+DIVERGENCE_FILE = "divergence.json"
+
+
+def post_fork_rounds(base_dir, branch):
+    """(fork_known, rounds): the rounds the line being superseded
+    applied AFTER this branch's fork — the rulings that will NOT ride
+    the adoption. rounds = [(sequence, delta_hash)]. A branch cut
+    before fork annotations existed has no fork point on record:
+    (False, []) — the advisory degrades honestly."""
+    fork_record = read_branch_fork(base_dir, branch)
+    if not isinstance(fork_record, dict) or "canon_sequence" not in fork_record:
+        return False, []
+    fork = fork_record["canon_sequence"]
+    return True, [(seq, delta_hash)
+                  for seq, delta_hash, *_rest in read_applied_log(base_dir)
+                  if seq > fork]
+
+
+def divergence_summary(base_dir, rounds):
+    """One row per post-fork round: sequence, id, and the delta's
+    summary counts read from the archived round dir (None when the
+    archive holds no readable changeset — an adoption entry, or a
+    pruned round)."""
+    rows = []
+    for seq, delta_hash in rounds:
+        row = {"sequence": seq, "id": delta_hash[:12]}
+        delta_path = (proposals_dir(base_dir) / delta_hash[:12]
+                      / "delta.json")
+        try:
+            delta = parse_delta(delta_path.read_text(encoding="utf-8"))
+            row["summary"] = {
+                "nodes_added": len(delta.nodes_added),
+                "nodes_changed": len(delta.nodes_changed),
+                "nodes_removed": len(delta.nodes_removed),
+                "edges_added": len(delta.edges_added),
+                "edges_changed": len(delta.edges_changed),
+                "edges_removed": len(delta.edges_removed),
+            }
+        except (OSError, ValueError, KeyError):
+            row["summary"] = None
+        rows.append(row)
+    return rows
 
 
 def adoption_marker_path(base_dir, branch):

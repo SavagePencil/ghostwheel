@@ -481,6 +481,46 @@ def next_log_sequence(base_dir, branch=None):
     return entries[-1][0] + 1 if entries else 1
 
 
+# A branch's fork annotation: a comment line in the branch's own event
+# log (comments are chain-inert and the log rides every archive copy),
+# recording where CANON's log stood at the cut. This is the fork point
+# succession's divergence advisory enumerates from — no sidecar file.
+FORK_PREFIX = "# fork "
+
+LOG_HEADER = (
+    "# The event log: one chained line per applied round —\n"
+    "# seq, delta hash, base identity before/after, predecessor's\n"
+    "# chain hash, this entry's chain hash. Rewriting any entry\n"
+    "# breaks every later link.\n")
+
+
+def write_branch_fork(base_dir, branch, record):
+    """Annotate a freshly cut branch's event log with its fork record.
+    Creates the log (standard header first) when the cut precedes the
+    branch's first round — append_applied_log then appends beneath."""
+    path = applied_log_path(base_dir, branch)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    prefix = "" if path.exists() else LOG_HEADER
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write(prefix + FORK_PREFIX + json.dumps(
+            record, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def read_branch_fork(base_dir, branch):
+    """The branch's fork record, or None for a branch cut before fork
+    annotations existed (the advisory then degrades honestly)."""
+    path = applied_log_path(base_dir, branch)
+    if not path.exists():
+        return None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith(FORK_PREFIX):
+            try:
+                return json.loads(line[len(FORK_PREFIX):])
+            except ValueError:
+                return None
+    return None
+
+
 def append_applied_log(base_dir, delta_hash, base_before, base_after,
                        branch=None):
     """One chained entry per applied round: each names its predecessor's
@@ -494,11 +534,7 @@ def append_applied_log(base_dir, delta_hash, base_before, base_after,
     path = applied_log_path(base_dir, branch)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            "# The event log: one chained line per applied round —\n"
-            "# seq, delta hash, base identity before/after, predecessor's\n"
-            "# chain hash, this entry's chain hash. Rewriting any entry\n"
-            "# breaks every later link.\n", encoding="utf-8")
+        path.write_text(LOG_HEADER, encoding="utf-8")
     with open(path, "a", encoding="utf-8") as handle:
         handle.write(f"{seq} {delta_hash} {base_before} {base_after} "
                      f"{prev_chain} {chain}\n")
