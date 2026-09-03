@@ -1199,6 +1199,17 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
             roster_advisories = roster_verdicts
         else:
             violations += roster_verdicts
+        # The answer keys: every key this round touches — the key itself,
+        # its CHECKS edge, or the body of the program it holds still — is
+        # re-run over the round's own graph. Refusal on the live line,
+        # advisory on a branch (a program may land before its table).
+        from . import answer_keys as answer_keys_mod
+        key_verdicts = answer_keys_mod.gate_verdicts(
+            changes, scratch, ontology, base_dir, advisory=advisory)
+        if advisory:
+            roster_advisories = roster_advisories + key_verdicts
+        else:
+            violations += key_verdicts
     # The stitch mechanism: preview the stitch's landing against the graph this round
     # will actually produce (changeset applied, machine layers
     # re-derived) — the diff gate must never approve a connection that
@@ -2553,6 +2564,30 @@ def cmd_receipts(base_dir, branch=None):
     return 0
 
 
+def cmd_answer_keys(base_dir, branch=None):
+    """The answer-key sweep: every Answer Key citizen on canon re-run
+    against canon's program bodies and the approved tables on disk —
+    the fidelity net, DB-free. A program that drifted from its table,
+    or a key that cannot be checked, fails the sweep by name (exit 1);
+    the record lands beside the prose either way."""
+    from . import answer_keys as answer_keys_mod
+    from . import report as report_mod
+    from .ontology import ontology_from_graph
+    try:
+        base = canon_base(base_dir, branch)
+    except FileNotFoundError as exc:
+        print("Attempted to read the committed backup for the answer-key "
+              f"sweep. Failed due to: {exc}.", file=sys.stderr)
+        return 1
+    ontology = ontology_from_graph(base, base_dir)
+    rows = answer_keys_mod.canon_check(base, ontology, base_dir)
+    doc = answer_keys_mod.answer_keys_report(base_dir, rows, branch)
+    report_mod.write_record(base_dir, answer_keys_mod.ANSWER_KEYS_REPORT_FILE,
+                            doc)
+    print(answer_keys_mod.render_report(doc))
+    return 0 if doc["passed"] else 1
+
+
 def load_corpus_grammars(base_dir):
     """Corpus grammar loading: if the opened knowledge base carries a
     grammars.py at its root, import it — its @register decorators fill
@@ -2695,6 +2730,14 @@ def main(argv=None):
              "source — stale quotes named with what they were hiding "
              "(no DB needed)")
     receipts_parser.add_argument(
+        "--branch", default=None,
+        help="sweep a branch's own line of truth instead of canon")
+    answer_keys_parser = sub.add_parser(
+        "answer-keys",
+        help="re-run every answer key on canon: each program held to its "
+             "approved table, from the committed backup and the tables on "
+             "disk (no DB needed); a drift or an uncheckable key fails")
+    answer_keys_parser.add_argument(
         "--branch", default=None,
         help="sweep a branch's own line of truth instead of canon")
     docs_parser = sub.add_parser(
@@ -2880,6 +2923,8 @@ def main(argv=None):
         return cmd_terms(base_dir)
     if args.command == "receipts":
         return cmd_receipts(base_dir, branch=args.branch)
+    if args.command == "answer-keys":
+        return cmd_answer_keys(base_dir, branch=args.branch)
     if args.command == "delta":
         return cmd_delta(base_dir, args.database, args.sync_bodies,
                          branch=args.branch)

@@ -28,6 +28,7 @@
 {"from": {"label": "[Section]", "name": "What the citizens are"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "CITES"}
 {"from": {"label": "[Section]", "name": "What worlds do with the conduct"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "CITES"}
 {"from": {"label": "Archetype", "name": "Answer"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Answer Key"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "Approved Omission"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "Audience"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
@@ -69,6 +70,7 @@
 {"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Cited"}, "type": "FOLLOWS"}
 {"from": {"label": "Archetype", "name": "Transcribed"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "FOLLOWS"}
 {"from": {"label": "Archetype", "name": "Answer"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Answer Key"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Approved Omission"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Completeness"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "Audience"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}

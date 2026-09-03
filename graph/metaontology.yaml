@@ -72,7 +72,9 @@
 #                   Stateful facet's edge vocabulary. HAS_DISCIPLINE /
 #                   HAS_AUDIENCE route Judgment rows to the project's
 #                   Discipline / Audience citizens (one system, shared
-#                   names).
+#                   names). CHECKS (Answer Key -> Procedure): an authored
+#                   ground edge naming the program a fidelity check holds
+#                   to its approved table.
 # Engine-stamped:   'Metaontology' and 'Ontology' Archetypes
 #                   (under Provenance) carry version + content
 #                   fingerprint — the self-description slice;
@@ -91,7 +93,17 @@
 # Concept-rooted Archetype, folded into INSTANCE_OF at derivation — so a
 # designer can declare that one citizen is an instance of several concepts
 # at once. Additive vocabulary only; MINOR bump.
-version: "0.13.0"
+# Ledger — 0.14.0 (answer keys enter the kernel): the fidelity net that
+# holds a table to its approved program — a transitions ladder walk, a
+# thresholds pattern, a recompute of worked examples — was a bootstrap
+# declaration living only in a consuming corpus's schema file and run only
+# by from-sources validation. It becomes a Judgment citizen, Answer Key,
+# with one CHECKS edge to the Procedure it holds still, so the net runs
+# from canon: at the delta gate when a round touches the key or the
+# checked program's body, and as the DB-free `answer-keys` sweep. The
+# engine owns the check, so the engine owns the vocabulary. Additive;
+# MINOR bump.
+version: "0.14.0"
 
 roots:
   Concept: >-
@@ -154,6 +166,21 @@ concepts:
       An editorial ruling at the parity gates: this claim of a source is
       deliberately absent from its regeneration and passes forever
       after. The claim-diff judge consults these rows.
+  Answer Key:
+    instance_of: Judgment
+    doc: >-
+      A fidelity net between an approved program and an approved table:
+      the program's derived facts must equal the table's rows. Three
+      kinds — transitions (the program's ladder walk equals the table's
+      from/to rows), thresholds (each table row's condition appears
+      verbatim in the program's branch case), recompute (each worked
+      example's asserted numbers recompute from the approved tables).
+      A citizen carries its kind, its table, and the remaining
+      declaration as JSON, and one CHECKS edge to the Procedure it holds
+      still. The engine re-runs every key at the delta gate when a
+      round touches the key or the checked program's body, and on
+      demand as the answer-keys sweep; a table that drifts from its
+      program is named by the key that caught it.
   # Visibility vocabulary (kernel ceremony, the visibility lens design,
   # owner-ruled 2026-08-11): mechanized vocabulary lives with its
   # machinery — the engine owns the lens (graph/lens.py). The storybook

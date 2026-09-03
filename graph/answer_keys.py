@@ -1,9 +1,15 @@
-"""Ontology-declared derivation answer keys.
+"""Answer keys: the fidelity net between a program and its approved table.
 
-Each transcribed program's derived facts must equal its approved table —
-declared in the ontology's `answer_keys:` section, checked by ONE
-generic engine pass inside validate. A new procedure gets its fidelity
-net by adding a declaration; nobody hand-writes a test.
+Each transcribed program's derived facts must equal its approved table.
+The net has two homes and one check. On canon, a key is a kernel
+Judgment citizen (Answer Key) carrying its kind and table as props, the
+rest of its declaration as JSON, and one CHECKS edge to the Procedure it
+holds still; the check runs at the delta gate whenever a round touches a
+key or a checked program's body, and on demand as the DB-free
+`answer-keys` sweep, reading program bodies from canon. In a bootstrap
+schema file, the same declarations sit under `answer_keys:` and run
+inside from-sources validate against the program files. A new procedure
+gets its net by adding a key; nobody hand-writes a test.
 
 Three kinds:
 
@@ -43,8 +49,10 @@ import re
 from pathlib import Path
 
 from . import procedures
-from .ontology import (ERROR, WARNING, Category, Finding, Reader,
-                       concept_bindings, node_reader, source_files_of)
+from .ontology import (ERROR, KERNEL_ANSWER_KEY_LABEL,
+                       KERNEL_PROCEDURE_LABEL, WARNING, Category, Finding,
+                       Reader, concept_bindings, node_reader,
+                       source_files_of)
 from .parsers import EMPTY_MARKERS, name_variants
 
 KNOWN_KEY_FIELDS = {"procedure", "derives", "table",
@@ -53,6 +61,18 @@ KNOWN_KEY_FIELDS = {"procedure", "derives", "table",
                     "skip_values", "example_column", "components",
                     "result"}
 KNOWN_KINDS = {"transitions", "thresholds", "recompute"}
+# The canon home: a kernel Judgment citizen per declaration, its kind and
+# table as plain props, the rest of the declaration as JSON, and one
+# CHECKS edge to the Procedure it holds still.
+KEY_JSON_PROP = "key_json"
+CHECKS_EDGE = "CHECKS"
+ANSWER_KEYS_REPORT_FILE = "answer-keys-report.json"
+# verdict codes (designer-safe refs in report.REF_KEYS)
+HELD = "answer-key-held"
+DRIFT = str(Category.ANSWER_KEY)           # the category's own code
+INVALID = "answer-key-invalid"
+UNREADABLE = "answer-key-unreadable"
+PROCEDURE_MISSING = "answer-key-procedure-missing"
 # The subject facets that make a label a transition ladder: a value it
 # holds exactly one of (Exclusive) whose changes are rule-governed
 # (Stateful). Both present -> the label's surfaces are candidate subjects.
@@ -116,16 +136,29 @@ def _case_bodies(proc_spec):
 
 
 def check(ontology):
-    """Every declared answer key, verified. Findings collate — the
-    approver never fixes one to discover the next."""
-    findings = []
+    """Every answer key the bootstrap schema declares, verified against
+    the program FILES it registers — the from-sources path (validate).
+    Findings collate — the approver never fixes one to discover the
+    next."""
     if not ontology.answer_keys:
-        return findings
-    fname = str(ontology.path)
-    specs = _load_procedures(ontology)
-    surfaces = subject_surfaces(ontology)
-    for index, key in enumerate(ontology.answer_keys):
-        where = f"answer_keys[{index}]"
+        return []
+    return check_keys(ontology.answer_keys, _load_procedures(ontology),
+                      subject_surfaces(ontology), ontology.base_dir,
+                      str(ontology.path))
+
+
+def check_keys(keys, specs, surfaces, base_dir, fname, wheres=None):
+    """The check itself, fed from either home: `keys` are the
+    declarations (each naming its `procedure`), `specs` the parsed
+    programs by name (from files or from canon bodies), `surfaces` the
+    transition subjects, `base_dir` where the tables are read. A
+    declaration defect is an ERROR carrying the answer-key-invalid code
+    (a missing program its own, finer one); a program/table disagreement
+    is a WARNING under the category's own code."""
+    findings = []
+    base_dir = Path(base_dir)
+    for index, key in enumerate(keys):
+        where = wheres[index] if wheres else f"answer_keys[{index}]"
         if not isinstance(key, dict):
             findings.append(Finding(
                 ERROR, Category.ANSWER_KEY, fname, where,
@@ -149,10 +182,13 @@ def check(ontology):
             findings.append(Finding(
                 ERROR, Category.ANSWER_KEY, fname, where,
                 f"no transcribed procedure named '{proc_name}' — the "
-                "declaration and the procedure files disagree"))
+                "declaration and the programs disagree",
+                code="answer-key-procedure-missing",
+                remedy="Name a transcribed procedure that exists, or land "
+                       "the program first."))
             continue
         try:
-            rows = _table_rows(ontology.base_dir, key["table"])
+            rows = _table_rows(base_dir, key["table"])
         except OSError as exc:
             findings.append(Finding(
                 ERROR, Category.ANSWER_KEY, fname, where,
@@ -166,7 +202,10 @@ def check(ontology):
                                               where))
         else:
             findings.extend(_check_recompute(key, proc_name, spec, rows,
-                                             where, ontology.base_dir))
+                                             where, base_dir))
+    for finding in findings:
+        if finding.severity == ERROR and not finding.code:
+            finding.code = INVALID
     return findings
 
 
@@ -503,3 +542,215 @@ def _check_gate(concrete, row, example, prefix, subject, key, where,
             f"'{bearer}' now bears {prop} in {gate_lookup['table']} — "
             "the example's suppression no longer matches the data")]
     return []
+
+
+# --- the canon home: keys and programs read from the graph ---------------
+
+
+def procedure_labels(ontology):
+    """The labels whose citizens carry programs: the kernel's own
+    Procedure label plus every label bound to the Procedure concept or
+    read through the procedure reader."""
+    labels = {KERNEL_PROCEDURE_LABEL}
+    for label, spec in (ontology.nodes if ontology is not None else {}).items():
+        if not isinstance(spec, dict):
+            continue
+        if KERNEL_PROCEDURE_LABEL in concept_bindings(spec) or \
+                node_reader(spec) == Reader.PROCEDURE_YAML:
+            labels.add(label)
+    return labels
+
+
+def procedure_specs_from_graph(graph, ontology):
+    """{procedure name: parsed program} from the bodies canon's program
+    citizens carry — the same parse the file path performs, over the
+    graph copy (byte-identical to the file while a file exists, the
+    only copy once it does not)."""
+    specs = {}
+    labels = procedure_labels(ontology)
+    for (label, name), props in sorted(graph.nodes.items(),
+                                       key=lambda item: str(item[0])):
+        if label not in labels or not (props or {}).get("body"):
+            continue
+        proc_spec, errors = procedures.parse_procedure(props["body"])
+        if proc_spec is not None and not errors:
+            specs[str(proc_spec["procedure"]).strip()] = proc_spec
+    return specs
+
+
+def keys_from_graph(graph):
+    """Every Answer Key citizen as (name, declaration | None, problem):
+    the declaration is the citizen's JSON plus its kind and table props
+    plus the procedure its CHECKS edge names; a citizen whose JSON does
+    not parse, or that checks no program, comes back with the problem
+    named instead of a declaration."""
+    checks = {}
+    for edge in graph.edges:
+        if edge.type == CHECKS_EDGE and \
+                edge.from_label == KERNEL_ANSWER_KEY_LABEL:
+            checks.setdefault(edge.from_name, []).append(edge.to_name)
+    keys = []
+    for (label, name), props in sorted(graph.nodes.items(),
+                                       key=lambda item: str(item[0])):
+        if label != KERNEL_ANSWER_KEY_LABEL:
+            continue
+        props = props or {}
+        raw = props.get(KEY_JSON_PROP)
+        try:
+            declared = json.loads(raw) if raw not in (None, "") else {}
+        except (ValueError, TypeError):
+            keys.append((name, None, (UNREADABLE,
+                         "its declaration does not parse as JSON")))
+            continue
+        if not isinstance(declared, dict):
+            keys.append((name, None, (UNREADABLE,
+                         "its declaration must be a JSON mapping")))
+            continue
+        targets = checks.get(name, [])
+        if len(targets) != 1:
+            keys.append((name, None, (PROCEDURE_MISSING,
+                         "it checks no program" if not targets else
+                         f"it checks {len(targets)} programs; a key holds "
+                         "exactly one")))
+            continue
+        key = dict(declared)
+        key["procedure"] = targets[0]
+        if props.get("derives") is not None:
+            key["derives"] = props["derives"]
+        if props.get("table") is not None:
+            key["table"] = props["table"]
+        keys.append((name, key, None))
+    return keys
+
+
+def canon_check(graph, ontology, base_dir):
+    """Every Answer Key citizen re-run against canon's program bodies
+    and the tables on disk. Returns one row per key — name, procedure,
+    kind, table, status (held | drift | invalid), the verdict code and
+    its ref, and the findings as rows — the record the sweep writes and
+    the gate reads."""
+    from .report import ref_key
+    specs = procedure_specs_from_graph(graph, ontology)
+    surfaces = subject_surfaces(ontology) if ontology is not None else []
+    rows = []
+    for name, key, problem in keys_from_graph(graph):
+        row = {"name": name, "procedure": None, "derives": None,
+               "table": None, "findings": []}
+        if problem is not None:
+            code, detail = problem
+            finding = Finding(ERROR, Category.ANSWER_KEY,
+                              f"{KERNEL_ANSWER_KEY_LABEL}: {name}", "-",
+                              f"'{name}' cannot be checked: {detail}",
+                              code=code,
+                              remedy="Fix the citizen in a gated round.")
+            row.update(status="invalid", code=code, ref=ref_key(code),
+                       findings=[finding.row()], problems=[finding])
+            rows.append(row)
+            continue
+        row.update(procedure=key.get("procedure"),
+                   derives=key.get("derives"), table=key.get("table"))
+        findings = check_keys([key], specs, surfaces, base_dir,
+                              f"{KERNEL_ANSWER_KEY_LABEL}: {name}",
+                              wheres=[name])
+        errors = [f for f in findings if f.severity == ERROR]
+        if errors:
+            code = errors[0].verdict_code
+            status = "invalid"
+        elif findings:
+            code, status = DRIFT, "drift"
+        else:
+            code, status = HELD, "held"
+        row.update(status=status, code=code, ref=ref_key(code),
+                   findings=[f.row() for f in findings], problems=findings)
+        rows.append(row)
+    return rows
+
+
+def answer_keys_report(base_dir, rows, branch=None):
+    """The sweep as one record: counts per status, the pass flag, and
+    every key as a row (its findings inside)."""
+    from .report import record_header
+    doc = record_header(base_dir, "answer-keys-report", branch)
+    keys = [{k: v for k, v in row.items() if k != "problems"}
+            for row in rows]
+    counts = {status: sum(1 for r in rows if r["status"] == status)
+              for status in ("held", "drift", "invalid")}
+    doc.update(counts=counts, passed=not (counts["drift"] or
+                                          counts["invalid"]),
+               keys=keys)
+    return doc
+
+
+def render_report(doc):
+    """The human-facing sweep: every key named with its verdict, every
+    finding beneath the key that raised it."""
+    counts = doc["counts"]
+    lines = ["# Answer keys — every program held to its approved table",
+             "",
+             f"**{counts['held']} held · {counts['drift']} drifted · "
+             f"{counts['invalid']} invalid**", ""]
+    if not doc["keys"]:
+        lines += ["No answer keys on canon — nothing holds a program to a "
+                  "table yet.", ""]
+        return "\n".join(lines)
+    for row in doc["keys"]:
+        mark = {"held": "✓", "drift": "⚠", "invalid": "⚠"}[row["status"]]
+        what = (f"{row['procedure']} → {row['table']} ({row['derives']})"
+                if row["procedure"] else "unreadable declaration")
+        lines.append(f"- {mark} {row['status']} — '{row['name']}': {what}")
+        for finding in row["findings"]:
+            lines.append(f"    - {finding['message']}")
+    lines.append("")
+    if doc["passed"]:
+        lines += ["PASS — every program agrees with its approved table.",
+                  ""]
+    else:
+        lines += ["FAIL — a program and its approved table disagree, or a "
+                  "key cannot be checked; re-verify the program, then "
+                  "re-approve the table (or fix the key) in a gated "
+                  "round.", ""]
+    return "\n".join(lines)
+
+
+def gate_verdicts(delta, scratch, ontology, base_dir, advisory=False):
+    """The delta gate's answer-key verdicts: every key this round
+    touches — an Answer Key row added or changed, its CHECKS edge added
+    or removed, or the body of a program it checks added or changed —
+    is re-run over the round's own graph. Refusals on the live line;
+    advisory on a branch mid-rebuild (a program lands before its table
+    catches up, by design)."""
+    from .report import ADVISORY, REFUSAL, Verdict
+    from .refs import CitizenRef
+    labels = procedure_labels(ontology)
+    touched_keys = {name for label, name, _ in delta.nodes_added
+                    if label == KERNEL_ANSWER_KEY_LABEL}
+    touched_keys |= {name for label, name, _ in delta.nodes_changed
+                     if label == KERNEL_ANSWER_KEY_LABEL}
+    for edge in list(delta.edges_added) + list(delta.edges_removed):
+        if edge.type == CHECKS_EDGE and \
+                edge.from_label == KERNEL_ANSWER_KEY_LABEL:
+            touched_keys.add(edge.from_name)
+    touched_programs = {name for label, name, _ in delta.nodes_added
+                        if label in labels}
+    touched_programs |= {name for label, name, changes in delta.nodes_changed
+                         if label in labels and "body" in changes}
+    if not touched_keys and not touched_programs:
+        return []
+    verdicts = []
+    for row in canon_check(scratch, ontology, base_dir):
+        if row["name"] not in touched_keys and \
+                row.get("procedure") not in touched_programs:
+            continue
+        for finding in row["problems"]:
+            verdicts.append(Verdict(
+                code=finding.verdict_code,
+                subject=CitizenRef(KERNEL_ANSWER_KEY_LABEL, row["name"]),
+                message=(f"Answer key '{row['name']}': {finding.detail}"),
+                remedy=finding.remedy or (
+                    "Re-verify the program, then re-approve the table — "
+                    "or fix the key — in this round."),
+                severity=ADVISORY if advisory else REFUSAL,
+                data={"procedure": row.get("procedure"),
+                      "table": row.get("table"),
+                      "derives": row.get("derives")}))
+    return verdicts

@@ -1,0 +1,48 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [
+  {
+   "from_label": "Archetype",
+   "from_name": "Answer Key",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Answer Key",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  }
+ ],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "Metaontology",
+   {
+    "fingerprint": [
+     "77092ac3a8c8489c0f3e9aa272c92f5a6f5b83424efb8247c240ee4736ea3fe4",
+     "831c88f0e7ec04c7814f75ac382b65263af353918cb1197d14868b3040c10f72"
+    ],
+    "version": [
+     "0.14.0",
+     "0.13.0"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": [
+  [
+   "Archetype",
+   "Answer Key",
+   {
+    "doc": "A fidelity net between an approved program and an approved table: the program's derived facts must equal the table's rows. Three kinds — transitions (the program's ladder walk equals the table's from/to rows), thresholds (each table row's condition appears verbatim in the program's branch case), recompute (each worked example's asserted numbers recompute from the approved tables). A citizen carries its kind, its table, and the remaining declaration as JSON, and one CHECKS edge to the Procedure it holds still. The engine re-runs every key at the delta gate when a round touches the key or the checked program's body, and on demand as the answer-keys sweep; a table that drifts from its program is named by the key that caught it."
+   }
+  ]
+ ]
+}

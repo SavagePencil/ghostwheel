@@ -1,6 +1,6 @@
 {
   "name": "ghostwheel",
   "displayName": "Ghostwheel",
-  "version": "0.54.0",
+  "version": "0.55.0",
   "description": "The Ghostwheel engine's conduct layer: trigger stubs for its skills. Content is pulled from the installed engine (python -m graph docs <name>), never copied."
 }

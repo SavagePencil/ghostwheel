@@ -174,6 +174,11 @@ REF_KEYS = {
     "new-label": "new-catalog",
     "doc-edit": "description-edit",
     "alias-added": "spelling-added",
+    # answer keys (the fidelity net between a program and its table)
+    "answer-key-held": "held",
+    "answer-key-invalid": "check-declaration-invalid",
+    "answer-key-unreadable": "check-declaration-unreadable",
+    "answer-key-procedure-missing": "checked-program-missing",
     "render-mapping-edited": "table-layout-edited",
     "render-mapping-unreadable": "table-layout-unreadable",
     "render-mapping-invalid": "table-layout-invalid",
