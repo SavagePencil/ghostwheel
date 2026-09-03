@@ -103,7 +103,8 @@ RECEIPT_TEXT_PROPS = ("from_text",)
 PROSE_PROPS = ("description", "doc", "text", "body", "notes")
 # provenance metadata — matching these attests nothing about content
 METADATA_PROPS = frozenset({
-    "source", "grade", "source_path", "approved_hash", "pr", "issue",
+    "source", "grade", "source_path", "approved_hash", "approved_in",
+    "pr", "issue",
     "decided_by", "decided_on", "scope", "medium", "rank", "origin",
     "fingerprint", "version", "tag"})
 

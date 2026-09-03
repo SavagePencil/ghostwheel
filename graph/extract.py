@@ -319,9 +319,21 @@ class Extractor:
             completeness = procedures.effective_completeness(proc_spec)
             props = {"body": text, "completeness": str(completeness),
                      "source_path": relpath}
-            for text_key in ("precondition", "description"):
-                if proc_spec.get(text_key):
-                    props[text_key] = proc_spec[text_key]
+            if procedures.precondition_text(proc_spec):
+                # the citizen carries the prose either authored form
+                # provides; a mapping form's receipt stays in the YAML
+                # as review evidence, verified like every other quote
+                props["precondition"] = \
+                    procedures.precondition_text(proc_spec)
+            if proc_spec.get("description"):
+                props["description"] = proc_spec["description"]
+            raw_specified = proc_spec.get("specified_in")
+            if isinstance(raw_specified, dict) \
+                    and raw_specified.get("approved_in"):
+                # the archive pointer rides the citizen: the hash
+                # detects drift, the link retrieves the approved text
+                props["approved_in"] = \
+                    str(raw_specified["approved_in"]).strip()
             if proc_spec.get("inputs"):
                 props["inputs"] = "\n".join(
                     self.render_input(item, entry)
