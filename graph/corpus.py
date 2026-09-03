@@ -1,22 +1,22 @@
-"""The regression corpus: owner-blessed floors, re-checked
+"""The regression corpus: owner-approved floors, re-checked
 before any "done".
 
 Spine phase 3 of the agentic approach (design:
 graph/design/agentic-approach.md §7 — "owner-approved floors are
 re-checked before any done"). A FLOOR is one owner-approved expectation
 with provenance: the check that guards it (a pytest node id), its
-scope, the expectation in plain words, and the blessing that made it a
+scope, the expectation in plain words, and the approval that made it a
 floor (a PR, a Decision row, a run id). The Approved Omission and
 Approved Difference rows the owner already rules on are this exact
 pattern inside the parity judge; the corpus generalizes it to
-everything the owner has ever caught or blessed — every calibration
+everything the owner has ever caught or approved — every calibration
 miss becomes a floor by doctrine (tenet 13: every catch becomes a
 check).
 
 What the ledger adds over the bare test suite: the tie from each guard
-back to the ruling that blessed it, and — what a suite cannot do —
+back to the approval that made it, and — what a suite cannot do —
 catching the guard itself vanishing. A floor whose test node was
-deleted or renamed reports as "the guard is gone", naming the blessing
+deleted or renamed reports as "the guard is gone", naming the approval
 it orphaned, instead of silently ceasing to protect anything.
 
 The ledger is graph/corpus/floors.jsonl — append-only, one floor per
@@ -61,7 +61,7 @@ def save_floors(path, floors):
 
 
 def record_floor(floors, check, scope, expectation, provenance):
-    """One blessing becomes one floor. check is the pytest node id that
+    """One approval becomes one floor. check is the pytest node id that
     guards the expectation (parameterized variants count as the same
     guard); provenance names the ruling — a PR, a Decision row, a run
     id. Refuses duplicates and empty fields: an unguarded or unowned
@@ -74,7 +74,7 @@ def record_floor(floors, check, scope, expectation, provenance):
                 f"Attempted to record a floor with an empty "
                 f"{field_name}. Failed because every floor names its "
                 "guard, its scope, the expectation in plain words, and "
-                "the blessing that made it a floor.")
+                "the approval that made it a floor.")
     if not _NODE_ID.match(check):
         raise ValueError(
             f"Attempted to record a floor guarded by '{check}'. Failed "
@@ -144,7 +144,7 @@ def floor_records(floors, collected, failed_ids=()):
             row.update(status=FLOOR_GUARD_MISSING, code="floor-guard-missing",
                        problem=(
                 f"the guard {floor['check']} is GONE — it protected "
-                f"\"{floor['expectation']}\" (blessed at "
+                f"\"{floor['expectation']}\" (approved at "
                 f"{floor['provenance']}). Restore the test or bring "
                 "the floor's retirement to the owner; floors are never "
                 "silently dropped."))
@@ -152,7 +152,7 @@ def floor_records(floors, collected, failed_ids=()):
             row.update(status=FLOOR_FAILED, code="floor-failed",
                        problem=(
                 f"the floor \"{floor['expectation']}\" FAILED its "
-                f"guard ({floor['check']}) — this was blessed at "
+                f"guard ({floor['check']}) — this was approved at "
                 f"{floor['provenance']}; the current change breaks a "
                 "prior approval. Fix the change, or bring the floor's "
                 "supersession to the owner."))
@@ -165,7 +165,7 @@ def floor_records(floors, collected, failed_ids=()):
 
 def missing_guards(floors, collected):
     """Floors whose guard no longer exists — each named with the
-    blessing it orphans. A deleted guard is a red, never a silence."""
+    approval it orphans. A deleted guard is a red, never a silence."""
     return [row["problem"] for row in floor_records(floors, collected)
             if row["status"] == FLOOR_GUARD_MISSING]
 
@@ -218,7 +218,7 @@ def corpus_report(base_dir, records, guard_problem=None):
 
 def render_report(floors, missing, failures):
     """Owner-facing corpus verdict."""
-    lines = ["# Regression corpus — every blessed floor, re-checked", ""]
+    lines = ["# Regression corpus — every approved floor, re-checked", ""]
     if not floors:
         lines += ["The corpus is empty — no floors recorded yet.", ""]
         return "\n".join(lines)
