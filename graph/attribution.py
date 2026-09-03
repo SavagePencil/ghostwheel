@@ -182,8 +182,11 @@ def _lemma(token):
     homes are worse than misses). Number-bearing tokens never enter
     the lemma at all — the numeric canon below owns them, so '-2'
     stays '-2' and no signed equivalence arrives through a back
-    door."""
-    if any(ch.isdigit() for ch in token):
+    door. Single-letter tokens skip it the same way: a bare 'm'
+    arising from a code value "(M)" is never the contraction remnant
+    the dictionary takes it for (I'm -> be), and a bare 'i' must not
+    come back re-cased — a one-letter token is a code, not a word."""
+    if len(token) <= 1 or any(ch.isdigit() for ch in token):
         return token
     return simplemma.lemmatize(token, lang="en")
 

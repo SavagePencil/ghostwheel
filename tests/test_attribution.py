@@ -402,3 +402,25 @@ def test_twin_citizens_read_alike_despite_a_name_echo():
     # appears only once (as the name), so it anchors nothing
     bare = index.attribute("Sword (Slashing) gleams in the dark.")
     assert bare.verdict == CANON_GAP
+
+
+def test_single_letter_codes_keep_their_evidence():
+    # the consumer's mover, reproduced: a claim restating a citizen's
+    # single-letter code value in parentheses must evidence that value
+    # identically before and after the lemma fold — a bare "m" from
+    # "(M)" is a code, never the I'm contraction the dictionary sees
+    g = GraphData()
+    g.ensure_node("Blade", "Falchion", reach_code="M",
+                  description="A broad, forward-weighted blade.")
+    verdict = CanonIndex(g).attribute(
+        "The Falchion (M) is a broad, forward-weighted blade.")
+    assert verdict.verdict == ATTRIBUTED and verdict.rung == PROPERTIES
+    assert "value" in verdict.evidence
+
+
+def test_every_single_letter_passes_the_canon_unchanged():
+    # the alphabet sweep, made a guard: no letter is a word to fold
+    # (m -> be) and none comes back re-cased (i -> I)
+    from graph.attribution import _canon
+    for letter in "abcdefghijklmnopqrstuvwxyz":
+        assert _canon(letter) == letter
