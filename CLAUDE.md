@@ -44,3 +44,13 @@ never heard of any other consumer.
   change set — and that change set migrates every canon this repo
   ships (`python -m graph kernel-migrate`; the kernel guard test
   enforces it).
+- **How the engine changes.** While the engine serves one knowledge
+  base, a genuine engine gap found by that knowledge base's work is
+  fixed directly — its own issue, tests both sides, no-trace clean —
+  and reported plainly. That latitude ends at the second knowledge
+  base's first canon round. From then on, a behavior-bearing change
+  (vocabulary, ceremony classes, the kernel, the CLI's shape, a
+  report's shape) gets an issue and a plan gate the owner rules before
+  any code. Defect exception: a plain defect with a failing test that
+  reproduces it is fixed directly and reported. Every release
+  re-checks every consumer's approved floors before its tag.
