@@ -245,8 +245,12 @@ def test_rederive_proceeds_when_the_kernel_matches(tmp_path, capsys,
                                                    monkeypatch):
     base_dir = seeded_kb(tmp_path)
     fake_database(monkeypatch)
+    # a fresh seed's derived layers already match the installed engine:
+    # the refresh has nothing to do, dry run and apply alike
     assert cmd_rederive(base_dir) == 0
-    assert "Rederived canon" in capsys.readouterr().out
+    assert "nothing to refresh" in capsys.readouterr().out
+    assert cmd_rederive(base_dir, apply=True) == 0
+    assert "nothing to refresh" in capsys.readouterr().out
 
 
 # -- the enrichment ruling: canon's own knowledge on kernel citizens ----

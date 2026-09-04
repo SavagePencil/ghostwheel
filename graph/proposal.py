@@ -41,6 +41,10 @@ APPROVAL_FILE = "approval.json"
 APPLIED_FILE = "applied.json"
 INVERSE_FILE = "inverse.json"
 STITCH_FILE = "stitch.json"
+# a derived-layer refresh (rederive --apply) is a round whose document
+# is a report — the engine that re-derived and what left and arrived —
+# never a replayable delta; it archives with the round like the rest
+REDERIVE_FILE = "rederive.json"
 ATTRIBUTION_FILE = "attribution.json"
 
 
@@ -719,7 +723,7 @@ def archive_round(base_dir, delta_id, branch=None):
     # WITH the round: a file left behind would ride the next round's
     # delta as if declared there
     for name in (BASE_FILE, DELTA_FILE, APPROVAL_FILE, APPLIED_FILE,
-                 INVERSE_FILE, STITCH_FILE, ATTRIBUTION_FILE):
+                 INVERSE_FILE, STITCH_FILE, ATTRIBUTION_FILE, REDERIVE_FILE):
         path = src / name
         if path.exists():
             (dst / name).write_text(path.read_text(encoding="utf-8"),
