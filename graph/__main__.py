@@ -534,11 +534,61 @@ def cmd_verify_seal(base_dir, exam_path):
     return 1
 
 
-def cmd_rederive(base_dir):
-    """Schema-bootstrap maintenance (until the schema inversion): re-derive canon's
-    machine layers against the current schema, with the ground layer
-    untouched — refuse if re-derivation would change any ground fact.
-    Loads the result and re-exports the backup from the database."""
+def engine_version():
+    """The installed engine's version, for records that name what
+    derived them; 'unknown' outside an installed package."""
+    try:
+        from importlib.metadata import version
+        return version("ghostwheel")
+    except Exception:
+        return "unknown"
+
+
+def derived_diff(base, new_graph):
+    """What a re-derivation changes: the edges and machine citizens that
+    leave and arrive between two graphs whose ground is identical —
+    the report an owner rules a derived-layer refresh on."""
+    from .ontology import MACHINE_LABELS
+    from .refs import CitizenRef, connection_ref
+
+    def edge_rows(edges):
+        return [connection_ref(e).row() for e in edges]
+
+    before, after = set(base.edges), set(new_graph.edges)
+    left = sorted(before - after, key=lambda e: (
+        e.type, e.from_label, str(e.from_name), e.to_label, str(e.to_name)))
+    arrived = sorted(after - before, key=lambda e: (
+        e.type, e.from_label, str(e.from_name), e.to_label, str(e.to_name)))
+    machine_before = {k: v for k, v in base.nodes.items()
+                      if k[0] in MACHINE_LABELS}
+    machine_after = {k: v for k, v in new_graph.nodes.items()
+                     if k[0] in MACHINE_LABELS}
+    gone = sorted(set(machine_before) - set(machine_after), key=str)
+    born = sorted(set(machine_after) - set(machine_before), key=str)
+    changed = sorted((k for k in set(machine_before) & set(machine_after)
+                      if machine_before[k] != machine_after[k]), key=str)
+    return {"edges_left": edge_rows(left),
+            "edges_arrived": edge_rows(arrived),
+            "citizens_left": [CitizenRef(*k).row() for k in gone],
+            "citizens_arrived": [CitizenRef(*k).row() for k in born],
+            "citizens_changed": [CitizenRef(*k).row() for k in changed]}
+
+
+def cmd_rederive(base_dir, apply=False):
+    """The derived-layer refresh: re-derive canon's machine layers from
+    its committed backup against the schema the graph itself carries
+    and the INSTALLED engine — the maintenance verb after an engine
+    change that moved a derive pass, or a ceremony that reshaped the
+    schema. Dry run by default: the derived-layer diff (edges and
+    machine citizens leaving and arriving) is the owner's gate report,
+    and nothing is written. --apply performs the refresh as a
+    first-class round: the anchor stamped with the next sequence, the
+    database loaded and read back byte-identical, the backup
+    re-exported, the round's record (rederive.json — the engine that
+    re-derived, and the diff) chained into the event log and archived.
+    The ground layer never moves here; a ground change rides the delta
+    path."""
+    from . import canonize as canonize_mod
     from . import load as load_mod
     from . import proposal as proposal_mod
     from . import restore as restore_mod
@@ -559,8 +609,20 @@ def cmd_rederive(base_dir):
     if skew:
         print(f"rederive refused — {skew}", file=sys.stderr)
         return 1
-    # The schema is reconstructed FROM the graph (the schema-delta ceremony): the committed
-    # backup is the schema of record; ontology.yaml is bootstrap-only.
+    out_of_step = proposal_mod.log_head_divergence(base_dir, base)
+    if out_of_step:
+        print(f"rederive refused — {out_of_step}", file=sys.stderr)
+        return 1
+    pin = proposal_mod.current_dir(base_dir) / proposal_mod.BASE_FILE
+    if pin.exists():
+        print("rederive refused — a round is in flight "
+              f"({pin.relative_to(base_dir)} pins its base), and the "
+              "refresh would move the base underneath it. Finish the "
+              "round (canonize --apply) or abandon it, then rerun.",
+              file=sys.stderr)
+        return 1
+    # The schema is reconstructed FROM the graph: the committed backup
+    # is the schema of record.
     ontology = ontology_from_graph(base, base_dir)
     ground = strip_derived(base)
     new_graph, findings = derive(ontology, ground)
@@ -579,6 +641,46 @@ def cmd_rederive(base_dir):
               "ground change goes through the delta path.",
               file=sys.stderr)
         return 1
+    # the anchor's stamp is what a refresh moves; compare everything else
+    unstamped = export_mod.serialize(new_graph)
+    if unstamped == export_mod.serialize(base):
+        print(f"Canon's derived layers already match engine "
+              f"{engine_version()} — nothing to refresh, nothing written.")
+        return 0
+    diff = derived_diff(base, new_graph)
+    version = engine_version()
+    print(f"Derived-layer refresh against engine {version}:")
+    for key, label in (("edges_left", "edges leaving"),
+                       ("edges_arrived", "edges arriving"),
+                       ("citizens_left", "machine citizens leaving"),
+                       ("citizens_arrived", "machine citizens arriving"),
+                       ("citizens_changed", "machine citizens changing")):
+        rows = diff[key]
+        if not rows:
+            continue
+        print(f"  {label} ({len(rows)}):")
+        for row in rows[:20]:
+            if "type" in row:
+                print(f"    ({row['from']['label']}) {row['from']['name']} "
+                      f"-[:{row['type']}]-> ({row['to']['label']}) "
+                      f"{row['to']['name']}")
+            else:
+                print(f"    ({row['label']}) {row['name']}")
+        if len(rows) > 20:
+            print(f"    … and {len(rows) - 20} more")
+    print("  ground layer: unchanged.")
+    if not apply:
+        print("Dry run: nothing written. Rerun with --apply to refresh "
+              "canon as a chained round.")
+        return 0
+    seq = proposal_mod.next_log_sequence(base_dir)
+    stamp_problems = canonize_mod.stamp_ontology_anchor(new_graph, seq)
+    if stamp_problems:
+        print("rederive refused — the version anchor cannot be stamped; "
+              "nothing was written:", file=sys.stderr)
+        for problem in stamp_problems:
+            print(f"  ⚠ {problem}", file=sys.stderr)
+        return 1
     config = load_mod.read_config(base_dir)
     try:
         summary = load_mod.load(new_graph, config)
@@ -589,15 +691,45 @@ def cmd_rederive(base_dir):
               "database to the last state.", file=sys.stderr)
         return 1
     if export_mod.serialize(dumped) != export_mod.serialize(new_graph):
-        print("Rederive: the database read back differently than what "
-              "was written. Backup untouched; python -m graph restore "
-              "rolls back.", file=sys.stderr)
+        print("EVENT LOG NOT WRITTEN — the database read back differently "
+              "than what was written (driver round-trip fault). The "
+              "backup files are untouched; python -m graph restore "
+              "returns the database to the last applied state.",
+              file=sys.stderr)
         return 1
     export_mod.write_export(dumped, base_dir / "graph" / "export")
-    print(f"Rederived canon against the current schema: "
+    # --- the event log: the refresh is a first-class round -------------
+    from . import report as report_mod
+    record = report_mod.record_header(base_dir, "rederive-report")
+    record.update(engine=version, sequence=seq, **diff)
+    record_text = json.dumps(record, ensure_ascii=False, indent=2,
+                             sort_keys=True) + "\n"
+    record_hash = proposal_mod.content_hash(record_text)
+    current = proposal_mod.current_dir(base_dir)
+    current.mkdir(parents=True, exist_ok=True)
+    (current / proposal_mod.REDERIVE_FILE).write_text(record_text,
+                                                      encoding="utf-8")
+    base_before = proposal_mod.base_identity(base)
+    base_after = proposal_mod.base_identity(dumped)
+    from . import workspace as workspace_mod
+    workspace_mod.stamp(config, "canon", base_after, git_ref(base_dir))
+    chain = proposal_mod.append_applied_log(
+        base_dir, record_hash, base_before, base_after)
+    proposal_mod.write_json(current / proposal_mod.APPLIED_FILE,
+                            {"delta_hash": record_hash,
+                             "base_after": base_after,
+                             "applied": "derived-layer-refresh",
+                             "engine": version, "chain": chain})
+    archive = proposal_mod.archive_round(base_dir, record_hash)
+    print(f"Refreshed canon's derived layers against engine {version}: "
           f"{summary['loaded_nodes']} nodes, {summary['loaded_edges']} "
-          "edges; ground layer unchanged; backup re-exported from the "
-          "database.")
+          "edges now live; ground layer unchanged; backup re-exported "
+          "from the database.")
+    print(f"Round archived: {archive.relative_to(base_dir)} — event log "
+          f"entry chained ({chain[:12]}); the refresh's record rides "
+          "with it.")
+    print("Ritual: pytest, commit the export + round archive + applied.log "
+          "line in one change set.")
     return 0
 
 
@@ -2705,12 +2837,17 @@ def main(argv=None):
              "against the Sealed Exam citizen in canon's backup (the "
              "content is hashed, never read)")
     verify_seal.add_argument("exam", help="path to the produced exam file")
-    sub.add_parser(
+    rederive_parser = sub.add_parser(
         "rederive",
-        help="maintenance: re-derive canon's machine layers against the "
-             "schema the graph itself carries, ground layer untouched, "
-             "backup re-exported from the database (refuses if ground "
-             "would change — ground changes ride the delta path)")
+        help="the derived-layer refresh after an engine change or a "
+             "schema ceremony: re-derive canon's machine layers from the "
+             "committed backup against the schema the graph carries — "
+             "dry run by default, printing what leaves and arrives; "
+             "--apply performs it as a chained, archived round (ground "
+             "untouched; a ground change rides the delta path)")
+    rederive_parser.add_argument(
+        "--apply", action="store_true",
+        help="write the refresh as a round (dry run without it)")
     kernel_parser = sub.add_parser(
         "kernel-migrate",
         help="migrate this canon's embedded kernel stratum to the "
@@ -2946,7 +3083,7 @@ def main(argv=None):
                            from_dir=args.from_dir, branch=args.branch,
                            base=args.base)
     if args.command == "rederive":
-        return cmd_rederive(base_dir)
+        return cmd_rederive(base_dir, apply=args.apply)
     if args.command == "kernel-migrate":
         return cmd_kernel_migrate(base_dir, args.apply)
     if args.command == "verify-seal":
