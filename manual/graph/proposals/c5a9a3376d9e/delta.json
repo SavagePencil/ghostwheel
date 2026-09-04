@@ -1,0 +1,71 @@
+{
+ "edges_added": [
+  {
+   "from_label": "Archetype",
+   "from_name": "[Bookmark]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Dependency]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Bookmark]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Dependency]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  }
+ ],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [
+  [
+   "Archetype",
+   "[Bookmark]",
+   {
+    "doc": "A citizen that lives in a dependency, cited from this knowledge base: the dependency's name, the citizen's label and name there, and the dependency edition it was resolved against, with exactly one RESOLVES_IN edge to the [Dependency] it lives in. This knowledge base's own citizens point at a bookmark through their own relation vocabulary, authored like any ground edge, so the setting's fact can rest on the rulebook's citizen without either knowledge base holding the other's rows. Machinery, never subject matter — hence bracketed."
+   }
+  ],
+  [
+   "Archetype",
+   "[Dependency]",
+   {
+    "doc": "Another knowledge base this one pins to an edition. The citizen's name is that knowledge base's own declared name; it carries the edition it is pinned to (the dependency's committed backup identity hash and its event-log sequence), the intent this knowledge base holds toward it (read, or write when a shared activity may land rounds there), and the git ref the edition was tagged at — that ref is provenance only. Where the dependency's checkout lives on this machine is settings, never canon. A knowledge base holding dependency entries is playing the world role; a dependency may itself hold dependencies. Machinery, never subject matter — hence bracketed."
+   }
+  ]
+ ],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "Metaontology",
+   {
+    "fingerprint": [
+     "77092ac3a8c8489c0f3e9aa272c92f5a6f5b83424efb8247c240ee4736ea3fe4",
+     "dc0069c3fdb88774fd4852f43b05856ef3ed39c7ec13db97e960b94627ec3b50"
+    ],
+    "version": [
+     "0.14.0",
+     "0.15.0"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}
