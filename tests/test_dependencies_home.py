@@ -170,11 +170,19 @@ def test_every_code_carries_a_designer_safe_ref():
 
 
 def test_a_pin_lands_through_a_round_and_a_bad_one_refuses(driven_kb,
+                                                            monkeypatch,
                                                             capsys):
     base, fake, _ = driven_kb
+    # the gate also reads the dependency's backup: a real herbal on disk,
+    # pinned at what it holds
+    from tests.test_dependencies_at_the_gate import _herbal
+    root, identity = _herbal(base.parent)
+    monkeypatch.setenv("GHOSTWHEEL_DEPENDENCY_HERBAL", str(root))
     canon = build_canon()
     fake.databases["neo4j"] = clone(canon)
-    fake.databases["scratch"] = _bookmark(_pin(clone(canon)))
+    fake.databases["scratch"] = _bookmark(
+        _pin(clone(canon), props={**HERBAL, "edition": identity,
+                                  "sequence": 0}))
     capsys.readouterr()
     assert main_mod.cmd_delta(base, None) == 0
     assert main_mod.cmd_approve(base, "owner") == 0

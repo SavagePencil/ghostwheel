@@ -1349,9 +1349,19 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     violations += delta_mod.body_sync_verdicts(scratch, base_dir)
     # the floor receipt: a cited fingerprint must match its file's bytes
     violations += delta_mod.fingerprint_verdicts(changes, base_dir)
-    # dependencies and bookmarks: the shape of a pin and a foreign citation
+    # dependencies and bookmarks: the shape of a pin and a foreign citation,
+    # then the pin against its checkout and the citation against what
+    # lives there; every round hears a pin that has fallen behind
     from . import dependencies as dependencies_mod
     violations += dependencies_mod.gate_verdicts(changes, scratch)
+    dependency_refusals = dependencies_mod.resolution_verdicts(
+        changes, scratch, config)
+    violations += dependency_refusals
+    dependency_advisories = dependencies_mod.drift_advisories(
+        scratch, config,
+        skip={v.subject.name for v in dependency_refusals
+              if v.subject is not None
+              and v.subject.label == dependencies_mod.KERNEL_DEPENDENCY_LABEL})
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,
@@ -1424,7 +1434,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     # disk and on screen.
     report_model = delta_mod.build_report(
         changes, violations, ceremony_items,
-        roster_advisories + receipt_advisories)
+        roster_advisories + receipt_advisories + dependency_advisories)
     report = report_mod.render_markdown(report_model)
     reports_dir = base_dir / "graph" / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -2921,6 +2931,28 @@ def cmd_answer_keys(base_dir, branch=None):
     return 0 if doc["passed"] else 1
 
 
+def cmd_dependencies(base_dir, branch=None):
+    """The drift query: every [Dependency] on canon against what its
+    checkout holds now — held, behind, or unreachable — printed one per
+    line and recorded as dependencies-report.json; exit 1 when any pin
+    is behind or cannot be reached, so a later tool can alert on it."""
+    from . import dependencies as dependencies_mod
+    from . import load as load_mod
+    from . import report as report_mod
+    try:
+        base = canon_base(base_dir, branch)
+    except FileNotFoundError as exc:
+        print("Attempted to read the committed backup for the dependency "
+              f"drift query. Failed due to: {exc}.", file=sys.stderr)
+        return 1
+    config = load_mod.read_config(base_dir)
+    rows = dependencies_mod.drift_rows(base, config)
+    doc = dependencies_mod.dependencies_report(base_dir, rows, branch)
+    report_mod.write_record(base_dir, dependencies_mod.REPORT_FILE, doc)
+    print(dependencies_mod.render_report(doc))
+    return 0 if doc["passed"] else 1
+
+
 def load_corpus_grammars(base_dir):
     """Corpus grammar loading: if the opened knowledge base carries a
     grammars.py at its root, import it — its @register decorators fill
@@ -2996,6 +3028,15 @@ def main(argv=None):
              "against the Sealed Exam citizen in canon's backup (the "
              "content is hashed, never read)")
     verify_seal.add_argument("exam", help="path to the produced exam file")
+    dependencies_parser = sub.add_parser(
+        "dependencies",
+        help="the drift query: every pinned dependency against what its "
+             "checkout holds now — held, behind, or unreachable — recorded "
+             "at graph/reports/dependencies-report.json; exit 1 when any "
+             "pin is behind or cannot be reached")
+    dependencies_parser.add_argument(
+        "--branch", default=None,
+        help="read the branch's own backup instead of live canon's")
     receipt_parser = sub.add_parser(
         "receipt",
         help="the floor receipt for any artifact — fingerprint, size, and "
@@ -3263,6 +3304,8 @@ def main(argv=None):
         return cmd_verify_seal(base_dir, args.exam)
     if args.command == "receipt":
         return cmd_receipt(base_dir, args.files)
+    if args.command == "dependencies":
+        return cmd_dependencies(base_dir, branch=args.branch)
     if args.command == "load":
         return cmd_load(base_dir, database=args.database)
     if args.command == "check":
