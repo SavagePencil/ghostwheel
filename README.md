@@ -107,7 +107,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 | `delta` | Diff `scratch` against canon's backup: a linted, itemized changeset. Its content hash is the proposal's identity. |
 | `approve` | Record the diff-gate approval against the proposal's content hash. |
 | `canonize` | Show the approved changeset and freeze status (dry run). |
-| `canonize --apply` | Apply the pinned changeset to the graph, re-derive the machine layers, re-export the backup, and chain the event log. |
+| `canonize --apply` | Apply the pinned changeset to the graph, re-derive the machine layers, re-export the backup, and chain the event log. Refuses by name, before any write, when the event log's head disagrees with the backup it would build on (a lost log line, a backup the log never described) — as do `kernel-migrate --apply` and the succession gates. |
 | `kernel-migrate` | Migrate this canon's embedded kernel stratum to the installed engine's kernel (dry run: report the splice and the orphan check, write nothing). Refuses when a removed kernel name would orphan project references — repoint those through an ordinary gated round first. |
 | `kernel-migrate --apply` | Perform the splice as a first-class round: project stratum and ground untouched (checked, not assumed), the delta archived with its inverse, the event log chained, the backup re-exported. Mutating commands refuse on kernel skew until this runs; read commands warn. |
 | `corpus` | Re-check every owner-blessed floor; reds name the blessing they break. |
