@@ -6,7 +6,7 @@
 # (See README, "Why the package is called `graph`".)
 [project]
 name = "ghostwheel"
-version = "0.61.0"
+version = "0.62.0"
 description = "Ghostwheel: a project-agnostic knowledge-graph engine — two-layer ontology, deterministic export/restore, reviewed delta rounds with a diff gate, a chained event log, and visibility lenses."
 requires-python = ">=3.11"
 # simplemma is PINNED EXACT: the lemma dictionary is part of the

@@ -166,6 +166,7 @@ REF_KEYS = {
     "precondition-failed": "precondition-failed",
     "derive-error": "derivation-error",
     "anchor-unstampable": "anchor-unstampable",
+    "database-held-elsewhere": "name-held-elsewhere",
     "write-failed": "write-failed",
     "roundtrip-fault": "readback-mismatch",
     # ceremony items
