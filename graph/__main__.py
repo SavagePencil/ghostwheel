@@ -1347,6 +1347,8 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     violations += delta_mod.stitch_verdicts(changes, scratch)
     violations += delta_mod.attribution_verdicts(changes, base)
     violations += delta_mod.body_sync_verdicts(scratch, base_dir)
+    # the floor receipt: a cited fingerprint must match its file's bytes
+    violations += delta_mod.fingerprint_verdicts(changes, base_dir)
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,
@@ -2265,6 +2267,42 @@ def cmd_approve(base_dir, by, branch=None):
     return 0
 
 
+def cmd_receipt(base_dir, files):
+    """The floor receipt for any artifact: fingerprint, size, and the
+    medium its bytes declare — printed to paste onto the citizen the
+    artifact is about, and recorded under graph/reports/. Every file
+    is read before anything is reported; an unreadable one collates."""
+    from . import comprehension
+    from . import report as report_mod
+
+    rows, failed = [], False
+    for relpath in files:
+        path = Path(relpath)
+        if not path.is_absolute():
+            path = base_dir / path
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            failed = True
+            text = (f"Attempted to issue a receipt for {relpath}. Failed "
+                    f"due to: {exc}.")
+            print(text, file=sys.stderr)
+            rows.append({"file": str(relpath), "code": "receipt-unreadable",
+                         "ref": report_mod.REF_KEYS["receipt-unreadable"],
+                         "problem": text})
+            continue
+        issued = comprehension.receipt(data)
+        print(f"{relpath}: fingerprint {issued['fingerprint']} · "
+              f"{issued['bytes']} bytes · {issued['medium']}")
+        rows.append({"file": str(relpath), **issued,
+                     "code": "receipt-issued",
+                     "ref": report_mod.REF_KEYS["receipt-issued"]})
+    doc = report_mod.record_header(base_dir, "receipt-report")
+    doc["receipts"] = rows
+    report_mod.write_record(base_dir, "receipt-report.json", doc)
+    return 1 if failed else 0
+
+
 def _procedure_citations(base_dir):
     """{artifact relpath: {cited headings}} and {artifact: [(name, spec)]}
     from the procedure files — the comprehension and round-trip
@@ -2310,13 +2348,18 @@ def cmd_comprehend(base_dir, artifacts, recall, dispose):
                             f"Failed due to: {exc}.")
             continue
         from . import roundtrip as roundtrip_mod
-        readings.append((relpath,
-                         comprehension.read_artifact(
-                             data, title=Path(relpath).name,
-                             origin=str(relpath),
-                             cited_sections=cited.get(relpath, set()),
-                             carried_texts=roundtrip_mod
-                             .carried_passages_for(base_dir, relpath))))
+        try:
+            readings.append((relpath,
+                             comprehension.read_artifact(
+                                 data, title=Path(relpath).name,
+                                 origin=str(relpath),
+                                 cited_sections=cited.get(relpath, set()),
+                                 carried_texts=roundtrip_mod
+                                 .carried_passages_for(base_dir, relpath))))
+        except comprehension.NotTextArtifact as exc:
+            # a non-text artifact: its floor receipt is on record in the
+            # refusal; the room reads structure, and there is none to read
+            problems.append(str(exc))
     for directory in recall or []:
         try:
             readings.append((directory,
@@ -2926,6 +2969,14 @@ def main(argv=None):
              "against the Sealed Exam citizen in canon's backup (the "
              "content is hashed, never read)")
     verify_seal.add_argument("exam", help="path to the produced exam file")
+    receipt_parser = sub.add_parser(
+        "receipt",
+        help="the floor receipt for any artifact — fingerprint, size, and "
+             "the medium its bytes declare — to paste onto the citizen it "
+             "is about; recorded at graph/reports/receipt-report.json")
+    receipt_parser.add_argument("files", nargs="+",
+                                help="artifact files (paths relative to "
+                                     "the knowledge base)")
     rederive_parser = sub.add_parser(
         "rederive",
         help="the derived-layer refresh after an engine change or a "
@@ -3177,6 +3228,8 @@ def main(argv=None):
         return cmd_kernel_migrate(base_dir, args.apply)
     if args.command == "verify-seal":
         return cmd_verify_seal(base_dir, args.exam)
+    if args.command == "receipt":
+        return cmd_receipt(base_dir, args.files)
     if args.command == "load":
         return cmd_load(base_dir, database=args.database)
     if args.command == "check":
