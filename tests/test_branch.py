@@ -333,7 +333,7 @@ class FakeDBMS:
     # the workspace-identity entry points: the stamp rides the named
     # database like the real one, invisible to dump/read (they strip)
     def stamp(self, config, role, base_hash, git_ref="unknown",
-              branch=None):
+              branch=None, kb=None):
         from graph.workspace import WORKSPACE_LABEL
         name = config["NEO4J_DATABASE"]
         graph = self.databases.setdefault(name, GraphData())
@@ -343,6 +343,8 @@ class FakeDBMS:
                  "database": name}
         if branch is not None:
             props["branch"] = branch
+        if kb is not None:
+            props["kb"] = kb
         graph.ensure_node(WORKSPACE_LABEL, "This database", **props)
 
     def read_stamp(self, config):

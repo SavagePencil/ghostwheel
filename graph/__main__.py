@@ -238,6 +238,13 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
     if database:
         config["NEO4J_DATABASE"] = database
     target = config["NEO4J_DATABASE"]
+    # the registry of names is the stamps: a database another knowledge
+    # base holds refuses before a byte is written
+    from . import workspace as workspace_mod
+    kb = refs_mod.kb_name(graph, base_dir)
+    held = workspace_mod.held_by_other(config, kb)
+    if held:
+        return guard(held)
     print(f"Restoring {config['NEO4J_URI']} "
           f"(database '{config['NEO4J_DATABASE']}') from the "
           f"{'export' if from_dir else 'backup'} at "
@@ -279,7 +286,7 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
             else "working-copy" if database else "canon")
     workspace_mod.stamp(config, role,
                         proposal_mod.base_identity(graph),
-                        git_ref(base_dir), branch=copy_of)
+                        git_ref(base_dir), branch=copy_of, kb=kb)
     if database and (not from_dir or copy_of):
         # a custom export is an inspection load, never a round cut —
         # unless it is a branch's OWN backup entering the branch's OWN
@@ -356,6 +363,17 @@ def _restore_branch(base_dir, branch, base, database):
                       branch=branch, problems=[text])
         return 1
 
+    # the registry of names is the stamps: a branch name another
+    # knowledge base already holds on this DBMS refuses before any write
+    from . import workspace as workspace_mod
+    kb = refs_mod.kb_name(canon, base_dir)
+    held = workspace_mod.held_by_other(
+        dict(config, NEO4J_DATABASE=target), kb)
+    if held:
+        print(held, file=sys.stderr)
+        _file_restore(base_dir, code="restore-guard", status="refused",
+                      branch=branch, problems=[held])
+        return 1
     seed = schema_only(canon)
     branch_export = proposal_mod.export_dir(base_dir, branch)
     # The branch's backup is born at the cut, written FROM the seed — the
@@ -397,7 +415,7 @@ def _restore_branch(base_dir, branch, base, database):
     from . import workspace as workspace_mod
     workspace_mod.stamp(config, "branch",
                         proposal_mod.base_identity(seed),
-                        git_ref(base_dir), branch=branch)
+                        git_ref(base_dir), branch=branch, kb=kb)
     pin_round(base_dir, seed, target, branch)
     # the fork annotation: where canon's log stood at this cut — the
     # fork point succession's divergence advisory enumerates from
@@ -682,6 +700,12 @@ def cmd_rederive(base_dir, apply=False):
             print(f"  ⚠ {problem}", file=sys.stderr)
         return 1
     config = load_mod.read_config(base_dir)
+    from . import workspace as workspace_mod
+    kb = refs_mod.kb_name(new_graph, base_dir)
+    held = workspace_mod.held_by_other(config, kb)
+    if held:
+        print(f"rederive refused — {held}", file=sys.stderr)
+        return 1
     try:
         summary = load_mod.load(new_graph, config)
         dumped = restore_mod.dump_db(config)
@@ -712,7 +736,8 @@ def cmd_rederive(base_dir, apply=False):
     base_before = proposal_mod.base_identity(base)
     base_after = proposal_mod.base_identity(dumped)
     from . import workspace as workspace_mod
-    workspace_mod.stamp(config, "canon", base_after, git_ref(base_dir))
+    workspace_mod.stamp(config, "canon", base_after, git_ref(base_dir),
+                        kb=kb)
     chain = proposal_mod.append_applied_log(
         base_dir, record_hash, base_before, base_after)
     proposal_mod.write_json(current / proposal_mod.APPLIED_FILE,
@@ -855,6 +880,12 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
             print(f"  ⚠ {problem}", file=sys.stderr)
         return 1
     config = load_mod.read_config(base_dir)
+    from . import workspace as workspace_mod
+    kb = refs_mod.kb_name(new_graph, base_dir)
+    held = workspace_mod.held_by_other(config, kb)
+    if held:
+        print(f"kernel-migrate refused — {held}", file=sys.stderr)
+        return 1
     try:
         summary = load_mod.load(new_graph, config)
         dumped = restore_mod.dump_db(config)
@@ -884,7 +915,8 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
     base_before = proposal_mod.base_identity(base)
     base_after = proposal_mod.base_identity(dumped)
     from . import workspace as workspace_mod
-    workspace_mod.stamp(config, "canon", base_after, git_ref(base_dir))
+    workspace_mod.stamp(config, "canon", base_after, git_ref(base_dir),
+                        kb=kb)
     chain = proposal_mod.append_applied_log(
         base_dir, delta_hash, base_before, base_after)
     proposal_mod.write_json(current / proposal_mod.APPLIED_FILE,
@@ -1013,6 +1045,12 @@ def cmd_load(base_dir, database=None):
     config = load_mod.read_config(base_dir)
     if database:
         config["NEO4J_DATABASE"] = database
+    from . import workspace as workspace_mod
+    kb = refs_mod.kb_name(graph, base_dir)
+    held = workspace_mod.held_by_other(config, kb)
+    if held:
+        print(held, file=sys.stderr)
+        return 1
     print(f"Loading into {config['NEO4J_URI']} "
           f"(database '{config['NEO4J_DATABASE']}') ...")
     try:
@@ -1034,7 +1072,7 @@ def cmd_load(base_dir, database=None):
     from . import workspace as workspace_mod
     workspace_mod.stamp(config, "working-copy" if database else "canon",
                         proposal_mod.base_identity(graph),
-                        git_ref(base_dir))
+                        git_ref(base_dir), kb=kb)
     if database:
         pin_round(base_dir, graph, database)
     return 0
@@ -1715,6 +1753,12 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         return bail("anchor-unstampable", text, stamp_problems)
 
     # --- write: load the target, re-export the backup FROM the database
+    from . import workspace as workspace_mod
+    kb = refs_mod.kb_name(new_graph, base_dir)
+    held = workspace_mod.held_by_other(target_config, kb)
+    if held:
+        print("--apply refused — " + held, file=sys.stderr)
+        return bail("database-held-elsewhere", held)
     try:
         summary = load_mod.load(new_graph, target_config)
         dumped = restore_mod.dump_db(target_config)
@@ -1746,7 +1790,8 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     from . import workspace as workspace_mod
     workspace_mod.stamp(target_config,
                         "canon" if branch is None else "branch",
-                        base_after, git_ref(base_dir), branch=branch)
+                        base_after, git_ref(base_dir), branch=branch,
+                        kb=kb)
     chain = proposal_mod.append_applied_log(
         base_dir, approval["delta_hash"], base_before, base_after, branch)
     # fold the round's recorded attribution into the line's ledger,
@@ -2057,6 +2102,12 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
         f"graph/branches/{archive_branch} — re-run the ceremony with "
         "--archive-as <unused name>, or remove that archive deliberately "
         "first.")
+    from . import workspace as workspace_mod
+    kb = refs_mod.kb_name(new_graph, base_dir)
+    held = workspace_mod.held_by_other(target_config, kb)
+    if held:
+        print(f"succession refused — {held}", file=sys.stderr)
+        return 1
     try:
         summary = load_mod.load(new_graph, target_config)
         dumped = restore_mod.dump_db(target_config)
@@ -2079,6 +2130,10 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
     # marker present always means the adoption entry is durable, and a
     # missing marker means the ceremony may be re-run to completion.
     canon_after = proposal_mod.base_identity(dumped)
+    # the adoption wiped canon's old stamp with everything else;
+    # re-identify the database at its new base
+    workspace_mod.stamp(target_config, "canon", canon_after,
+                        git_ref(base_dir), kb=kb)
     record = {
         "branch": branch,
         "adopted_by": ruled_by,
@@ -2645,10 +2700,44 @@ def cmd_init(target, name=None):
     print(f"Knowledge base '{kb}' seeded at {target} from the engine "
           f"kernel alone — {len(seed.nodes)} schema citizens, "
           f"{len(seed.edges)} schema edges; no ground facts.")
+    # Its own database names from birth: several knowledge bases share
+    # one DBMS, so the canon database is the knowledge base's name and
+    # the working copy is <name>-scratch — never the engine-wide defaults.
+    env_file = target / ".env"
+    canon_db = default_database_name(kb)
+    scratch_db = f"{canon_db}-scratch"
+    if env_file.exists():
+        print(f"Settings: {env_file.name} already exists — kept as-is.")
+    else:
+        env_file.write_text(
+            "# This knowledge base's DBMS settings — fill in the "
+            "credentials; keep .env out of source control.\n"
+            "NEO4J_URI=bolt://localhost:7687\n"
+            "NEO4J_USERNAME=neo4j\n"
+            "NEO4J_PASSWORD=changeme\n"
+            "\n"
+            "# Its own database names: several knowledge bases can share "
+            "one DBMS\n# without colliding.\n"
+            f"NEO4J_DATABASE={canon_db}\n"
+            f"NEO4J_SCRATCH_DATABASE={scratch_db}\n",
+            encoding="utf-8")
+        print(f"Settings written to {env_file.name}: canon database "
+              f"'{canon_db}', working copy '{scratch_db}' — fill in the "
+              "DBMS credentials there and keep the file out of source "
+              "control.")
     print("Next: python -m graph restore (build its canon database from "
-          "the backup), then restore --database scratch to cut the "
-          "first authoring round.")
+          f"the backup), then restore --database {scratch_db} to cut "
+          "the first authoring round.")
     return 0
+
+
+def default_database_name(kb):
+    """A knowledge base's default canon database name: its own name,
+    in the shape a DBMS accepts (lower case; letters, digits, dots and
+    dashes; no leading or trailing dash)."""
+    import re
+    slug = re.sub(r"[^a-z0-9.-]+", "-", kb.lower()).strip("-.")
+    return slug or "canon"
 
 
 def cmd_terms(base_dir):

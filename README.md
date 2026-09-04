@@ -98,7 +98,7 @@ Run as `python -m graph <command>` (or `ghostwheel <command>` once installed).
 
 | Command | What it does |
 |---|---|
-| `init [<dir>] [--name <kb>]` | Seed a new knowledge base, **born graph-native**: write a committed backup holding the kernel's schema stratum alone into `<dir>/graph/export` — no `ontology.yaml`, no sources, no database. `--name` declares the knowledge base's own name on its Ontology anchor (default: the directory's basename), so identity travels with the backup; an existing canon adopts a name through an ordinary gated round. Everything else grows through gated rounds. Refuses a directory that already holds a knowledge base. |
+| `init [<dir>] [--name <kb>]` | Seed a new knowledge base, **born graph-native**: write a committed backup holding the kernel's schema stratum alone into `<dir>/graph/export` — no `ontology.yaml`, no sources, no database. `--name` declares the knowledge base's own name on its Ontology anchor (default: the directory's basename), so identity travels with the backup; an existing canon adopts a name through an ordinary gated round. Writes the knowledge base's own `.env` when none exists, naming its canon database `<kb>` and its working copy `<kb>-scratch`, so several knowledge bases share one DBMS without colliding (an existing `.env` is kept as-is). Everything else grows through gated rounds. Refuses a directory that already holds a knowledge base. |
 | `validate` | Parse the sources/schema against the ontology; write a consistency report to `graph/reports/validation.md`. No database needed. |
 | `export` | Write a deterministic snapshot of canon to `graph/export/`. Commit it alongside any graph change. No database needed. |
 | `restore` | Rebuild the database from `graph/export/` alone, then verify it re-serializes byte-identical. |
@@ -165,11 +165,15 @@ moments — the **plan gate** and the **diff gate**:
    working database and pins canon's content identity as the base. Mistakes in
    scratch cost nothing. Every database the engine creates carries a
    **workspace-identity stamp** in-band — what it is (canon, working copy,
-   branch, inspection) and which base it was cut from — and the round
-   machinery checks it: a copy belonging to another knowledge base or to a
-   round that has since closed refuses plainly instead of diffing into a
-   surreal changeset. The stamp describes the database, never the canon it
-   holds — every read-back path strips it before diffing or exporting.
+   branch, inspection), which knowledge base it belongs to, and which base
+   it was cut from — and the round machinery checks it: a copy belonging to
+   another knowledge base or to a round that has since closed refuses
+   plainly instead of diffing into a surreal changeset. The stamps are also
+   the DBMS's registry of names: every load reads the target's stamp first,
+   and a database another knowledge base holds refuses by name before a
+   byte is written — nothing is ever renamed. The stamp describes the
+   database, never the canon it holds — every read-back path strips it
+   before diffing or exporting.
 2. **Author ground facts.** An author (a person or an agent holding
    scratch-only write credentials) creates the nodes and edges the source
    asserts — a Gem, a Beast, the edge that says this Beast guards that Gem — each

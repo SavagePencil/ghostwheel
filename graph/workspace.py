@@ -15,12 +15,20 @@ that has since closed — refuses with a plain answer instead of
 producing a surreal changeset. A database cut before this stamp
 existed carries none and is let through with a note; only a
 MISMATCHED identity refuses.
+
+The stamp also names WHICH knowledge base the database belongs to, and
+the stamps together are the DBMS's registry of names: every load first
+reads the target's stamp, and a database another knowledge base holds
+refuses by name before a byte is written — the only way two knowledge
+bases sharing a DBMS could otherwise collide (a branch's database is
+its bare branch name) is closed at the door. Nothing is ever renamed.
 """
 
 from datetime import datetime, timezone
 
 WORKSPACE_LABEL = "[Workspace]"
 STAMP_NAME = "This database"
+KB_PROP = "kb"
 
 # What a database can be. `canon` and `branch` hold a line of truth;
 # `working-copy` is a round's authoring clone; `inspection` is a
@@ -28,9 +36,11 @@ STAMP_NAME = "This database"
 ROLES = ("canon", "working-copy", "branch", "inspection")
 
 
-def stamp(config, role, base_hash, git_ref="unknown", branch=None):
+def stamp(config, role, base_hash, git_ref="unknown", branch=None,
+          kb=None):
     """Write the identity stamp into the configured database, replacing
-    any prior stamp — a database has exactly one identity at a time."""
+    any prior stamp — a database has exactly one identity at a time.
+    `kb` names the knowledge base the database belongs to."""
     from neo4j import GraphDatabase  # deferred: only DB paths need it
 
     assert role in ROLES, role
@@ -44,6 +54,8 @@ def stamp(config, role, base_hash, git_ref="unknown", branch=None):
     }
     if branch is not None:
         props["branch"] = branch
+    if kb is not None:
+        props[KB_PROP] = kb
     driver = GraphDatabase.driver(
         config["NEO4J_URI"],
         auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))
@@ -90,6 +102,41 @@ def strip(graph):
                    if WORKSPACE_LABEL not in (edge.from_label,
                                               edge.to_label)]
     return graph
+
+
+def held_by_problem(found, kb, database):
+    """Judge a database's stamp against the knowledge base about to
+    load into it. Returns a designer-facing refusal, or None when the
+    database is unstamped (pre-stamp, or made by hand), stamped without
+    a knowledge base (an older engine's stamp), or this knowledge
+    base's own."""
+    if found is None:
+        return None
+    holder = found.get(KB_PROP)
+    if not holder or holder == kb:
+        return None
+    role = found.get("role") or "database"
+    return (
+        f"Attempted to load knowledge base '{kb}' into database "
+        f"'{database}'. Failed due to: that database identifies itself "
+        f"as knowledge base '{holder}''s {role} — loading here would "
+        "wipe another knowledge base's line. Pick a name this knowledge "
+        "base owns: set NEO4J_DATABASE or NEO4J_SCRATCH_DATABASE in its "
+        ".env, or choose another --database or branch name. Nothing is "
+        "renamed."
+    )
+
+
+def held_by_other(config, kb):
+    """The configured database's refusal when another knowledge base
+    holds it, else None. A database that does not exist yet, or cannot
+    be read, is nobody's — creation and the load report their own
+    faults, so nothing is judged here."""
+    try:
+        found = read_stamp(config)
+    except Exception:
+        return None
+    return held_by_problem(found, kb, config["NEO4J_DATABASE"])
 
 
 def identity_problem(found, pinned_base_hash, database):

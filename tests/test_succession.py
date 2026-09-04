@@ -141,11 +141,14 @@ def test_succession_apply_adopts_branch_as_canon(driven_kb, capsys):
     anchor = live_graph.nodes[(ARCHETYPE_LABEL, ONTOLOGY_ANCHOR)]
     assert anchor["version"] == 1
 
-    # graph/export re-serializes byte-identical to the live DB and carries
-    # the branch's authored nodes
+    # graph/export re-serializes byte-identical to the live DB as the
+    # engine reads it back (its identity stamp stripped — the adoption
+    # re-stamped canon at its new base) and carries the branch's
+    # authored nodes
     canon_export = read_export(export_dir(base))
     assert export_mod.serialize(canon_export) == \
-        export_mod.serialize(live_graph)
+        export_mod.serialize(fake.dump_db({"NEO4J_DATABASE": live}))
+    assert fake.read_stamp({"NEO4J_DATABASE": live})["role"] == "canon"
     assert ("Character", "Ember") in canon_export.nodes
 
     # canon's log gained ONE chained entry, still verifying, whose payload
