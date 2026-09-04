@@ -1349,9 +1349,9 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     violations += delta_mod.body_sync_verdicts(scratch, base_dir)
     # the floor receipt: a cited fingerprint must match its file's bytes
     violations += delta_mod.fingerprint_verdicts(changes, base_dir)
-    # members and bookmarks: the shape of a mount and a foreign citation
-    from . import members as members_mod
-    violations += members_mod.gate_verdicts(changes, scratch)
+    # dependencies and bookmarks: the shape of a pin and a foreign citation
+    from . import dependencies as dependencies_mod
+    violations += dependencies_mod.gate_verdicts(changes, scratch)
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,
@@ -2699,15 +2699,15 @@ def cmd_docs(record=None):
     return 0
 
 
-MEMBER_PATH_PREFIX = "GHOSTWHEEL_MEMBER_"
-_MEMBER_SETTINGS_BLOCK = (
+DEPENDENCY_PATH_PREFIX = "GHOSTWHEEL_DEPENDENCY_"
+_DEPENDENCY_SETTINGS_BLOCK = (
     "\n"
-    "# Members this knowledge base mounts — one line per member, naming\n"
-    "# where that knowledge base's checkout lives on this machine (its\n"
-    "# committed backup is read there). Settings, never canon: the mount\n"
-    "# itself is a [Member] entry authored in a gated round, pinned to the\n"
-    "# member's edition.\n"
-    f"# {MEMBER_PATH_PREFIX}<name>=/path/to/that/knowledge-base\n")
+    "# Dependencies this knowledge base pins — one line per dependency,\n"
+    "# naming where that knowledge base's checkout lives on this machine\n"
+    "# (its committed backup is read there). Settings, never canon: the\n"
+    "# pin itself is a [Dependency] entry authored in a gated round, at\n"
+    "# the dependency's edition.\n"
+    f"# {DEPENDENCY_PATH_PREFIX}<name>=/path/to/that/knowledge-base\n")
 
 
 def cmd_init(target, name=None, world=False):
@@ -2717,10 +2717,10 @@ def cmd_init(target, name=None, world=False):
     seed shape a schema-only branch cut is born from — so the delta path
     can build everything else through gated rounds. No database needed:
     the first `restore` there brings the DBMS into the story.
-    `world` seeds exactly the same knowledge base and adds the member
-    settings block to its .env plus the next step — a world is a role a
-    knowledge base plays by holding [Member] entries, authored in a
-    gated round, never a type the seed marks."""
+    `world` seeds exactly the same knowledge base and adds the
+    dependency settings block to its .env plus the next step — a world
+    is a role a knowledge base plays by holding [Dependency] entries,
+    authored in a gated round, never a type the seed marks."""
     from .extract import Extractor, schema_only
     from .ontology import ARCHETYPE_LABEL, ERROR, kernel_ontology
 
@@ -2769,8 +2769,8 @@ def cmd_init(target, name=None, world=False):
     scratch_db = f"{canon_db}-scratch"
     if env_file.exists():
         print(f"Settings: {env_file.name} already exists — kept as-is."
-              + (f" Add the member block by hand:\n{_MEMBER_SETTINGS_BLOCK}"
-                 if world else ""))
+              + (f" Add the dependency block by hand:\n"
+                 f"{_DEPENDENCY_SETTINGS_BLOCK}" if world else ""))
     else:
         env_file.write_text(
             "# This knowledge base's DBMS settings — fill in the "
@@ -2783,20 +2783,21 @@ def cmd_init(target, name=None, world=False):
             "one DBMS\n# without colliding.\n"
             f"NEO4J_DATABASE={canon_db}\n"
             f"NEO4J_SCRATCH_DATABASE={scratch_db}\n"
-            + (_MEMBER_SETTINGS_BLOCK if world else ""),
+            + (_DEPENDENCY_SETTINGS_BLOCK if world else ""),
             encoding="utf-8")
         print(f"Settings written to {env_file.name}: canon database "
               f"'{canon_db}', working copy '{scratch_db}'"
-              + (", and the member block to fill in" if world else "")
+              + (", and the dependency block to fill in" if world else "")
               + " — fill in the DBMS credentials there and keep the file "
               "out of source control.")
     print("Next: python -m graph restore (build its canon database from "
           f"the backup), then restore --database {scratch_db} to cut "
           "the first authoring round"
-          + (" — and in that round mount each member as a [Member] entry "
-             "(its name = the member's declared name; edition and "
-             "sequence from its committed backup; intent read or write), "
-             "naming each member's path in .env." if world else "."))
+          + (" — and in that round pin each dependency as a [Dependency] "
+             "entry (its name = that knowledge base's declared name; "
+             "edition and sequence from its committed backup; intent read "
+             "or write), naming each dependency's path in .env."
+             if world else "."))
     return 0
 
 
@@ -3107,10 +3108,10 @@ def main(argv=None):
              "current directory)")
     init_parser.add_argument(
         "--world", action="store_true",
-        help="seed the same knowledge base and add the member settings "
-             "block to its .env — a world is a role a knowledge base "
-             "plays by holding [Member] entries, authored in its first "
-             "gated round")
+        help="seed the same knowledge base and add the dependency "
+             "settings block to its .env — a world is a role a knowledge "
+             "base plays by holding [Dependency] entries, authored in its "
+             "first gated round")
     init_parser.add_argument(
         "--name", default=None,
         help="the knowledge base's declared name, written onto its "

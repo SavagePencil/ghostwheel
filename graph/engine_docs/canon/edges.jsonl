@@ -56,8 +56,8 @@
 {"from": {"label": "Archetype", "name": "[Bookmark]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Boundary Rule]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Conduct Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Dependency]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Design Record]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
-{"from": {"label": "Archetype", "name": "[Member]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
@@ -101,8 +101,8 @@
 {"from": {"label": "Archetype", "name": "[Bookmark]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Boundary Rule]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Conduct Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Dependency]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Design Record]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
-{"from": {"label": "Archetype", "name": "[Member]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}

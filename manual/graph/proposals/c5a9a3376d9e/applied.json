@@ -1,0 +1,7 @@
+{
+  "applied": "kernel-migration",
+  "base_after": "60d2e9499b02e0174b8ecd9d44d8e13dc3cd3257f9be0aec1b4003cc0d1d40f0",
+  "chain": "27abfa2da8d29ae4dd5a142c8f26194e77f1d3bb709d7403166387f0343271a0",
+  "delta_hash": "c5a9a3376d9e018e82ea741bbec3185c1e6f8f935c1e1b2a8e814c60759bb2f9",
+  "kernel": "0.15.0"
+}
