@@ -267,21 +267,6 @@ def apply_delta(graph, delta):
     return []
 
 
-def file_era_executed(delta):
-    """The subset of a delta the FILE-ERA apply actually executes:
-    removals (nodes and edges) are manual approver acts canonize never
-    writes, so pre-flip they are logged-but-pending. The replay check
-    compares the executed subset; the archived delta and inverse stay
-    complete. Post-flip the graph-native applier executes everything and
-    this distinction retires."""
-    executed = Delta()
-    executed.nodes_added = list(delta.nodes_added)
-    executed.nodes_changed = list(delta.nodes_changed)
-    executed.edges_added = list(delta.edges_added)
-    executed.edges_changed = list(delta.edges_changed)
-    return executed
-
-
 def ground_identity(graph):
     """The GROUND truth's content identity: the serialization with the
     machine-recomputed layers excluded (derived edge types; machine

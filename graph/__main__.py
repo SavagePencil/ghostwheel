@@ -2569,8 +2569,8 @@ def cmd_terms(base_dir):
             print(f"\n({len(rejects_seen)} ruled reject(s) suppressed.)")
     if stale:
         print(f"\n{len(stale)} rejected term(s) no longer appear in the "
-              "docs — retire them from rejected_terms in "
-              "graph/ontology.yaml:")
+              "docs — retire their ruling rows (the Decision citizens "
+              "carrying rejected_term) through a gated round:")
         for term in stale:
             print(f"  {term}")
     return 0
@@ -2707,10 +2707,10 @@ def main(argv=None):
     verify_seal.add_argument("exam", help="path to the produced exam file")
     sub.add_parser(
         "rederive",
-        help="schema-bootstrap maintenance (until the schema inversion): re-derive "
-             "canon's machine layers against the current ontology.yaml, "
-             "ground layer untouched, backup re-exported from the "
-             "database")
+        help="maintenance: re-derive canon's machine layers against the "
+             "schema the graph itself carries, ground layer untouched, "
+             "backup re-exported from the database (refuses if ground "
+             "would change — ground changes ride the delta path)")
     kernel_parser = sub.add_parser(
         "kernel-migrate",
         help="migrate this canon's embedded kernel stratum to the "

@@ -1141,8 +1141,13 @@ class Extractor:
                                       target_label, target))
         # A branch observes the CONCEPT it switches on (the victim's State),
         # not one named value — project that read to the label's Archetype.
+        # Concept-level reads resolve the PROJECT layer only: a step that
+        # happens to say a kernel facet's name ("Ordered", "Completeness")
+        # observes no kernel machinery, so no READS ever points into it.
+        kernel = self.ontology.kernel_names
         for case_label in case_labels:
-            if (ARCHETYPE_LABEL, case_label) in self.graph.nodes:
+            if (ARCHETYPE_LABEL, case_label) in self.graph.nodes \
+                    and case_label not in kernel:
                 project(make_edge("READS", label, proc_name,
                                   ARCHETYPE_LABEL, case_label))
         # A compute step likewise observes CONCEPTS ("modifiers due to State
@@ -1154,6 +1159,8 @@ class Extractor:
                 continue
             for hit in parsers.mention_matches(step.text, archetype_surfaces):
                 for _, target in archetype_surfaces[hit]:
+                    if target in kernel:
+                        continue
                     project(make_edge("READS", label, proc_name,
                                       ARCHETYPE_LABEL, target))
 
