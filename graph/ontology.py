@@ -326,6 +326,10 @@ KERNEL_PROCEDURE_LABEL = "Procedure"
 # its approved table; citizens under it are authored ground, each with a
 # CHECKS edge to the Procedure it holds still (see graph/answer_keys.py).
 KERNEL_ANSWER_KEY_LABEL = "Answer Key"
+# The worlds layer's kernel machinery (0.15.0): a mounted knowledge base
+# and a citizen cited from one. Bracketed — never subject matter.
+KERNEL_MEMBER_LABEL = "[Member]"
+KERNEL_BOOKMARK_LABEL = "[Bookmark]"
 # Labels the engine materializes itself; projects may not declare them.
 RESERVED_LABELS = {ARCHETYPE_LABEL: "used by the metamodel concepts: section",
                    STEP_LABEL: "used by the procedure_yaml lift",

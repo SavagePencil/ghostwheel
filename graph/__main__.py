@@ -1349,6 +1349,9 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     violations += delta_mod.body_sync_verdicts(scratch, base_dir)
     # the floor receipt: a cited fingerprint must match its file's bytes
     violations += delta_mod.fingerprint_verdicts(changes, base_dir)
+    # members and bookmarks: the shape of a mount and a foreign citation
+    from . import members as members_mod
+    violations += members_mod.gate_verdicts(changes, scratch)
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,
@@ -2696,13 +2699,28 @@ def cmd_docs(record=None):
     return 0
 
 
-def cmd_init(target, name=None):
+MEMBER_PATH_PREFIX = "GHOSTWHEEL_MEMBER_"
+_MEMBER_SETTINGS_BLOCK = (
+    "\n"
+    "# Members this knowledge base mounts — one line per member, naming\n"
+    "# where that knowledge base's checkout lives on this machine (its\n"
+    "# committed backup is read there). Settings, never canon: the mount\n"
+    "# itself is a [Member] entry authored in a gated round, pinned to the\n"
+    "# member's edition.\n"
+    f"# {MEMBER_PATH_PREFIX}<name>=/path/to/that/knowledge-base\n")
+
+
+def cmd_init(target, name=None, world=False):
     """Seed a new knowledge base, born graph-native: no ontology.yaml,
     no sources, no derive path. Writes a committed backup holding the
     kernel's schema stratum alone into <target>/graph/export — the same
     seed shape a schema-only branch cut is born from — so the delta path
     can build everything else through gated rounds. No database needed:
-    the first `restore` there brings the DBMS into the story."""
+    the first `restore` there brings the DBMS into the story.
+    `world` seeds exactly the same knowledge base and adds the member
+    settings block to its .env plus the next step — a world is a role a
+    knowledge base plays by holding [Member] entries, authored in a
+    gated round, never a type the seed marks."""
     from .extract import Extractor, schema_only
     from .ontology import ARCHETYPE_LABEL, ERROR, kernel_ontology
 
@@ -2750,7 +2768,9 @@ def cmd_init(target, name=None):
     canon_db = default_database_name(kb)
     scratch_db = f"{canon_db}-scratch"
     if env_file.exists():
-        print(f"Settings: {env_file.name} already exists — kept as-is.")
+        print(f"Settings: {env_file.name} already exists — kept as-is."
+              + (f" Add the member block by hand:\n{_MEMBER_SETTINGS_BLOCK}"
+                 if world else ""))
     else:
         env_file.write_text(
             "# This knowledge base's DBMS settings — fill in the "
@@ -2762,15 +2782,21 @@ def cmd_init(target, name=None):
             "# Its own database names: several knowledge bases can share "
             "one DBMS\n# without colliding.\n"
             f"NEO4J_DATABASE={canon_db}\n"
-            f"NEO4J_SCRATCH_DATABASE={scratch_db}\n",
+            f"NEO4J_SCRATCH_DATABASE={scratch_db}\n"
+            + (_MEMBER_SETTINGS_BLOCK if world else ""),
             encoding="utf-8")
         print(f"Settings written to {env_file.name}: canon database "
-              f"'{canon_db}', working copy '{scratch_db}' — fill in the "
-              "DBMS credentials there and keep the file out of source "
-              "control.")
+              f"'{canon_db}', working copy '{scratch_db}'"
+              + (", and the member block to fill in" if world else "")
+              + " — fill in the DBMS credentials there and keep the file "
+              "out of source control.")
     print("Next: python -m graph restore (build its canon database from "
           f"the backup), then restore --database {scratch_db} to cut "
-          "the first authoring round.")
+          "the first authoring round"
+          + (" — and in that round mount each member as a [Member] entry "
+             "(its name = the member's declared name; edition and "
+             "sequence from its committed backup; intent read or write), "
+             "naming each member's path in .env." if world else "."))
     return 0
 
 
@@ -3080,6 +3106,12 @@ def main(argv=None):
         help="directory to become the knowledge base root (default: the "
              "current directory)")
     init_parser.add_argument(
+        "--world", action="store_true",
+        help="seed the same knowledge base and add the member settings "
+             "block to its .env — a world is a role a knowledge base "
+             "plays by holding [Member] entries, authored in its first "
+             "gated round")
+    init_parser.add_argument(
         "--name", default=None,
         help="the knowledge base's declared name, written onto its "
              "Ontology anchor so it travels with the committed backup "
@@ -3193,7 +3225,7 @@ def main(argv=None):
     if args.command == "init":
         # Opens no knowledge base either — it births one where none
         # exists, so base-dir discovery cannot precede it.
-        return cmd_init(args.target, name=args.name)
+        return cmd_init(args.target, name=args.name, world=args.world)
 
     base_dir = find_base_dir()
     load_corpus_grammars(base_dir)

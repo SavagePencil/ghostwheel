@@ -1,0 +1,71 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [
+  {
+   "from_label": "Archetype",
+   "from_name": "[Bookmark]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Member]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Bookmark]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Member]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  }
+ ],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "Metaontology",
+   {
+    "fingerprint": [
+     "e239e57fda48e6c6f6fab0ef65eded184fc3d85552c585cc41658fcb57b7ddcf",
+     "77092ac3a8c8489c0f3e9aa272c92f5a6f5b83424efb8247c240ee4736ea3fe4"
+    ],
+    "version": [
+     "0.15.0",
+     "0.14.0"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": [
+  [
+   "Archetype",
+   "[Bookmark]",
+   {
+    "doc": "A citizen that lives in a member knowledge base, cited from this one: the member's name, the citizen's label and name there, and the member edition it was resolved against, with exactly one IN_MEMBER edge to the [Member] it lives in. This knowledge base's own citizens point at a bookmark through their own relation vocabulary, authored like any ground edge, so the setting's fact can rest on the rulebook's citizen without either knowledge base holding the other's rows. Machinery, never subject matter — hence bracketed."
+   }
+  ],
+  [
+   "Archetype",
+   "[Member]",
+   {
+    "doc": "A knowledge base this one mounts, pinned to an edition. The citizen's name is the member's own declared name; it carries the edition it is pinned to (the member's committed backup identity hash and its event-log sequence), the intent this knowledge base holds toward it (read, or write when a shared activity may land rounds there), and the git ref the edition was tagged at — that ref is provenance only. Where the member's checkout lives on this machine is settings, never canon. A knowledge base holding member entries is playing the world role; a member may itself hold members. Machinery, never subject matter — hence bracketed."
+   }
+  ]
+ ]
+}

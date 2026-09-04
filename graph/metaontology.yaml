@@ -50,6 +50,13 @@
 # Under Provenance: Artifact and DocSection are project-level labels
 #                   (declared in a project's ontology, bound to this root),
 #                   with MENTIONS / PART_OF edges; SPECIFIED_IN reserved.
+#                   [Member] and [Bookmark] are kernel machinery here
+#                   (bracketed: a designer never authors either as subject
+#                   matter): a [Member] is another knowledge base this one
+#                   mounts at a pinned edition; a [Bookmark] is a citizen
+#                   that lives in a member, cited from here. Any knowledge
+#                   base holding [Member] entries is playing the world
+#                   role — a role, never a type.
 # Relations:        SUBTYPE_OF (genuine taxonomy — never use for the
 #                   instance tower; declared via `subtypes:` on a concept
 #                   entry naming the citizens that are its KINDS, derived
@@ -74,7 +81,10 @@
 #                   Discipline / Audience citizens (one system, shared
 #                   names). CHECKS (Answer Key -> Procedure): an authored
 #                   ground edge naming the program a fidelity check holds
-#                   to its approved table.
+#                   to its approved table. IN_MEMBER ([Bookmark] ->
+#                   [Member]): an authored ground edge naming the mounted
+#                   knowledge base a bookmarked citizen lives in — exactly
+#                   one per bookmark.
 # Engine-stamped:   'Metaontology' and 'Ontology' Archetypes
 #                   (under Provenance) carry version + content
 #                   fingerprint — the self-description slice;
@@ -103,7 +113,19 @@
 # checked program's body, and as the DB-free `answer-keys` sweep. The
 # engine owns the check, so the engine owns the vocabulary. Additive;
 # MINOR bump.
-version: "0.14.0"
+# Ledger — 0.15.0 (members and bookmarks enter the kernel): a knowledge
+# base gains the vocabulary to mount another knowledge base and to cite
+# a citizen that lives there. [Member] pins a mounted knowledge base to
+# an edition (its committed backup's identity hash and event-log
+# sequence) with a read or write intent; [Bookmark] names a citizen in a
+# member — its knowledge base, label, name, and the edition it was
+# resolved against — with one IN_MEMBER edge to that member. Both are
+# Provenance-rooted machinery: where the member lives on disk is
+# settings, never canon, and a knowledge base's own citizens point at a
+# bookmark through their own relation vocabulary. The delta gate checks
+# their shape; resolution against the member's backup is the next rung.
+# Additive; MINOR bump.
+version: "0.15.0"
 
 roots:
   Concept: >-
@@ -181,6 +203,31 @@ concepts:
       round touches the key or the checked program's body, and on
       demand as the answer-keys sweep; a table that drifts from its
       program is named by the key that caught it.
+  "[Member]":
+    instance_of: Provenance
+    doc: >-
+      A knowledge base this one mounts, pinned to an edition. The
+      citizen's name is the member's own declared name; it carries the
+      edition it is pinned to (the member's committed backup identity
+      hash and its event-log sequence), the intent this knowledge base
+      holds toward it (read, or write when a shared activity may land
+      rounds there), and the git ref the edition was tagged at — that
+      ref is provenance only. Where the member's checkout lives on
+      this machine is settings, never canon. A knowledge base holding
+      member entries is playing the world role; a member may itself
+      hold members. Machinery, never subject matter — hence bracketed.
+  "[Bookmark]":
+    instance_of: Provenance
+    doc: >-
+      A citizen that lives in a member knowledge base, cited from this
+      one: the member's name, the citizen's label and name there, and
+      the member edition it was resolved against, with exactly one
+      IN_MEMBER edge to the [Member] it lives in. This knowledge base's
+      own citizens point at a bookmark through their own relation
+      vocabulary, authored like any ground edge, so the setting's fact
+      can rest on the rulebook's citizen without either knowledge base
+      holding the other's rows. Machinery, never subject matter —
+      hence bracketed.
   # Visibility vocabulary (kernel ceremony, the visibility lens design,
   # owner-ruled 2026-08-11): mechanized vocabulary lives with its
   # machinery — the engine owns the lens (graph/lens.py). The storybook
