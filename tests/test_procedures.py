@@ -567,6 +567,28 @@ def test_compute_projects_reads_not_mutates(make_repo):
     assert not [e for e in edges(graph, "MUTATES") if e[1] == "Tally"]
 
 
+def test_compute_reads_resolve_the_project_layer_only(make_repo):
+    # a step that happens to say a kernel facet's name ("Completeness",
+    # "Ordered") observes no kernel machinery: concept-level READS land
+    # on project concepts only, never on the kernel stratum
+    files = dict(FILES)
+    files["data/procedures/tally.yaml"] = TALLY.replace(
+        "  - compute: the Bounties owed against the total\n",
+        "  - compute: the Bounties owed against the total, by Completeness "
+        "and Ordered rank\n")
+    ontology = ONTOLOGY.replace(
+        "data/procedures/tend.yaml]",
+        "data/procedures/tend.yaml, data/procedures/tally.yaml]")
+    graph, findings = run(make_repo, files=files, ontology=ontology)
+    assert not [f for f in findings if f.severity == ERROR]
+    reads = edges(graph, "READS")
+    assert ("Procedure", "Tally", "Archetype", "Condition") in reads
+    kernel_reads = [e for e in reads if e[1] == "Tally"
+                    and e[2] == "Archetype"
+                    and e[3] in ("Completeness", "Ordered")]
+    assert kernel_reads == []
+
+
 def test_known_at_completeness_archetypes(make_repo):
     graph, _ = run(make_repo)
     known = edges(graph, "KNOWN_AT")

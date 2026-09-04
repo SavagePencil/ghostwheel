@@ -2,14 +2,47 @@
 identity, divergence naming, and the Approved-to-Applied freeze. Pure
 logic plus the mini-repo — no database needed."""
 
-from graph.canonize import apply_plan, build_plan
 from graph.delta import diff
-from graph.extract import extract, make_edge
+from graph.extract import GraphData, extract, make_edge
 from graph.ontology import load_ontology
 from graph.proposal import (archive_round, base_identity, content_hash,
                             current_dir, divergence, parse_delta,
                             serialize_delta, write_json)
-from tests.test_canonize import agent_scratch, build_base, clone
+from tests.test_extract import FILES, ONTOLOGY
+
+
+def clone(graph):
+    copy = GraphData()
+    for (label, name), props in graph.nodes.items():
+        copy.ensure_node(label, name, **dict(props))
+    copy.edges = list(graph.edges)
+    return copy
+
+
+def build_base(make_repo):
+    base_dir, path = make_repo(FILES, ONTOLOGY)
+    ontology, _ = load_ontology(path, base_dir)
+    base, _ = extract(ontology)
+    return base_dir, path, ontology, base
+
+
+def agent_scratch(base):
+    """What an agent session leaves in scratch: base + ground facts only."""
+    scratch = clone(base)
+    scratch.ensure_node("Knack", "Glimmer", knack_class="Active",
+                        note="a hidden note", from_text="quoted evidence")
+    scratch.edges.append(make_edge("HAS_KNACK_SPARK", "Knack", "Glimmer",
+                                   "Spark", "Faint"))
+    scratch.edges.append(make_edge("GRANTS_KNACK", "Terrain", "Windswept",
+                                   "Knack", "Glimmer"))
+    scratch.edges.append(make_edge("SWAPS_WITH", "Knack", "Glimmer",
+                                   "Knack", "Frost", {"trigger": "feint"}))
+    scratch.ensure_node("Note", "third one")
+    scratch.edges.append(make_edge("ABOUT", "Note", "third one",
+                                   "Knack", "Frost"))
+    scratch.nodes[("Knack", "Frost")]["knack_class"] = "Active"
+    scratch.nodes[("Knack", "Frost")]["note"] = "updated note"
+    return scratch
 
 
 def rich_delta(make_repo):
@@ -58,18 +91,18 @@ def test_divergence_names_both_directions(make_repo):
 
 
 def test_apply_replays_the_pinned_document(make_repo):
-    # the pinned artifact drives apply — parse(serialize(delta)) must
-    # reach the same fixpoint as applying the live delta would
-    base_dir, path, ontology, base, scratch = rich_delta(make_repo)
+    # the pinned artifact drives apply — parse(serialize(delta)) applied
+    # to the base must reach exactly the scratch the delta was diffed
+    # from, ground for ground, and drain to an empty residual
+    from graph.proposal import apply_delta, ground_identity
+    _, _, _, base, scratch = rich_delta(make_repo)
     pinned_text = serialize_delta(diff(base, scratch))
-    plan = build_plan(parse_delta(pinned_text), ontology, base_dir)
-    assert not plan.blocked, plan.review_required
-    apply_plan(plan, base_dir)
-    ontology2, _ = load_ontology(path, base_dir)
-    new_base, _ = extract(ontology2)
-    residual = diff(new_base, scratch)
-    assert residual.nodes_added == []
-    assert residual.edges_added == []
+    replayed = clone(base)
+    assert apply_delta(replayed, parse_delta(pinned_text)) == []
+    assert ground_identity(replayed) == ground_identity(scratch)
+    residual = diff(replayed, scratch)
+    assert residual.nodes_added == [] and residual.nodes_removed == []
+    assert residual.edges_added == [] and residual.edges_removed == []
 
 
 def test_base_identity_tracks_source_changes(make_repo):
@@ -99,26 +132,6 @@ def test_archive_round_moves_the_artifacts(tmp_path):
 
 from graph.proposal import (append_applied_log, apply_delta, ground_identity,
                             invert_delta, verify_applied_log)
-
-
-def test_apply_delta_replays_the_round(make_repo):
-    # applying the logged delta to the base reproduces the ground truth
-    # the file edits produced — replay equivalence
-    base_dir, path, ontology, base, scratch = rich_delta(make_repo)
-    delta = diff(base, scratch)
-    plan = build_plan(delta, ontology, base_dir)
-    apply_plan(plan, base_dir)
-    ontology2, _ = load_ontology(path, base_dir)
-    new_base, _ = extract(ontology2)
-
-    # the file era executes adds and changes; removals are manual
-    # approver acts — the replay compares what was actually executed
-    from graph.proposal import file_era_executed
-    replayed = clone(base)
-    problems = apply_delta(
-        replayed, parse_delta(serialize_delta(file_era_executed(delta))))
-    assert problems == []
-    assert ground_identity(replayed) == ground_identity(new_base)
 
 
 def test_walk_back_returns_to_base(make_repo):
