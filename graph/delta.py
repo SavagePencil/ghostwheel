@@ -1250,6 +1250,62 @@ def body_sync_verdicts(scratch, base_dir):
     return violations
 
 
+def fingerprint_verdicts(delta, base_dir):
+    """The floor receipt at the gate: a citizen the round adds or
+    re-fingerprints, whose name is a file under the knowledge base,
+    must carry that file's fingerprint — a stale or mistyped receipt
+    refuses by name. A name that is not a file on disk is not judged:
+    a fingerprint may cite bytes held elsewhere."""
+    import hashlib
+    import pathlib
+
+    verdicts = []
+    rows = [(label, name, (props or {}).get("fingerprint"))
+            for label, name, props in delta.nodes_added]
+    rows += [(label, name, changes["fingerprint"][1])
+             for label, name, changes in delta.nodes_changed
+             if "fingerprint" in changes]
+    for label, name, declared in rows:
+        if not declared:
+            continue
+        relative = pathlib.Path(str(name))
+        if relative.is_absolute() or ".." in relative.parts:
+            continue  # a citizen's name never reaches outside the KB
+        path = pathlib.Path(base_dir) / relative
+        if not path.is_file():
+            continue
+        try:
+            actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError as exc:
+            verdicts.append(Verdict(
+                code="fingerprint-file-unreadable",
+                subject=CitizenRef(label, name),
+                message=(
+                    f"Attempted to check the fingerprint '{name}' cites "
+                    f"against the file. Failed due to: the file is not "
+                    f"readable ({exc}) — restore the file or cite the "
+                    "bytes you meant."),
+                remedy="Restore the file or cite the bytes you meant.",
+                data={"file": str(name), "declared": declared}))
+            continue
+        if actual != declared:
+            verdicts.append(Verdict(
+                code="fingerprint-mismatch",
+                subject=CitizenRef(label, name),
+                message=(
+                    f"Attempted to cite {name} by fingerprint on "
+                    f"'{name}'. Failed due to: the citizen declares "
+                    f"{declared[:12]} but the file's bytes hash to "
+                    f"{actual[:12]} — the receipt is stale or mistyped. "
+                    f"Run python -m graph receipt {name} and paste its "
+                    "fingerprint, or cite the bytes you meant."),
+                remedy=(f"Run python -m graph receipt {name} and paste "
+                        "its fingerprint, or cite the bytes you meant."),
+                data={"file": str(name), "declared": declared,
+                      "actual": actual}))
+    return verdicts
+
+
 def body_sync_violations(scratch, base_dir):
     """The body-sync verdicts as prose lines — a rendering of
     body_sync_verdicts(). The records are the truth; these are their

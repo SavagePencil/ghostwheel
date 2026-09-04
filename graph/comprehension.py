@@ -182,6 +182,74 @@ def fingerprint_bytes(data):
     return hashlib.sha256(data).hexdigest()
 
 
+# -- the floor receipt: any artifact's identity, before anyone reads it --
+#
+# The front door promises any artifact (text, image, model, audio, link).
+# Every artifact enters at least at its floor receipt — a whole-file
+# fingerprint, its size, and the medium its BYTES declare (never its
+# file extension) — and a non-text artifact is cited on the citizen it
+# is about by that receipt, with an observation of what it shows. The
+# reading room's structural comprehension is text-only and says so.
+
+_SIGNATURES = (
+    (b"\x89PNG\r\n\x1a\n", "image"),
+    (b"\xff\xd8\xff", "image"),
+    (b"GIF87a", "image"),
+    (b"GIF89a", "image"),
+    (b"%PDF-", "pdf"),
+    (b"ID3", "audio"),
+    (b"fLaC", "audio"),
+    (b"OggS", "audio"),
+)
+_MEDIUM_PHRASE = {"image": "an image", "pdf": "a PDF", "audio": "audio",
+                  "binary": "binary data", "text": "text"}
+
+
+def sniff_medium(data):
+    """The medium an artifact's bytes declare: text, image, pdf, audio,
+    or binary (bytes the engine recognizes as neither text nor a known
+    medium)."""
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image"
+    if data[:4] == b"RIFF" and data[8:12] == b"WAVE":
+        return "audio"
+    for signature, medium in _SIGNATURES:
+        if data.startswith(signature):
+            return medium
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError:
+        return "binary"
+    return "text"
+
+
+def receipt(data):
+    """The floor receipt: fingerprint, size in bytes, medium."""
+    return {"fingerprint": fingerprint_bytes(data), "bytes": len(data),
+            "medium": sniff_medium(data)}
+
+
+class NotTextArtifact(ValueError):
+    """A non-text artifact handed to the reading room. The refusal
+    carries the artifact's floor receipt, so what arrived is still on
+    record even though its structure cannot be read."""
+
+    def __init__(self, title, floor_receipt):
+        self.title = title
+        self.receipt = floor_receipt
+        medium = _MEDIUM_PHRASE.get(floor_receipt["medium"],
+                                    floor_receipt["medium"])
+        super().__init__(
+            f"Attempted to read artifact {title} into the reading room. "
+            f"Failed due to: it is {medium}, not text (fingerprint "
+            f"{floor_receipt['fingerprint'][:12]}, "
+            f"{floor_receipt['bytes']} bytes). A non-text artifact enters "
+            "canon at its floor receipt — cited by fingerprint on the "
+            "citizen it is about, with an observation of what it shows — "
+            "never through the reading room. python -m graph receipt "
+            "<file> prints the receipt to paste.")
+
+
 def read_artifact(data, title, origin="", cited_sections=(),
                   carried_texts=()):
     """Build a Reading from an artifact's bytes (markdown, v0).
@@ -200,7 +268,10 @@ def read_artifact(data, title, origin="", cited_sections=(),
     patterns = carried_patterns(carried_texts)
     fingerprint = fingerprint_bytes(data)
     short = fingerprint[:12]
-    text = data.decode("utf-8")
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        raise NotTextArtifact(title, receipt(data)) from None
     sections = []
     # stack of (level, position-path list, child-counter dict)
     stack = []  # entries: {"level": int, "path": [..], "children": int}
