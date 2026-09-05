@@ -47,16 +47,17 @@ class Delta:
     edges_changed: list = field(default_factory=list)  # (Edge after, {prop: (before, after)})
     stitch: list = field(default_factory=list)         # Edge — lands after re-derivation (the stitch mechanism)
     attribution: list = field(default_factory=list)    # claim→citizen link rows (recorded provenance)
+    moves: dict = field(default_factory=dict)          # declared renames / re-homings (moves.json)
 
     @property
     def empty(self):
         # a links-only round is a real proposal: recording provenance
         # for already-authored citizens changes no ground but is a
-        # ruling all the same
+        # ruling all the same — and so is a moves-only round
         return not (self.nodes_added or self.nodes_removed
                     or self.nodes_changed or self.edges_added
                     or self.edges_removed or self.edges_changed
-                    or self.stitch or self.attribution)
+                    or self.stitch or self.attribution or self.moves)
 
 
 def read_graph(config):
@@ -180,9 +181,11 @@ CEREMONY_RENDER_PROPS = frozenset({RENDERED_VIEWS_PROP})
 _OUT_OF_CLASS = (
     "this schema change is outside the ceremony's classes (new declared "
     "concepts, label births, doc edits, added aliases, render-mapping "
-    "edits, source unregistration, removal of unreferenced rows) — "
-    "changes to an EXISTING label "
-    "or spec move data underneath them and ride the migration charter. "
+    "edits, source unregistration, removal of unreferenced rows, and the "
+    "declared moves — a rename of the world's own label or a re-homing "
+    "of citizens under a kind, filed in moves.json) — "
+    "any other change to an EXISTING label "
+    "or spec moves data underneath it and rides the migration charter. "
     "Propose the change to the owner at the plan gate instead.")
 
 

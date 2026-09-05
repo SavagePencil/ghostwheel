@@ -50,6 +50,11 @@ REDERIVE_FILE = "rederive.json"
 # the target's current round, archived with it, and turned into the
 # target log's merged-from annotation at apply.
 MERGE_FILE = "merge.json"
+# A round's declared data-moving ops (the migration charter's project
+# side): renames of the world's own labels and re-homings of citizens
+# under a kind — filed beside the stitch, embedded in the proposal so the
+# approval hash covers them, performed at canonize --apply.
+MOVES_FILE = "moves.json"
 ATTRIBUTION_FILE = "attribution.json"
 
 
@@ -86,6 +91,11 @@ def serialize_delta(delta):
         # pre-stitch round's archived document still hashes to the id
         # its event-log entry recorded
         doc["stitch"] = [_edge_doc(e) for e in delta.stitch]
+    if delta.moves:
+        # Declared moves (renames, re-homings): present only when the
+        # round declares them, so every earlier round's archived document
+        # still hashes to its recorded id
+        doc["moves"] = delta.moves
     if delta.attribution:
         # Recorded attribution (the provenance-recording rung): present
         # only when the round declares links, so every earlier round's
@@ -150,6 +160,7 @@ def parse_delta(text):
                            for d, c in doc["edges_changed"]]
     delta.stitch = [_edge_from_doc(d) for d in doc.get("stitch", [])]
     delta.attribution = [dict(d) for d in doc.get("attribution", [])]
+    delta.moves = dict(doc.get("moves") or {})
     return delta
 
 
@@ -494,6 +505,19 @@ def read_stitch(base_dir, branch=None):
     return [_edge_from_doc(d) for d in doc]
 
 
+def read_moves(base_dir, branch=None):
+    """The round's declared moves at proposals/current/moves.json:
+    {"rename": {old: new}, "rehome": {source label: {target label:
+    [citizen names]}}}. Absent file = no moves. Shape faults raise
+    ValueError in the house form."""
+    path = current_dir(base_dir, branch) / MOVES_FILE
+    if not path.exists():
+        return {}
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    from .moves import normalize
+    return normalize(doc, MOVES_FILE)
+
+
 def read_attribution_file(base_dir, branch=None):
     """The round's declared claim→citizen links — the author files them
     at proposals/current/attribution.json (a JSON list of link rows:
@@ -792,7 +816,7 @@ def archive_round(base_dir, delta_id, branch=None):
     # delta as if declared there
     for name in (BASE_FILE, DELTA_FILE, APPROVAL_FILE, APPLIED_FILE,
                  INVERSE_FILE, STITCH_FILE, ATTRIBUTION_FILE, REDERIVE_FILE,
-                 MERGE_FILE):
+                 MERGE_FILE, MOVES_FILE):
         path = src / name
         if path.exists():
             (dst / name).write_text(path.read_text(encoding="utf-8"),
