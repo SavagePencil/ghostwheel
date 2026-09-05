@@ -1,0 +1,18 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [
+  [
+   "Decision",
+   "The pocket declares itself (0.16.0)",
+   {
+    "decided_by": "James Clarendon",
+    "decided_on": "2026-09-04",
+    "doc": "Kernel ceremony ruling: a named branch cut as a clone of canon is a pocket — a collaborator's own version of a knowledge base, hard-isolated from canon like every branch. Its declaration (who cut it, when, who is invited to look, the base kind, the canon identity and sequence it forked from) lives in-band and in no file: on the branch database's identity stamp and as the bracketed machinery citizen [Pocket], named for the branch, in the branch's own graph and export, so the front door can ask who cut this and who may look. The engine writes the row at the cut and rewrites it through the invite verbs; nobody authors it by hand (the diff gate refuses that); it is set aside from the line's content identity so an invite change moves no chain; succession strips it — canon is never a pocket. Readability is declarative at this rung; making it physical is a later rung. Additive; kernel 0.15.0 -> 0.16.0, delivered to existing knowledge bases by kernel-migrate."
+   }
+  ]
+ ],
+ "nodes_changed": [],
+ "nodes_removed": []
+}

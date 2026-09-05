@@ -152,12 +152,33 @@ def content_hash(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def identity_view(graph):
+    """The graph as identity sees it: a branch's own declaration rows
+    (a pocket's who-cut-it and who-may-look) are set aside, so an
+    invite change re-exports a backup without moving the line's
+    identity or the chain built on it. Everything else counts."""
+    from .extract import GraphData
+    from .ontology import DECLARATION_LABELS
+    if not any(key[0] in DECLARATION_LABELS for key in graph.nodes):
+        return graph
+    view = GraphData()
+    for (label, name), props in graph.nodes.items():
+        if label not in DECLARATION_LABELS:
+            view.ensure_node(label, name, **dict(props))
+    view.edges = [edge for edge in graph.edges
+                  if edge.from_label not in DECLARATION_LABELS
+                  and edge.to_label not in DECLARATION_LABELS]
+    return view
+
+
 def base_identity(graph):
     """The base's content identity: hash over the deterministic
-    serialization (the same bytes `export` writes)."""
+    serialization (the same bytes `export` writes), with a line's own
+    declaration rows set aside (see identity_view)."""
     from . import export as export_mod
     digest = hashlib.sha256()
-    for filename, content in sorted(export_mod.serialize(graph).items()):
+    for filename, content in sorted(
+            export_mod.serialize(identity_view(graph)).items()):
         digest.update(filename.encode("utf-8"))
         digest.update(content.encode("utf-8"))
     return digest.hexdigest()

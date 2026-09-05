@@ -37,10 +37,11 @@ ROLES = ("canon", "working-copy", "branch", "inspection")
 
 
 def stamp(config, role, base_hash, git_ref="unknown", branch=None,
-          kb=None):
+          kb=None, extra=None):
     """Write the identity stamp into the configured database, replacing
     any prior stamp — a database has exactly one identity at a time.
-    `kb` names the knowledge base the database belongs to."""
+    `kb` names the knowledge base the database belongs to; `extra`
+    carries further in-band facts (a pocket's declaration)."""
     from neo4j import GraphDatabase  # deferred: only DB paths need it
 
     assert role in ROLES, role
@@ -56,6 +57,8 @@ def stamp(config, role, base_hash, git_ref="unknown", branch=None,
         props["branch"] = branch
     if kb is not None:
         props[KB_PROP] = kb
+    if extra:
+        props.update(extra)
     driver = GraphDatabase.driver(
         config["NEO4J_URI"],
         auth=(config["NEO4J_USERNAME"], config["NEO4J_PASSWORD"]))

@@ -16,7 +16,8 @@ from dataclasses import dataclass, field
 
 from . import report as report_mod
 from .extract import GraphData, make_edge
-from .ontology import (ARCHETYPE_LABEL, MACHINE_LABELS, MEMBERSHIP_EDGE_TYPE,
+from .ontology import (ARCHETYPE_LABEL, DECLARATION_LABELS, MACHINE_LABELS,
+                       MEMBERSHIP_EDGE_TYPE,
                        RENDERED_VIEWS_PROP, SCHEMA_EDGE_TYPES, SCHEMA_LABELS,
                        STRATIFIED_EDGE_TYPES, UNAUTHORABLE_EDGE_TYPES,
                        UNAUTHORABLE_LABELS, Reader, is_concept_archetype,
@@ -105,7 +106,12 @@ def diff(base, scratch):
     # freeze must refuse an authored schema mutation by name, never
     # swallow it into a green apply. Authored machine-label ADDITIONS
     # still itemize so the lint can refuse them.
-    machine = (lambda key: key[0] in MACHINE_LABELS)
+    # A line's own declaration rows (a pocket's who-cut-it and who-may-
+    # look) are the engine's to write, never scratch's to edit: an edit
+    # or removal there never itemizes — the invite verbs are the way —
+    # while an authored ADDITION still itemizes so the lint refuses it.
+    machine = (lambda key: key[0] in MACHINE_LABELS
+               or key[0] in DECLARATION_LABELS)
     for key in sorted(scratch.nodes.keys() - base.nodes.keys(),
                       key=lambda k: (k[0], str(k[1]))):
         delta.nodes_added.append((key[0], key[1], dict(scratch.nodes[key])))
@@ -843,6 +849,19 @@ def lint_verdicts(delta, base=None):
             # Schema adds are fully adjudicated by ceremony_records:
             # permitted concepts itemize, everything else already refused.
             pass
+        elif label in DECLARATION_LABELS:
+            violations.append(Verdict(
+                code="declaration-authored",
+                subject=CitizenRef(label, name),
+                message=(
+                    f"'{name}' can't be created as a {label} — a line's "
+                    "own declaration (who cut this pocket, who may look) "
+                    "is written by the engine at the cut and changed by "
+                    "python -m graph branch <name> --invite/--uninvite, "
+                    "never authored by hand. Delete the row from scratch."),
+                remedy="Delete the row from scratch; use python -m graph "
+                       "branch <name> --invite/--uninvite to change a "
+                       "declaration."))
         elif label in UNAUTHORABLE_LABELS:
             violations.append(Verdict(
                 code="machine-label-authored",

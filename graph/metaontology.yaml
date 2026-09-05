@@ -56,7 +56,12 @@
 #                   one pins at an edition; a [Bookmark] is a citizen that
 #                   lives in a dependency, cited from here. Any knowledge
 #                   base holding [Dependency] entries is playing the world
-#                   role — a role, never a type.
+#                   role — a role, never a type. [Pocket] is a branch's
+#                   own declaration of itself as a pocket (who cut it,
+#                   when, who may look, the base kind, the canon identity
+#                   it forked from): engine-written at the cut and by the
+#                   invite verbs, never authored, set aside from content
+#                   identity, stripped at succession.
 # Relations:        SUBTYPE_OF (genuine taxonomy — never use for the
 #                   instance tower; declared via `subtypes:` on a concept
 #                   entry naming the citizens that are its KINDS, derived
@@ -125,7 +130,18 @@
 # bookmark through their own relation vocabulary. The delta gate checks
 # their shape; resolution against the dependency's backup is the next
 # rung. Additive; MINOR bump.
-version: "0.15.0"
+# Ledger — 0.16.0 (the pocket declares itself): a named branch cut as a
+# clone of canon is a pocket — a collaborator's own version of a
+# knowledge base, hard-isolated from canon. Its declaration lives in
+# the branch's own graph as [Pocket] (who cut it, when, who is invited,
+# the base kind, the canon identity and sequence it forked from), so the
+# front door can ask "who cut this, who may look" and the backup carries
+# the answer with no file beside it. Engine-written at the cut and
+# rewritten by the invite verbs, never authored by hand; set aside from
+# the line's content identity so an invite change moves no chain;
+# stripped at succession, since canon is never a pocket. Physical
+# readability is a later rung. Additive; MINOR bump.
+version: "0.16.0"
 
 roots:
   Concept: >-
@@ -229,6 +245,18 @@ concepts:
       setting's fact can rest on the rulebook's citizen without either
       knowledge base holding the other's rows. Machinery, never subject
       matter — hence bracketed.
+  "[Pocket]":
+    instance_of: Provenance
+    doc: >-
+      A branch's own declaration of itself as a pocket — a collaborator's
+      version of this knowledge base, cut as a clone of canon and
+      hard-isolated from it. The citizen is named for the branch and
+      carries who cut it, when, who is invited to look, the base kind,
+      and the canon identity and sequence it forked from. The engine
+      writes it at the cut and rewrites it when the invite list changes;
+      nobody authors it by hand, it is set aside from the line's content
+      identity, and succession strips it — canon is never a pocket.
+      Machinery, never subject matter — hence bracketed.
   # Visibility vocabulary (kernel ceremony, the visibility lens design,
   # owner-ruled 2026-08-11): mechanized vocabulary lives with its
   # machinery — the engine owns the lens (graph/lens.py). The storybook

@@ -331,6 +331,14 @@ KERNEL_ANSWER_KEY_LABEL = "Answer Key"
 # subject matter.
 KERNEL_DEPENDENCY_LABEL = "[Dependency]"
 KERNEL_BOOKMARK_LABEL = "[Bookmark]"
+# A branch cut as a pocket declares itself in-band (0.16.0): who cut
+# it, when, who may look, the base kind, the canon identity it forked
+# from. Engine-written at the cut and by the invite verbs, never
+# authored by hand; set aside from a line's content identity so an
+# invite change moves no chain; stripped at succession — canon is
+# never a pocket.
+KERNEL_POCKET_LABEL = "[Pocket]"
+DECLARATION_LABELS = frozenset({KERNEL_POCKET_LABEL})
 # Labels the engine materializes itself; projects may not declare them.
 RESERVED_LABELS = {ARCHETYPE_LABEL: "used by the metamodel concepts: section",
                    STEP_LABEL: "used by the procedure_yaml lift",

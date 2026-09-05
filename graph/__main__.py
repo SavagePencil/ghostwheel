@@ -183,7 +183,7 @@ def cmd_export(base_dir, from_sources=False):
 
 
 def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
-                base=None):
+                base=None, by=None, invite=None):
     """Rebuild a database from graph/export/ alone, then read it back
     and prove byte-identity with the backup — the D55 drill.
     With --database scratch: clone canon to scratch and pin the round
@@ -198,8 +198,9 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
     from . import load as load_mod  # deferred: needs the neo4j driver
     from . import restore as restore_mod
 
-    if branch is not None or base is not None:
-        return _restore_branch(base_dir, branch, base, database)
+    if branch is not None or base is not None or by or invite:
+        return _restore_branch(base_dir, branch, base, database,
+                               by=by, invite=invite)
 
     def guard(text, **facts):
         # a run refused before any write: the record names the guard
@@ -297,31 +298,50 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
     return 0
 
 
-def _restore_branch(base_dir, branch, base, database):
+def _restore_branch(base_dir, branch, base, database, by=None,
+                    invite=None):
     """Cut a branch: build its seed from canon's committed backup, write
     the branch's own backup, load it into the branch's database, prove
     byte-identity, and pin the branch round. The branch is a line of
     truth WITHIN this KB — hard-isolated from live canon (its target
     database can never be the canon database) and born from a declared
-    base (only schema-only in this slice; clone-of-canon is a future
-    Pocket base). Collates every problem before touching the DBMS."""
+    base: schema-only (the schema stratum alone — a rebuild line) or
+    clone-of-canon (canon's whole graph — a POCKET, declared in-band by
+    who cut it and who is invited). Collates every problem before
+    touching the DBMS."""
     from . import load as load_mod
+    from . import pockets as pockets_mod
     from . import proposal as proposal_mod
     from . import restore as restore_mod
     from .extract import schema_only
 
     config = load_mod.read_config(base_dir)
+    invite = list(invite or [])
     # Verify-all before apply-any: collate every refusal — the name lint,
     # the base check, the no-alias rule, and the existing-home guard —
     # before writing a single byte.
     problems = list(proposal_mod.branch_name_problems(
         branch, config["NEO4J_DATABASE"]))
-    if base != "schema-only":
+    if base not in pockets_mod.BASES:
         problems.append(
             "Attempted to cut a branch with base "
-            f"{base!r}. Failed due to: the only branch base in this "
-            "release is 'schema-only' (the schema stratum alone) — pass "
-            "--base schema-only.")
+            f"{base!r}. Failed due to: a branch is born from a declared "
+            "base — schema-only (the schema stratum alone, a rebuild "
+            "line) or clone-of-canon (canon's whole graph, a pocket). "
+            "Pass --base schema-only or --base clone-of-canon.")
+    if base == pockets_mod.CLONE_OF_CANON and not by:
+        problems.append(
+            f"Attempted to cut pocket '{branch}' with nobody named as "
+            "cutting it. Failed due to: a pocket declares who cut it — "
+            "pass --by <who> (and --invite <name> for each person who "
+            "may look).")
+    if base == pockets_mod.SCHEMA_ONLY and (by or invite):
+        problems.append(
+            f"Attempted to declare branch '{branch}' a pocket with "
+            "--by/--invite. Failed due to: a pocket is a clone of canon; "
+            "a schema-only branch is a rebuild line and carries no "
+            "declaration. Cut with --base clone-of-canon, or drop "
+            "--by/--invite.")
     if database is not None:
         problems.append(
             f"Attempted to cut branch '{branch}' with --database "
@@ -374,15 +394,31 @@ def _restore_branch(base_dir, branch, base, database):
         _file_restore(base_dir, code="restore-guard", status="refused",
                       branch=branch, problems=[held])
         return 1
-    seed = schema_only(canon)
+    canon_log = proposal_mod.read_applied_log(base_dir)
+    canon_sequence = canon_log[-1][0] if canon_log else 0
+    pocket = None
+    if base == pockets_mod.CLONE_OF_CANON:
+        pocket = pockets_mod.declaration(
+            by, invite, proposal_mod.base_identity(canon), canon_sequence)
+        seed = pockets_mod.with_declaration(canon, branch, pocket)
+    else:
+        seed = schema_only(canon)
     branch_export = proposal_mod.export_dir(base_dir, branch)
     # The branch's backup is born at the cut, written FROM the seed — the
     # drill then proves the branch DATABASE re-serializes to it.
     export_mod.write_export(seed, branch_export)
     config["NEO4J_DATABASE"] = target
-    print(f"Cutting branch '{branch}' (database '{target}') from canon's "
-          f"schema stratum alone — {len(seed.nodes)} schema citizens, "
-          f"{len(seed.edges)} schema edges; no ground facts ...")
+    if pocket:
+        invited = ", ".join(pocket["invited"]) or "nobody yet"
+        print(f"Cutting pocket '{branch}' (database '{target}') as a clone "
+              f"of canon at sequence {canon_sequence} — {len(canon.nodes)} "
+              f"citizens, {len(canon.edges)} connections; cut by {by}, "
+              f"invited: {invited} ...")
+    else:
+        print(f"Cutting branch '{branch}' (database '{target}') from "
+              f"canon's schema stratum alone — {len(seed.nodes)} schema "
+              f"citizens, {len(seed.edges)} schema edges; no ground facts "
+              "...")
     try:
         summary = load_mod.load(seed, config)
         dumped = restore_mod.dump_db(config)
@@ -415,15 +451,16 @@ def _restore_branch(base_dir, branch, base, database):
     from . import workspace as workspace_mod
     workspace_mod.stamp(config, "branch",
                         proposal_mod.base_identity(seed),
-                        git_ref(base_dir), branch=branch, kb=kb)
+                        git_ref(base_dir), branch=branch, kb=kb,
+                        extra=pockets_mod.stamp_facts(pocket) if pocket
+                        else None)
     pin_round(base_dir, seed, target, branch)
     # the fork annotation: where canon's log stood at this cut — the
     # fork point succession's divergence advisory enumerates from
     from datetime import datetime, timezone
-    canon_log = proposal_mod.read_applied_log(base_dir)
     proposal_mod.write_branch_fork(base_dir, branch, {
         "base": base,
-        "canon_sequence": canon_log[-1][0] if canon_log else 0,
+        "canon_sequence": canon_sequence,
         "canon_chain_tip": canon_log[-1][5] if canon_log else "genesis",
         "cut_at": datetime.now(timezone.utc).isoformat(
             timespec="seconds"),
@@ -1866,6 +1903,7 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
 
     from . import canonize as canonize_mod
     from . import load as load_mod
+    from . import pockets as pockets_mod
     from . import proposal as proposal_mod
     from . import restore as restore_mod
     from . import succession as succession_mod
@@ -2013,7 +2051,8 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
                       derive_error_findings))
         gates.append(("ground-facts lint clean over the branch's full "
                       "line", "line-facts-unclean",
-                      succession_mod.line_lint(branch_backup)))
+                      succession_mod.line_lint(
+                          pockets_mod.strip_declarations(branch_backup))))
         from .canonize import ONTOLOGY_ANCHOR
         from .ontology import ARCHETYPE_LABEL
         anchor_missing = [] if (
@@ -2100,8 +2139,9 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
 
     # The adoption is an event in CANON's line: its sequence stamps the
     # version anchor, so the version a fresh connection reads keeps
-    # climbing through the ceremony.
-    new_graph = branch_live
+    # climbing through the ceremony. A pocket's own declaration never
+    # rides in: canon is never a pocket.
+    new_graph = pockets_mod.strip_declarations(branch_live)
     stamp_problems = canonize_mod.stamp_ontology_anchor(new_graph, sequence)
     if stamp_problems:
         print("--apply refused — the version anchor cannot be stamped; "
@@ -2931,6 +2971,107 @@ def cmd_answer_keys(base_dir, branch=None):
     return 0 if doc["passed"] else 1
 
 
+def cmd_branch(base_dir, branch, invite=None, uninvite=None):
+    """A pocket's declaration, shown or changed. With --invite/--uninvite
+    the [Pocket] row in the branch's backup is rewritten, the branch
+    database reloaded from it and read back byte-identical, and the
+    identity stamp re-written with the new facts — the line's content
+    identity does not move (the declaration is set aside from it), so
+    no chain, pin, or round is disturbed. Every problem collates before
+    anything is written."""
+    from . import load as load_mod
+    from . import pockets as pockets_mod
+    from . import proposal as proposal_mod
+    from . import restore as restore_mod
+    from . import succession as succession_mod
+    from . import workspace as workspace_mod
+
+    invite, uninvite = list(invite or []), list(uninvite or [])
+    try:
+        graph = restore_mod.read_export(proposal_mod.export_dir(base_dir,
+                                                                branch))
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        print(f"Attempted to read branch '{branch}''s backup. Failed due "
+              f"to: {exc}. python -m graph branches lists the branches "
+              "this knowledge base has.", file=sys.stderr)
+        return 1
+    row = pockets_mod.pocket_row(graph, branch)
+    if row is None:
+        print(f"Attempted to read pocket '{branch}''s declaration. Failed "
+              "due to: that branch is a rebuild line, not a pocket — it "
+              "was cut with --base schema-only and carries no declaration. "
+              "A pocket is cut with --base clone-of-canon --by <who>.",
+              file=sys.stderr)
+        return 1
+    if not invite and not uninvite:
+        invited = ", ".join(row.get("invited") or []) or "nobody yet"
+        print(f"Pocket '{branch}' — cut by {row.get('cut_by')} "
+              f"({row.get('cut_at')}) from canon at sequence "
+              f"{row.get('forked_sequence')} (identity "
+              f"{str(row.get('forked_from'))[:12]}); invited: {invited}.")
+        return 0
+    problems = []
+    adopted = succession_mod.adopted_branch_problem(base_dir, branch,
+                                                    "an invite change")
+    if adopted:
+        problems.append(adopted)
+    current = list(row.get("invited") or [])
+    for name in uninvite:
+        if name not in current:
+            problems.append(
+                f"Attempted to withdraw '{name}''s invitation to pocket "
+                f"'{branch}'. Failed due to: nobody by that name is "
+                f"invited (invited: {', '.join(current) or 'nobody'}).")
+    if problems:
+        print("\n".join(problems), file=sys.stderr)
+        return 1
+    invited = sorted((set(current) | set(invite)) - set(uninvite))
+    updated = pockets_mod.clone_graph(graph)
+    updated.nodes[(pockets_mod.KERNEL_POCKET_LABEL, branch)] = dict(
+        row, invited=invited)
+    config = load_mod.read_config(base_dir)
+    config["NEO4J_DATABASE"] = branch
+    try:
+        load_mod.load(updated, config)
+        dumped = restore_mod.dump_db(config)
+    except Exception as exc:
+        print(f"Attempted to rewrite pocket '{branch}''s declaration in "
+              f"its database. Failed due to: {exc}. The backup is "
+              "untouched.", file=sys.stderr)
+        return 1
+    if export_mod.serialize(dumped) != export_mod.serialize(updated):
+        print(f"Attempted to rewrite pocket '{branch}''s declaration. "
+              "Failed due to: the database read back differently than "
+              "what was written (driver round-trip fault). The backup is "
+              "untouched; python -m graph restore --from its backup "
+              "returns the database to it.", file=sys.stderr)
+        return 1
+    export_mod.write_export(dumped, proposal_mod.export_dir(base_dir, branch))
+    workspace_mod.stamp(
+        config, "branch", proposal_mod.base_identity(dumped),
+        git_ref(base_dir), branch=branch,
+        kb=refs_mod.kb_name(dumped, base_dir),
+        extra=pockets_mod.stamp_facts(
+            updated.nodes[(pockets_mod.KERNEL_POCKET_LABEL, branch)]))
+    print(f"Pocket '{branch}' — invited: {', '.join(invited) or 'nobody'}. "
+          "Declaration rewritten in the branch's backup and stamp; the "
+          "line's identity is unchanged.")
+    return 0
+
+
+def cmd_branches(base_dir):
+    """The pocket roster: every branch of this knowledge base from its
+    backup — pocket or rebuild line, cut by whom, invited, sequence,
+    adopted — printed and recorded. No DBMS needed."""
+    from . import pockets as pockets_mod
+    from . import report as report_mod
+    rows = pockets_mod.branch_rows(base_dir)
+    doc = pockets_mod.branches_report(base_dir, rows)
+    report_mod.write_record(base_dir, pockets_mod.REPORT_FILE, doc)
+    print(pockets_mod.render_rows(rows))
+    return 0
+
+
 def cmd_dependencies(base_dir, branch=None):
     """The drift query: every [Dependency] on canon against what its
     checkout holds now — held, behind, or unreachable — printed one per
@@ -3028,6 +3169,22 @@ def main(argv=None):
              "against the Sealed Exam citizen in canon's backup (the "
              "content is hashed, never read)")
     verify_seal.add_argument("exam", help="path to the produced exam file")
+    branch_parser = sub.add_parser(
+        "branch",
+        help="a pocket's declaration: show who cut it and who may look, "
+             "or change the invite list (--invite / --uninvite) — the "
+             "stamp and the [Pocket] row are rewritten; nothing else "
+             "moves, and the line's identity stays put")
+    branch_parser.add_argument("name", help="the branch")
+    branch_parser.add_argument("--invite", action="append", default=None,
+                               metavar="NAME", help="invite a person")
+    branch_parser.add_argument("--uninvite", action="append", default=None,
+                               metavar="NAME", help="withdraw an invitation")
+    sub.add_parser(
+        "branches",
+        help="list this knowledge base's branches from their backups — "
+             "pocket or rebuild line, cut by whom, invited, sequence, "
+             "adopted — recorded at graph/reports/branches-report.json")
     dependencies_parser = sub.add_parser(
         "dependencies",
         help="the drift query: every pinned dependency against what its "
@@ -3078,9 +3235,18 @@ def main(argv=None):
              "copy. A branch never becomes canon by flag; succession is "
              "the owner's ceremony.")
     restore_parser.add_argument(
-        "--base", default=None, choices=["schema-only"],
-        help="the branch's declared base — only 'schema-only' (the schema "
-             "stratum alone, from nothing) in this release")
+        "--base", default=None, choices=["schema-only", "clone-of-canon"],
+        help="the branch's declared base — 'schema-only' (the schema "
+             "stratum alone: a rebuild line) or 'clone-of-canon' (canon's "
+             "whole graph: a POCKET, a collaborator's own version, "
+             "declared in-band by --by and --invite)")
+    restore_parser.add_argument(
+        "--by", default=None,
+        help="who cuts the pocket (required with --base clone-of-canon)")
+    restore_parser.add_argument(
+        "--invite", action="append", default=None, metavar="NAME",
+        help="a person invited to look at the pocket (repeatable); "
+             "declarative here — physical readability is a later rung")
     restore_parser.add_argument(
         "--from", dest="from_dir", default=None,
         help="load a CUSTOM export directory (e.g. a lens-scoped "
@@ -3295,7 +3461,12 @@ def main(argv=None):
     if args.command == "restore":
         return cmd_restore(base_dir, database=args.database,
                            from_dir=args.from_dir, branch=args.branch,
-                           base=args.base)
+                           base=args.base, by=args.by, invite=args.invite)
+    if args.command == "branch":
+        return cmd_branch(base_dir, args.name, invite=args.invite,
+                          uninvite=args.uninvite)
+    if args.command == "branches":
+        return cmd_branches(base_dir)
     if args.command == "rederive":
         return cmd_rederive(base_dir, apply=args.apply)
     if args.command == "kernel-migrate":
