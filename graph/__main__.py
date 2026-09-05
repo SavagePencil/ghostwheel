@@ -1010,6 +1010,18 @@ def pin_round(base_dir, graph, database, branch=None):
         print(f"note: {leftover.relative_to(base_dir)} carries {count} "
               "declared by a round that was never applied — this round "
               "will declare them unless you remove or rewrite the file.")
+    # a prepared merge belongs to the copy it was replayed into: a fresh
+    # copy holds none of it, so the record is discarded, not carried
+    stale_merge = current / proposal_mod.MERGE_FILE
+    if stale_merge.exists():
+        try:
+            source = proposal_mod.read_json(stale_merge).get("from")
+        except ValueError:
+            source = "another line"
+        stale_merge.unlink()
+        print(f"note: a merge prepared from {source} was discarded with "
+              "the previous working copy — run python -m graph merge "
+              "again to take those rounds up into this one.")
     print(f"Round cut: base pinned at {ref} "
           f"({base_path.relative_to(base_dir)})")
 
@@ -1469,9 +1481,22 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     # The markdown lands FIRST: if the changeset later refuses to
     # serialize, the report that names the offending row is already on
     # disk and on screen.
+    # a prepared merge: every citizen changed on both lines is named
+    # while the owner is already looking — the copy's version lands
+    merge_advisories = []
+    merge_path = proposal_mod.current_dir(base_dir, branch) / \
+        proposal_mod.MERGE_FILE
+    if merge_path.exists():
+        from . import merge as merge_mod
+        try:
+            merge_advisories = merge_mod.contested_advisories(
+                proposal_mod.read_json(merge_path))
+        except ValueError:
+            merge_advisories = []
     report_model = delta_mod.build_report(
         changes, violations, ceremony_items,
-        roster_advisories + receipt_advisories + dependency_advisories)
+        roster_advisories + receipt_advisories + dependency_advisories
+        + merge_advisories)
     report = report_mod.render_markdown(report_model)
     reports_dir = base_dir / "graph" / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -1853,6 +1878,22 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         sequence = proposal_mod.read_applied_log(base_dir, branch)[-1][0]
         proposal_mod.append_attribution_log(
             base_dir, pinned_delta.attribution, sequence, branch)
+    # a prepared merge landed with this round: the line's log records
+    # the rounds taken up, so a second merge skips them and succession's
+    # divergence advisory does not re-list them
+    merge_path = current / proposal_mod.MERGE_FILE
+    if merge_path.exists():
+        try:
+            merge_record = proposal_mod.read_json(merge_path)
+        except ValueError:
+            merge_record = {}
+        proposal_mod.write_merged_annotation(base_dir, branch, {
+            "from": merge_record.get("from"),
+            "fork_sequence": merge_record.get("fork_sequence"),
+            "rounds": merge_record.get("rounds") or [],
+            "sequence": proposal_mod.read_applied_log(base_dir,
+                                                      branch)[-1][0],
+            "contested": len(merge_record.get("contested") or [])})
     proposal_mod.write_json(current / proposal_mod.APPLIED_FILE,
                             {"delta_hash": approval["delta_hash"],
                              "base_after": base_after,
@@ -2971,6 +3012,119 @@ def cmd_answer_keys(base_dir, branch=None):
     return 0 if doc["passed"] else 1
 
 
+def cmd_merge(base_dir, source, target, database=None):
+    """Merge — one line takes up another's rounds while both persist.
+    Prepares the TARGET's ordinary round: the source's rounds since the
+    fork replay into the target's fresh working copy (contested citizens
+    — changed on both lines — stay at the target's version and are
+    listed base / yours / theirs), merge.json rides the round, and
+    delta → approve → canonize --apply land it like any round. Both
+    directions between canon and a pocket."""
+    from . import delta as delta_mod
+    from . import load as load_mod
+    from . import merge as merge_mod
+    from . import proposal as proposal_mod
+    from . import report as report_mod
+    from . import succession as succession_mod
+    from . import workspace as workspace_mod
+
+    src, tgt = merge_mod.resolve_line(source), merge_mod.resolve_line(target)
+    if src == tgt:
+        print(f"Attempted to merge {source} into {target}. Failed due to: "
+              "a line cannot take up its own rounds — name a pocket on "
+              "one side and canon on the other.", file=sys.stderr)
+        return 1
+    problems = []
+    graphs = {}
+    for line in (src, tgt):
+        try:
+            graphs[line] = canon_base(base_dir, line)
+        except FileNotFoundError as exc:
+            problems.append(f"Attempted to read {merge_mod.describe(line)}"
+                            f"'s committed backup. Failed due to: {exc}.")
+    for line in (src, tgt):
+        if line is not None:
+            adopted = succession_mod.adopted_branch_problem(base_dir, line,
+                                                            "a merge")
+            if adopted:
+                problems.append(adopted)
+    if problems:
+        print("\n".join(problems), file=sys.stderr)
+        return 1
+    source_graph, target_graph = graphs[src], graphs[tgt]
+    fork, _pocket, problem = merge_mod.fork_point(
+        base_dir, src, tgt, source_graph, target_graph)
+    if problem:
+        print(problem, file=sys.stderr)
+        return 1
+    # the target's fresh working copy: what lands is exactly the replay
+    # plus the owner's rulings, never a half-authored round
+    config = load_mod.read_config(base_dir)
+    database = _authoring_database(database, tgt, config)
+    if tgt is not None:
+        read_problem = proposal_mod.authoring_read_problem(
+            database, config["NEO4J_DATABASE"])
+        if read_problem:
+            print(read_problem, file=sys.stderr)
+            return 1
+    config["NEO4J_DATABASE"] = database
+    identity = _working_copy_check(base_dir, config, database, tgt)
+    if identity:
+        print(identity, file=sys.stderr)
+        return 1
+    try:
+        copy = delta_mod.read_graph(config)
+    except Exception as exc:
+        print(f"Attempted to read {merge_mod.describe(tgt)}'s working copy "
+              f"('{database}'). Failed due to: {exc}. Cut it first "
+              "(python -m graph restore --database <copy>).",
+              file=sys.stderr)
+        return 1
+    if not merge_mod.serialize_equal(copy, target_graph):
+        print(f"Attempted to merge into {merge_mod.describe(tgt)}'s working "
+              f"copy ('{database}'). Failed due to: the copy already "
+              "differs from its base — a merge wants a fresh copy, so what "
+              "lands is exactly the rounds taken up plus your rulings. "
+              "Re-cut the copy, then merge.", file=sys.stderr)
+        return 1
+    merged, record, problems = merge_mod.prepare(
+        base_dir, src, tgt, source_graph, target_graph, copy)
+    if merged is None or record is None:
+        print("\n".join(problems), file=sys.stderr)
+        return 1
+    doc = merge_mod.merge_report(base_dir, record, tgt)
+    report_mod.write_record(base_dir, merge_mod.REPORT_FILE, doc)
+    if doc["nothing_to_take_up"]:
+        print(merge_mod.render_report(doc))
+        return 0
+    try:
+        load_mod.load(merged, config)
+        readback = delta_mod.read_graph(config)
+    except Exception as exc:
+        print(f"Attempted to land the replay in '{database}'. Failed due "
+              f"to: {exc}. The copy may be half-written — re-cut it and "
+              "merge again.", file=sys.stderr)
+        return 1
+    if not merge_mod.serialize_equal(readback, merged):
+        print(f"Attempted to land the replay in '{database}'. Failed due "
+              "to: the copy read back differently than what was written "
+              "(driver round-trip fault). Re-cut it and merge again.",
+              file=sys.stderr)
+        return 1
+    workspace_mod.stamp(config, "working-copy",
+                        proposal_mod.base_identity(target_graph),
+                        git_ref(base_dir), branch=tgt,
+                        kb=refs_mod.kb_name(target_graph, base_dir))
+    current = proposal_mod.current_dir(base_dir, tgt)
+    current.mkdir(parents=True, exist_ok=True)
+    proposal_mod.write_json(current / proposal_mod.MERGE_FILE, record)
+    print(merge_mod.render_report(doc))
+    print(f"Replay landed in '{database}'; the merge record rides the "
+          f"round ({(current / proposal_mod.MERGE_FILE).relative_to(base_dir)}"
+          f"); report at graph/reports/{merge_mod.REPORT_FILE}.")
+    return 0
+
+
 def cmd_branch(base_dir, branch, invite=None, uninvite=None):
     """A pocket's declaration, shown or changed. With --invite/--uninvite
     the [Pocket] row in the branch's backup is rewritten, the branch
@@ -3169,6 +3323,26 @@ def main(argv=None):
              "against the Sealed Exam citizen in canon's backup (the "
              "content is hashed, never read)")
     verify_seal.add_argument("exam", help="path to the produced exam file")
+    merge_parser = sub.add_parser(
+        "merge",
+        help="merge — one line takes up another's rounds while both "
+             "persist: prepares the TARGET's ordinary round (the source's "
+             "rounds since the fork replay into the target's fresh working "
+             "copy; citizens changed on both lines stay at the target's "
+             "version, listed base / yours / theirs), then delta, approve, "
+             "canonize --apply as any round. Between canon and a pocket, "
+             "either direction.")
+    merge_parser.add_argument("--from", dest="source", required=True,
+                              metavar="LINE",
+                              help="the line whose rounds are taken up "
+                                   "('canon' or a pocket's name)")
+    merge_parser.add_argument("--into", dest="target", required=True,
+                              metavar="LINE",
+                              help="the line that takes them up ('canon' "
+                                   "or a pocket's name)")
+    merge_parser.add_argument("--database", default=None,
+                              help="the target's working copy (default: "
+                                   "its usual authoring copy)")
     branch_parser = sub.add_parser(
         "branch",
         help="a pocket's declaration: show who cut it and who may look, "
@@ -3465,6 +3639,9 @@ def main(argv=None):
     if args.command == "branch":
         return cmd_branch(base_dir, args.name, invite=args.invite,
                           uninvite=args.uninvite)
+    if args.command == "merge":
+        return cmd_merge(base_dir, args.source, args.target,
+                         database=args.database)
     if args.command == "branches":
         return cmd_branches(base_dir)
     if args.command == "rederive":

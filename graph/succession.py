@@ -49,9 +49,13 @@ def post_fork_rounds(base_dir, branch):
     if not isinstance(fork_record, dict) or "canon_sequence" not in fork_record:
         return False, []
     fork = fork_record["canon_sequence"]
+    # rounds the branch already took up by merging from canon rode
+    # across already: they are no divergence
+    from .proposal import taken_up_rounds
+    taken = taken_up_rounds(base_dir, branch, "canon")
     return True, [(seq, delta_hash)
                   for seq, delta_hash, *_rest in read_applied_log(base_dir)
-                  if seq > fork]
+                  if seq > fork and delta_hash not in taken]
 
 
 def divergence_summary(base_dir, rounds):

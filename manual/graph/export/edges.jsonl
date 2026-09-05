@@ -122,6 +122,7 @@
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Agentic intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Generation)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Cautions (Merging lines)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Procedure intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Dispatch — which job serves the input"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
@@ -133,6 +134,7 @@
 {"from": {"label": "[Conduct Section]", "name": "Idioms that matter (each learned the hard way)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Input layers (the evaluator boundary)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Mapping and drafting lessons"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Merging lines"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Posture"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Presentation is its own check"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Procedure (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
@@ -146,6 +148,7 @@
 {"from": {"label": "[Conduct Section]", "name": "The convergence loop"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The default path (short; machinery engages only on signals)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The flow"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The flow (Merging lines)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The front door"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The invariants (medium-independent)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "Archetype", "name": "[Conduct Section]"}, "type": "INSTANCE_OF"}
@@ -225,6 +228,7 @@
 {"from": {"label": "Procedure", "name": "Agentic intake"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "Generation"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
+{"from": {"label": "Procedure", "name": "Merging lines"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "Procedure intake"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "Querying the rules graph"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
 {"from": {"label": "Procedure", "name": "The front door"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "KNOWN_AT"}
@@ -242,6 +246,7 @@
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Agentic intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Generation)"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Cautions (Merging lines)"}, "properties": {}, "to": {"label": "Procedure", "name": "Merging lines"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Cautions (Procedure intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Procedure intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Dispatch — which job serves the input"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "type": "PART_OF"}
@@ -253,6 +258,7 @@
 {"from": {"label": "[Conduct Section]", "name": "Idioms that matter (each learned the hard way)"}, "properties": {}, "to": {"label": "Procedure", "name": "Querying the rules graph"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Input layers (the evaluator boundary)"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Mapping and drafting lessons"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "Merging lines"}, "properties": {}, "to": {"label": "Procedure", "name": "Merging lines"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Posture"}, "properties": {}, "to": {"label": "Procedure", "name": "Querying the rules graph"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Presentation is its own check"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "Procedure (Dynamic-ontology intake)"}, "properties": {}, "to": {"label": "Procedure", "name": "Dynamic-ontology intake"}, "type": "PART_OF"}
@@ -266,6 +272,7 @@
 {"from": {"label": "[Conduct Section]", "name": "The convergence loop"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The default path (short; machinery engages only on signals)"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The flow"}, "properties": {}, "to": {"label": "Procedure", "name": "Agentic intake"}, "type": "PART_OF"}
+{"from": {"label": "[Conduct Section]", "name": "The flow (Merging lines)"}, "properties": {}, "to": {"label": "Procedure", "name": "Merging lines"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The front door"}, "properties": {}, "to": {"label": "Procedure", "name": "The front door"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The invariants (medium-independent)"}, "properties": {}, "to": {"label": "Procedure", "name": "Generation"}, "type": "PART_OF"}
 {"from": {"label": "[Conduct Section]", "name": "The maintenance loop"}, "properties": {}, "to": {"label": "Procedure", "name": "The maintenance loop"}, "type": "PART_OF"}
@@ -356,6 +363,9 @@
 {"from": {"label": "Procedure", "name": "Generation"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The default path (short; machinery engages only on signals)"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Generation"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The invariants (medium-independent)"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Generation"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The trace and the margin"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Merging lines"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Cautions (Merging lines)"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Merging lines"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Merging lines"}, "type": "SPECIFIED_IN"}
+{"from": {"label": "Procedure", "name": "Merging lines"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "The flow (Merging lines)"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Procedure intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Cautions (Procedure intake)"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Procedure intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Procedure (Procedure intake)"}, "type": "SPECIFIED_IN"}
 {"from": {"label": "Procedure", "name": "Procedure intake"}, "properties": {}, "to": {"label": "[Conduct Section]", "name": "Procedure intake"}, "type": "SPECIFIED_IN"}

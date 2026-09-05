@@ -45,6 +45,11 @@ STITCH_FILE = "stitch.json"
 # is a report — the engine that re-derived and what left and arrived —
 # never a replayable delta; it archives with the round like the rest
 REDERIVE_FILE = "rederive.json"
+# A prepared merge (the fifth job): the source line, the fork point, the
+# rounds taken up, and the contested citizens — written by `merge` into
+# the target's current round, archived with it, and turned into the
+# target log's merged-from annotation at apply.
+MERGE_FILE = "merge.json"
 ATTRIBUTION_FILE = "attribution.json"
 
 
@@ -596,6 +601,48 @@ def write_branch_fork(base_dir, branch, record):
             record, ensure_ascii=False, sort_keys=True) + "\n")
 
 
+# The merged-from annotation: a line's log records which of another
+# line's rounds it has taken up (the merge job), so a second merge skips
+# them and succession's divergence advisory does not re-list rounds
+# that already rode across. Annotations, like the fork record, are
+# comment lines: the chained spine is untouched.
+MERGED_PREFIX = "# merged "
+
+
+def write_merged_annotation(base_dir, branch, record):
+    path = applied_log_path(base_dir, branch)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    prefix = "" if path.exists() else LOG_HEADER
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write(prefix + MERGED_PREFIX + json.dumps(
+            record, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def read_merged_annotations(base_dir, branch=None):
+    """Every merged-from record on a line's log, in order."""
+    path = applied_log_path(base_dir, branch)
+    if not path.exists():
+        return []
+    records = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith(MERGED_PREFIX):
+            try:
+                records.append(json.loads(line[len(MERGED_PREFIX):]))
+            except ValueError:
+                continue
+    return records
+
+
+def taken_up_rounds(base_dir, branch, source):
+    """The source line's round hashes this line has already taken up
+    (source is a branch name, or 'canon')."""
+    taken = set()
+    for record in read_merged_annotations(base_dir, branch):
+        if record.get("from") == source:
+            taken.update(record.get("rounds") or [])
+    return taken
+
+
 def read_branch_fork(base_dir, branch):
     """The branch's fork record, or None for a branch cut before fork
     annotations existed (the advisory then degrades honestly)."""
@@ -744,7 +791,8 @@ def archive_round(base_dir, delta_id, branch=None):
     # WITH the round: a file left behind would ride the next round's
     # delta as if declared there
     for name in (BASE_FILE, DELTA_FILE, APPROVAL_FILE, APPLIED_FILE,
-                 INVERSE_FILE, STITCH_FILE, ATTRIBUTION_FILE, REDERIVE_FILE):
+                 INVERSE_FILE, STITCH_FILE, ATTRIBUTION_FILE, REDERIVE_FILE,
+                 MERGE_FILE):
         path = src / name
         if path.exists():
             (dst / name).write_text(path.read_text(encoding="utf-8"),
