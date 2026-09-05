@@ -58,6 +58,7 @@
 {"from": {"label": "Archetype", "name": "[Conduct Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Dependency]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Design Record]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Pocket]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
 {"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
@@ -103,6 +104,7 @@
 {"from": {"label": "Archetype", "name": "[Conduct Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Dependency]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Design Record]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Pocket]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Section]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
 {"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}

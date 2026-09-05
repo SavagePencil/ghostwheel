@@ -1,0 +1,48 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [
+  {
+   "from_label": "Archetype",
+   "from_name": "[Pocket]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Pocket]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  }
+ ],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "Metaontology",
+   {
+    "fingerprint": [
+     "d9dc1deac19be9e1acd7166543b29b68d47a8f489c2ada02a11f435f380b9023",
+     "dc0069c3fdb88774fd4852f43b05856ef3ed39c7ec13db97e960b94627ec3b50"
+    ],
+    "version": [
+     "0.16.0",
+     "0.15.0"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": [
+  [
+   "Archetype",
+   "[Pocket]",
+   {
+    "doc": "A branch's own declaration of itself as a pocket — a collaborator's version of this knowledge base, cut as a clone of canon and hard-isolated from it. The citizen is named for the branch and carries who cut it, when, who is invited to look, the base kind, and the canon identity and sequence it forked from. The engine writes it at the cut and rewrites it when the invite list changes; nobody authors it by hand, it is set aside from the line's content identity, and succession strips it — canon is never a pocket. Machinery, never subject matter — hence bracketed."
+   }
+  ]
+ ]
+}
