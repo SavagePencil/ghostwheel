@@ -38,6 +38,11 @@ def read_config(base_dir):
     for key in DEFAULTS:
         if os.environ.get(key):
             config[key] = os.environ[key]
+    # a dependency's checkout path (GHOSTWHEEL_DEPENDENCY_<NAME>) is
+    # settings like the rest: the .env line, the environment overriding
+    for key, value in os.environ.items():
+        if key.startswith("GHOSTWHEEL_DEPENDENCY_") and value:
+            config[key] = value
     return config
 
 
