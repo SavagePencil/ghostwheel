@@ -232,10 +232,12 @@ def rename_problems(ground, renames):
     return problems
 
 
-def apply_renames(ground, renames, version="?"):
+def apply_renames(ground, renames, version="?", kernel_names=None):
     """A copy of the ground with the renames applied, plus the adoption
     records: [{label, new, citizens, retired_spec_keys, memberships}]
-    for each project-declared row renamed onto a kernel name."""
+    for each project-declared row renamed onto a kernel name (when
+    `kernel_names` is given, only onto one of those; a project rename
+    keeps its spec)."""
     import json
 
     from .extract import make_edge
@@ -258,7 +260,8 @@ def apply_renames(ground, renames, version="?"):
         new_props = dict(props)
         if label == ARCHETYPE_LABEL and name in active:
             new_name = active[name]
-            if name in declared_by_project:
+            if name in declared_by_project and (
+                    kernel_names is None or new_name in kernel_names):
                 spec = json.loads(new_props.pop("spec_json", "{}") or "{}")
                 bindings = spec.get("concept") or []
                 bindings = [bindings] if isinstance(bindings, str) else list(bindings)

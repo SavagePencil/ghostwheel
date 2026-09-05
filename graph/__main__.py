@@ -848,10 +848,12 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
             print(f"  ⚠ {problem}", file=sys.stderr)
         return 1
     pre_rename = ground
-    ground, adoptions = km.apply_renames(ground, renames, str(version))
+    new_nodes, new_edges = km.kernel_stratum(seed)
+    ground, adoptions = km.apply_renames(
+        ground, renames, str(version),
+        kernel_names=set(new_nodes) | set(renames.values()))
     relabeled = km.relabel_census(pre_rename, renames)
     old_nodes, old_edges = km.kernel_stratum(ground)
-    new_nodes, new_edges = km.kernel_stratum(seed)
     if old_nodes == new_nodes and old_edges == new_edges and not relabeled:
         print(f"This canon already carries the installed kernel "
               f"({version}) — nothing to migrate.")
@@ -1065,6 +1067,12 @@ def pin_round(base_dir, graph, database, branch=None):
               "will declare them unless you remove or rewrite the file.")
     # a prepared merge belongs to the copy it was replayed into: a fresh
     # copy holds none of it, so the record is discarded, not carried
+    stale_moves = current / proposal_mod.MOVES_FILE
+    if stale_moves.exists():
+        stale_moves.unlink()
+        print("note: a moves declaration left by a round that was never "
+              "applied was discarded with the previous working copy — "
+              "declare the moves again for this round if they still hold.")
     stale_merge = current / proposal_mod.MERGE_FILE
     if stale_merge.exists():
         try:
@@ -1423,6 +1431,19 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                 f"Failed due to: {exc}"),
             remedy="Fix or remove the stitch file, then re-run the delta.",
             data={"path": f"{stitch_rel}/{proposal_mod.STITCH_FILE}"})
+    # declared moves: a rename of the world's own label or a re-homing
+    # of citizens under a kind — filed in moves.json, embedded in the
+    # proposal so the approval covers them, itemized at the gate
+    moves_problem = None
+    try:
+        changes.moves = proposal_mod.read_moves(base_dir, branch)
+    except (ValueError, KeyError) as exc:
+        moves_rel = proposal_mod.current_dir(base_dir,
+                                             branch).relative_to(base_dir)
+        moves_problem = report_mod.Verdict(
+            code="moves-file-unreadable", message=str(exc),
+            remedy="Fix or remove the moves file, then re-run the delta.",
+            data={"path": f"{moves_rel}/{proposal_mod.MOVES_FILE}"})
     # recorded attribution: the round's declared claim→citizen links
     # ride inside the changeset, so the approval covers them and the
     # gate shows them being ruled
@@ -1442,6 +1463,12 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                           f"{proposal_mod.ATTRIBUTION_FILE}"})
     violations = delta_mod.lint_verdicts(changes, base)
     ceremony_items = delta_mod.ceremony_records(changes, base)[0]
+    from . import moves as moves_mod
+    move_items, move_refusals = moves_mod.move_records(changes, base)
+    ceremony_items += move_items
+    violations += move_refusals
+    if moves_problem:
+        violations.append(moves_problem)
     if stitch_problem:
         violations.append(stitch_problem)
     if attribution_problem:
@@ -1526,7 +1553,13 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         from .extract import derive, strip_derived
         preview = strip_derived(base)
         if not proposal_mod.apply_delta(preview, changes):
-            derived_preview, _ = derive(ontology, preview)
+            if changes.moves and not move_refusals:
+                # the stitch may name a label the round's moves create:
+                # preview it against the graph AFTER the moves
+                preview, _ = moves_mod.apply_moves(
+                    preview, changes.moves, moves_mod.kernel_names(base))
+            derived_preview, _ = derive(
+                ontology_from_graph(preview, base_dir), preview)
             violations += [
                 report_mod.Verdict(code="stitch-landing", message=problem)
                 for problem in proposal_mod.apply_stitch(derived_preview,
@@ -1830,6 +1863,24 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         for problem in problems:
             print(f"  ⚠ {problem}", file=sys.stderr)
         return bail("precondition-failed", text, problems)
+    # The declared moves land after the authored changeset (spoken in
+    # the old names, as scratch was) and before the stitch and
+    # re-derivation — the same transform the kernel's renames ride
+    if pinned_delta.moves:
+        from . import moves as moves_mod
+        _items, move_refusals = moves_mod.move_records(pinned_delta,
+                                                       strip_derived(base))
+        move_problems = [str(v) for v in move_refusals]
+        if not move_problems:
+            ground, move_problems = moves_mod.apply_moves(
+                ground, pinned_delta.moves,
+                moves_mod.kernel_names(strip_derived(base)))
+        if move_problems:
+            text = "the declared moves cannot be performed; nothing was written:"
+            print("--apply refused — " + text, file=sys.stderr)
+            for problem in move_problems:
+                print(f"  ⚠ {problem}", file=sys.stderr)
+            return bail("move-failed", text, move_problems)
     # The schema is reconstructed from the POST-apply ground: a ceremony
     # round's schema changes are already in `ground` here, and derive
     # must see the schema the round produces, not the one it started
@@ -1927,8 +1978,13 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     export_mod.write_export(dumped, target_export)
 
     # --- the event log: inverse, chained entry, archive ----------------
-    inverse_text = proposal_mod.serialize_delta(
-        proposal_mod.invert_delta(pinned_delta))
+    # When moves rode, the inverse is the FULL ground diff — the only
+    # honest walk-back for a relabel; otherwise the changeset's own
+    inverse_delta = (proposal_mod.invert_delta(
+        delta_mod.diff(strip_derived(base), strip_derived(dumped)))
+                     if pinned_delta.moves
+                     else proposal_mod.invert_delta(pinned_delta))
+    inverse_text = proposal_mod.serialize_delta(inverse_delta)
     (current / proposal_mod.INVERSE_FILE).write_text(inverse_text,
                                                      encoding="utf-8")
     base_before = approval.get("base_hash") or \
@@ -1950,6 +2006,14 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         sequence = proposal_mod.read_applied_log(base_dir, branch)[-1][0]
         proposal_mod.append_attribution_log(
             base_dir, pinned_delta.attribution, sequence, branch)
+    if pinned_delta.moves:
+        # the ledger's refs move with the canon they name
+        from . import moves as moves_mod
+        moved_rows = moves_mod.rewrite_ledger(base_dir, pinned_delta.moves,
+                                              branch)
+        if moved_rows:
+            print(f"  attribution ledger: {moved_rows} row"
+                  f"{'s' if moved_rows != 1 else ''} follow the moves.")
     # a prepared merge landed with this round: the line's log records
     # the rounds taken up, so a second merge skips them and succession's
     # divergence advisory does not re-list them

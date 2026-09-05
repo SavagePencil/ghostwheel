@@ -120,6 +120,16 @@ REF_KEYS = {
     "dependency-pin-behind": "pin-behind",
     "dependency-held": "held",
     "declaration-authored": "declaration-engine-written",
+    "project-renamed": "renamed",
+    "citizens-rehomed": "rehomed",
+    "move-unverified": "cannot-judge-without-base",
+    "move-kernel-name": "kernel-name-not-yours",
+    "move-source-missing": "nothing-by-that-name",
+    "move-target-held": "name-already-held",
+    "rehome-not-a-kind": "not-a-kind",
+    "rehome-citizen-missing": "citizen-not-under-source",
+    "moves-file-unreadable": "declaration-unreadable",
+    "move-failed": "move-failed",
     "taxonomy-cycle": "kind-of-itself",
     "artifact-edge-misused": "artifact-link-misused",
     "location-kind-unknown": "location-kind-unknown",
@@ -431,7 +441,8 @@ def render_markdown(report):
                   "are within the ceremony's permitted classes (new "
                   "declared concepts, label births, doc edits, added "
                   "aliases, render-mapping edits, source unregistration, "
-                  "taxonomy declarations, unreferenced removals); "
+                  "taxonomy declarations, unreferenced removals, "
+                  "declared moves — renames and re-homings); "
                   "approving this round is the ceremony ruling that "
                   "makes them schema.", ""]
         lines += [f"- ⚑ {item}" for item in report.ceremony] + [""]
