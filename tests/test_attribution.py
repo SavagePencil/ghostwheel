@@ -99,7 +99,7 @@ def test_census_leaves_headerless_tables_as_structure():
 
 def test_metadata_props_attest_nothing():
     g = GraphData()
-    g.ensure_node("Decision", "A ruling on lamps",
+    g.ensure_node("[Decision]", "A ruling on lamps",
                   source="docs/tale.md section Harbor",
                   grade="agent-proposed")
     verdict = CanonIndex(g).attribute(
@@ -182,17 +182,17 @@ def test_step_lift_attributes_at_receipt_grade_citing_the_procedure():
     # procedure carries; a claim found there cites the procedure, not
     # the step (the owner is the step name's prefix before the mark)
     g = GraphData()
-    g.ensure_node("Procedure", "Tally the Points")
-    g.ensure_node("Step", "Tally the Points §1",
+    g.ensure_node("[Procedure]", "Tally the Points")
+    g.ensure_node("[Step]", "Tally the Points §1",
                   kind="compute",
                   text="the top point total equals the might score")
     verdict = CanonIndex(g).attribute(
         "the top point total equals the might score")
     assert verdict.verdict == ATTRIBUTED and verdict.rung == RECEIPT
-    assert ("Procedure", "Tally the Points") in verdict.citizens
+    assert ("[Procedure]", "Tally the Points") in verdict.citizens
     assert "step" in verdict.evidence
     # the step itself is never the cited home
-    assert not any(label == "Step" for label, _ in verdict.citizens)
+    assert not any(label == "[Step]" for label, _ in verdict.citizens)
 
 
 def test_value_matching_folds_numeric_format_and_parentheticals():
@@ -286,7 +286,7 @@ def test_whole_book_unit_produces_one_scorecard(make_repo):
     (export_dir / "nodes.jsonl").write_text(
         json.dumps({"label": "Terrain", "name": "Bog",
                     "properties": {"defense_mod": -2}}) + "\n"
-        + json.dumps({"label": "Approved Omission",
+        + json.dumps({"label": "[Approved Omission]",
                       "name": "rain soaks everyone completely",
                       "properties": {"scope": "docs/two.md"}}) + "\n",
         encoding="utf-8")

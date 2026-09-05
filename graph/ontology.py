@@ -123,7 +123,7 @@ KNOWN_TOP_KEYS = {"version", "tag", "enums", "defaults", "concepts",
                   # sources are indexes rather than prose (the coverage
                   # sweeps read both — no directory or filename is hardcoded)
                   "content_roots", "non_prose_sources"}
-KNOWN_META_KEYS = {"version", "roots", "facets", "concepts"}
+KNOWN_META_KEYS = {"version", "roots", "facets", "concepts", "renamed"}
 KNOWN_ENUM_KEYS = {"source", "column", "values", "ordered"}
 # ordered+values: an archetype-level ladder (e.g. the engine's Completeness
 # levels Cited < Attested < Transcribed) — values name sibling concepts.
@@ -317,27 +317,47 @@ def node_reader(spec):
         return READER_BY_EXTENSION.get(Path(files[0]).suffix.lower())
     return None
 ARCHETYPE_LABEL = "Archetype"
-STEP_LABEL = "Step"
-OUTCOME_LABEL = "Outcome"
+STEP_LABEL = "[Step]"
+OUTCOME_LABEL = "[Outcome]"
 # The kernel's own concept label for procedures — ground citizens under
 # it may be graph-native (no source file; see link_native_procedures).
-KERNEL_PROCEDURE_LABEL = "Procedure"
+KERNEL_PROCEDURE_LABEL = "[Procedure]"
 # The kernel's Judgment concept for the fidelity net between a program and
 # its approved table; citizens under it are authored ground, each with a
 # CHECKS edge to the Procedure it holds still (see graph/answer_keys.py).
-KERNEL_ANSWER_KEY_LABEL = "Answer Key"
+KERNEL_ANSWER_KEY_LABEL = "[Answer Key]"
+# The Judgment family and the permissions vocabulary, bracketed at the
+# bracket sweep (0.17.0): brackets mark machinery and never shadow a
+# word a designer's world might need. Theme stays unbracketed (designer
+# lexicon, the owner's word).
+KERNEL_QUESTION_LABEL = "[Question]"
+KERNEL_DECISION_LABEL = "[Decision]"
+KERNEL_ANSWER_LABEL = "[Answer]"
+KERNEL_TODO_LABEL = "[TODO]"
+KERNEL_APPROVED_OMISSION_LABEL = "[Approved Omission]"
+KERNEL_REQUIREMENT_LABEL = "[Requirement]"
+KERNEL_OPINION_LABEL = "[Opinion]"
+KERNEL_DISCIPLINE_LABEL = "[Discipline]"
+KERNEL_AUDIENCE_LABEL = "[Audience]"
+# Artifacts (0.17.0): the thing handed over, where it is, what it
+# depicts, what it stands for, and how a location kind is opened.
+KERNEL_ARTIFACT_LABEL = "[Artifact]"
+KERNEL_ARTIFACT_LOCATION_LABEL = "[Artifact Location]"
+KERNEL_FILE_LOCATION_LABEL = "[File Location]"
+KERNEL_INTERPRETATION_LABEL = "[Interpretation]"
+KERNEL_RESOLVER_LABEL = "[Resolver]"
 # The worlds layer's kernel machinery (0.15.0): another knowledge base
 # pinned to an edition, and a citizen cited from one. Bracketed — never
 # subject matter.
-KERNEL_DEPENDENCY_LABEL = "[Dependency]"
-KERNEL_BOOKMARK_LABEL = "[Bookmark]"
+KERNEL_DEPENDENCY_LABEL = "[Knowledge Base Dependency]"
+KERNEL_BOOKMARK_LABEL = "[Citizen Bookmark]"
 # A branch cut as a pocket declares itself in-band (0.16.0): who cut
 # it, when, who may look, the base kind, the canon identity it forked
 # from. Engine-written at the cut and by the invite verbs, never
 # authored by hand; set aside from a line's content identity so an
 # invite change moves no chain; stripped at succession — canon is
 # never a pocket.
-KERNEL_POCKET_LABEL = "[Pocket]"
+KERNEL_POCKET_LABEL = "[Pocket Universe]"
 DECLARATION_LABELS = frozenset({KERNEL_POCKET_LABEL})
 # Labels the engine materializes itself; projects may not declare them.
 RESERVED_LABELS = {ARCHETYPE_LABEL: "used by the metamodel concepts: section",
@@ -622,7 +642,8 @@ def load_metaontology(path):
             findings.append(Finding(ERROR, Category.ONTOLOGY, str(path), section,
                                     f"the {section} section needs a "
                                     f"'{root}' root"))
-    meta = {"version": raw.get("version"), "path": str(path)}
+    meta = {"version": raw.get("version"), "path": str(path),
+            "renamed": dict(raw.get("renamed") or {})}
     return concepts, meta, findings
 
 
@@ -668,7 +689,21 @@ def load_ontology(path, base_dir, metaontology_path=None):
                 f"'{name}' is provided by the engine metaontology and cannot "
                 "be redeclared"))
             continue
+        if name in (meta.get("renamed") or {}):
+            findings.append(Finding(
+                ERROR, Category.ONTOLOGY, str(path), f"concepts.{name}",
+                f"'{name}' was renamed to '{meta['renamed'][name]}' at a "
+                "kernel ceremony — declare the new name (an existing canon "
+                "migrates with python -m graph kernel-migrate)"))
+            continue
         concepts[name] = spec
+    for label in (raw.get("nodes") or {}):
+        if label in (meta.get("renamed") or {}):
+            findings.append(Finding(
+                ERROR, Category.ONTOLOGY, str(path), f"nodes.{label}",
+                f"'{label}' was renamed to '{meta['renamed'][label]}' at a "
+                "kernel ceremony — declare the new name (an existing canon "
+                "migrates with python -m graph kernel-migrate)"))
 
     ontology = Ontology(path=path, base_dir=Path(base_dir), raw=raw,
                         enums=raw.get("enums") or {},
@@ -835,7 +870,7 @@ def ontology_from_graph(graph, base_dir):
     rejected_terms = sorted(
         props["rejected_term"]
         for (label, _name), props in graph.nodes.items()
-        if label == "Decision" and props.get("rejected_term"))
+        if label == KERNEL_DECISION_LABEL and props.get("rejected_term"))
 
     return Ontology(
         path=Path(base_dir) / "graph" / "ontology.yaml",

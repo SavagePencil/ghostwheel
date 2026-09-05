@@ -3,8 +3,8 @@ base pinning another and citing a citizen that lives there.
 
 Kernel 0.15.0 declares two Provenance-rooted machinery concepts —
 bracketed, because a designer never authors either as subject matter.
-A [Dependency] pins another knowledge base to an edition with a read
-or write intent; a [Bookmark] names a citizen in a dependency with
+A [Knowledge Base Dependency] pins another knowledge base to an edition with a read
+or write intent; a [Citizen Bookmark] names a citizen in a dependency with
 exactly one RESOLVES_IN edge to it. The delta gate checks their SHAPE;
 resolution against the dependency's backup is the next rung.
 `init --world` seeds the same knowledge base plus the dependency
@@ -68,7 +68,7 @@ def test_the_kernel_declares_both_under_provenance_bracketed(tmp_path):
         assert parents == {"Provenance"}
         assert any(e.type == "DECLARED_IN" and e.to_name == "Metaontology"
                    and e.from_name == label for e in seed.edges)
-    assert DEPENDENCY == "[Dependency]" and BOOKMARK == "[Bookmark]"
+    assert DEPENDENCY == "[Knowledge Base Dependency]" and BOOKMARK == "[Citizen Bookmark]"
     assert DEPENDENCY_REQUIRED == ("edition", "sequence", "intent")
     assert BOOKMARK_REQUIRED == ("dependency", "citizen_label",
                                  "citizen_name", "edition")
@@ -227,7 +227,7 @@ def test_init_world_seeds_the_same_knowledge_base_plus_dependency_settings(
     assert main_mod.DEPENDENCY_PATH_PREFIX not in \
         (plain / ".env").read_text(encoding="utf-8")
     out = capsys.readouterr().out
-    assert "pin each dependency as a [Dependency] entry" in out
+    assert "pin each dependency as a [Knowledge Base Dependency] entry" in out
     # an existing .env is kept, and the block is shown to add by hand
     kept = tmp_path / "ember"
     kept.mkdir()

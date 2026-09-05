@@ -47,8 +47,8 @@ VERDICT_WORDS = (ALLOW, DENY)
 # The kernel's visibility citizens (the visibility lens design is where they reside). Named Visibility
 # Group, not Group — boundary rule 6 caught the bare name colliding
 # with a project's own domain vocabulary (a consuming project had already claimed the bare name).
-GROUP_LABEL = "Visibility Group"
-CLASS_LABEL = "Visibility Class"
+GROUP_LABEL = "[Visibility Group]"
+CLASS_LABEL = "[Visibility Class]"
 
 # Q2 (owner-ruled): subject-facing refusals are uniform and name
 # nothing — indistinguishable from the thing not existing. Surfaces

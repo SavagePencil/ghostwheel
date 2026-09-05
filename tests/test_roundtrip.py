@@ -205,7 +205,7 @@ def test_backup_omission_row_clears_cited_prose(make_repo):
     export_dir = base_dir / "graph" / "export"
     export_dir.mkdir(parents=True)
     (export_dir / "nodes.jsonl").write_text(json.dumps(
-        {"label": "Approved Omission",
+        {"label": "[Approved Omission]",
          "name": "bold beasts may never win a contest",
          "properties": {"scope": "docs/bestiary.md"}}) + "\n",
         encoding="utf-8")

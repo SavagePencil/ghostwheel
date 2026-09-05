@@ -1,12 +1,12 @@
 """Dependencies and bookmarks: a knowledge base pinning another, and
 citing a citizen that lives there (kernel 0.15.0).
 
-A [Dependency] is another knowledge base this one pins to an edition —
+A [Knowledge Base Dependency] is another knowledge base this one pins to an edition —
 the dependency's committed-backup identity hash and event-log sequence
-— with an intent (read, or write). A [Bookmark] is a citizen that lives
+— with an intent (read, or write). A [Citizen Bookmark] is a citizen that lives
 in a dependency: its knowledge base, label, and name there, and the
 edition it was resolved against, with exactly one RESOLVES_IN edge to
-its [Dependency]. This knowledge base's own citizens point at a
+its [Knowledge Base Dependency]. This knowledge base's own citizens point at a
 bookmark through their own relation vocabulary. Where a dependency
 lives on disk is settings, never canon.
 
@@ -295,10 +295,10 @@ def _short(value):
 
 
 def resolution_verdicts(delta, scratch, config):
-    """The gate reads the dependency's backup: every [Dependency] the
+    """The gate reads the dependency's backup: every [Knowledge Base Dependency] the
     round touches must be pinned at what its checkout holds (identity
     and sequence) and carry the name the checkout declares; every
-    [Bookmark] the round touches — and every bookmark of a dependency
+    [Citizen Bookmark] the round touches — and every bookmark of a dependency
     the round re-pins — must cite a citizen that exists there. A
     dependency the gate cannot reach refuses for the rows that touch
     it: a round may not cite what cannot be checked."""
@@ -409,7 +409,7 @@ def resolution_verdicts(delta, scratch, config):
 
 
 def drift_rows(graph, config):
-    """One row per [Dependency] on the graph: its pin, what its checkout
+    """One row per [Knowledge Base Dependency] on the graph: its pin, what its checkout
     holds now, and a status — held, behind (the checkout differs from
     the pin), or unreachable."""
     from .report import ref_key

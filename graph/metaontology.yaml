@@ -27,18 +27,26 @@
 #
 # Doc strings below become queryable `doc` properties on the Archetype nodes.
 #
-# MACHINERY MARKING (owner ruling): citizens the owner designates as
-# machinery — vocabulary customers interrogate but never say — wear
-# square brackets in their NAME: '[Segment Scheme]', '[Schema Layer]'
-# (vim-special-buffer prior art: in your list, not yours to touch).
-# Customer-facing kernel citizens (the Judgment family, Procedure, the
-# Metaontology/Ontology anchors) stay unbracketed. Designating more is
-# one bracket-wrap + a MINOR bump. Filter for relevance:
+# MACHINERY MARKING (owner ruling, widened at the bracket sweep):
+# citizens the owner designates as machinery — vocabulary customers
+# interrogate but never say — wear square brackets in their NAME:
+# '[Segment Scheme]', '[Schema Layer]' (vim-special-buffer prior art: in
+# your list, not yours to touch). Brackets ALSO keep the kernel from
+# shadowing a word a designer's world might need: a story has its own
+# artifacts, questions, decisions, answers, steps and outcomes, so the
+# kernel's are '[Artifact]', '[Question]', '[Decision]', '[Answer]',
+# '[Step]', '[Outcome]' and so on. Exempt: the four roots and the facets
+# (never a citizen's label — Archetype-row vocabulary only; awaits the
+# first world whose subject matter needs one of those words), the
+# Metaontology/Ontology anchors (engine-stamped), and Theme — designer
+# lexicon, the owner's word, kept unbracketed on purpose. Designating
+# more is one bracket-wrap + a MINOR bump. Filter for relevance:
 #   WHERE NOT a.name STARTS WITH '['
 #
 # --- Reserved vocabulary (documented before it exists) -----------------------
-# Under Judgment:   Question / Decision / Answer / TODO / Approved Omission /
-#                   Requirement / Opinion are KERNEL
+# Under Judgment:   [Question] / [Decision] / [Answer] / [TODO] /
+#                   [Approved Omission] / [Requirement] / [Opinion] /
+#                   [Interpretation] are KERNEL
 #                   concepts (declared below; promoted from project
 #                   labels at the self-description round — the storybook
 #                   test: every corpus with gates has them). Projects bind
@@ -50,13 +58,20 @@
 # Under Provenance: Artifact and DocSection are project-level labels
 #                   (declared in a project's ontology, bound to this root),
 #                   with MENTIONS / PART_OF edges; SPECIFIED_IN reserved.
-#                   [Dependency] and [Bookmark] are kernel machinery here
+#                   [Knowledge Base Dependency] and [Citizen Bookmark] are kernel machinery here
 #                   (bracketed: a designer never authors either as subject
-#                   matter): a [Dependency] is another knowledge base this
-#                   one pins at an edition; a [Bookmark] is a citizen that
+#                   matter): a [Knowledge Base Dependency] is another knowledge base this
+#                   one pins at an edition; a [Citizen Bookmark] is a citizen that
 #                   lives in a dependency, cited from here. Any knowledge
-#                   base holding [Dependency] entries is playing the world
-#                   role — a role, never a type. [Pocket] is a branch's
+#                   base holding [Knowledge Base Dependency] entries is playing the world
+#                   role — a role, never a type. [Artifact] is the thing a
+#                   person hands over, promoted from the project level at
+#                   the bracket sweep: identity is its name, WHERE it is
+#                   lives on [Artifact Location] rows behind LOCATED_AT
+#                   ([File Location] the kernel's own kind; other kinds by
+#                   the owning world's taxonomy ceremony), and a [Resolver]
+#                   binds a location kind to the procedure that opens it
+#                   (OPENS_WITH). [Pocket Universe] is a branch's
 #                   own declaration of itself as a pocket (who cut it,
 #                   when, who may look, the base kind, the canon identity
 #                   it forked from): engine-written at the cut and by the
@@ -86,10 +101,17 @@
 #                   Discipline / Audience citizens (one system, shared
 #                   names). CHECKS (Answer Key -> Procedure): an authored
 #                   ground edge naming the program a fidelity check holds
-#                   to its approved table. RESOLVES_IN ([Bookmark] ->
-#                   [Dependency]): an authored ground edge naming the pinned
+#                   to its approved table. RESOLVES_IN ([Citizen Bookmark] ->
+#                   [Knowledge Base Dependency]): an authored ground edge naming the pinned
 #                   knowledge base a bookmarked citizen lives in — exactly
-#                   one per bookmark.
+#                   one per bookmark. DEPICTS ([Artifact] -> any citizen):
+#                   the objective contents, one authored edge per depicted
+#                   thing, medium-neutral (a song depicts a horn). LOCATED_AT
+#                   ([Artifact] -> [Artifact Location]), SUPERSEDES
+#                   ([Artifact] new -> old), INTERPRETED_AS ([Interpretation]
+#                   -> what it stands for), DRAWS_ON ([Interpretation] -> a
+#                   depicted citizen it uses), OPENS_WITH ([Resolver] -> the
+#                   procedure that opens a location kind).
 # Engine-stamped:   'Metaontology' and 'Ontology' Archetypes
 #                   (under Provenance) carry version + content
 #                   fingerprint — the self-description slice;
@@ -120,9 +142,9 @@
 # MINOR bump.
 # Ledger — 0.15.0 (dependencies and bookmarks enter the kernel): a
 # knowledge base gains the vocabulary to pin another knowledge base and
-# to cite a citizen that lives there. [Dependency] pins another knowledge
+# to cite a citizen that lives there. [Knowledge Base Dependency] pins another knowledge
 # base to an edition (its committed backup's identity hash and event-log
-# sequence) with a read or write intent; [Bookmark] names a citizen in a
+# sequence) with a read or write intent; [Citizen Bookmark] names a citizen in a
 # dependency — its knowledge base, label, name, and the edition it was
 # resolved against — with one RESOLVES_IN edge to that dependency. Both
 # are Provenance-rooted machinery: where a dependency lives on disk is
@@ -133,7 +155,7 @@
 # Ledger — 0.16.0 (the pocket declares itself): a named branch cut as a
 # clone of canon is a pocket — a collaborator's own version of a
 # knowledge base, hard-isolated from canon. Its declaration lives in
-# the branch's own graph as [Pocket] (who cut it, when, who is invited,
+# the branch's own graph as [Pocket Universe] (who cut it, when, who is invited,
 # the base kind, the canon identity and sequence it forked from), so the
 # front door can ask "who cut this, who may look" and the backup carries
 # the answer with no file beside it. Engine-written at the cut and
@@ -141,7 +163,73 @@
 # the line's content identity so an invite change moves no chain;
 # stripped at succession, since canon is never a pocket. Physical
 # readability is a later rung. Additive; MINOR bump.
-version: "0.16.0"
+# Ledger — 0.17.0 (the bracket sweep and artifacts): this ceremony
+# RENAMES. Fifteen kernel citizen labels take brackets — [Procedure],
+# [Question], [Decision], [Answer], [TODO], [Approved Omission],
+# [Requirement], [Opinion], [Answer Key], [Visibility Group],
+# [Visibility Class], [Discipline], [Audience], and the machine labels
+# [Step] and [Outcome] — because brackets mark machinery AND never
+# shadow a word a designer's world might need; and three names from the
+# worlds layer take their full words under the never-trim rule —
+# [Knowledge Base Dependency], [Citizen Bookmark], [Pocket Universe]. Theme stays unbracketed:
+# "Theme is designer lexicon" (the owner's words). Roots, facets, the
+# Completeness ladder, and the anchors are exempt until a world's
+# subject matter needs one of those words. The rename is delivered by
+# kernel-migrate's rename rule (the `renamed` map below): every citizen
+# relabeled, every edge re-pointed, project specs rewritten, the
+# attribution ledger rewritten, one chained round per canon with its
+# inverse — the migration charter's first data-moving op.
+#
+# The same ceremony brings artifacts into the kernel: [Artifact]
+# (promoted from the project level — a same-named project label is
+# adopted and renamed by the same rule; identity stays its name, WHERE
+# it is moves to [Artifact Location] rows behind LOCATED_AT, with
+# [File Location] the kernel's own kind and other kinds declared by the
+# owning world through the taxonomy ceremony; its grade reuses
+# Completeness as CONTENT HELD — Cited: name and location; Attested: a
+# description and its DEPICTS facts confirmed at the gate; Transcribed:
+# region receipts, still parked — while VERIFICATION is the location
+# row's own fact, never folded into the grade; `superseded_at` and
+# SUPERSEDES mark an artifact retired as an intake ruler), DEPICTS
+# (the objective contents), [Interpretation] (what an artifact stands
+# for to a world, per intent — a fifth ruled-reading grain beside
+# alias, Approved Difference, [Approved Omission], and Verbatim,
+# entering as a sibling; the name [Intended Use] is reserved for
+# placement if it ever needs a citizen, nothing built), and [Resolver]
+# as vocabulary (its verb awaits the first tool knowledge base).
+# Derivation now folds a citizen's INSTANCE_OF up its label's
+# SUBTYPE_OF chain (the taxonomy-membership rule), DAG-enforced at the
+# ceremony. MINOR bump under the 0.x convention; the rename is named
+# here plainly.
+version: "0.17.0"
+
+# Names this kernel renamed, old -> new. kernel-migrate reads this map:
+# a canon carrying a citizen label, an Archetype row, a spec binding, or
+# an attribution ref under an old name is rewritten to the new one in
+# the migration round; a project label that already uses a new name
+# refuses by name. A same-named project label is ADOPTED by the rename
+# (its row becomes kernel-declared; its file-era spec retires; extra
+# concept bindings survive as declared memberships per citizen).
+renamed:
+  Procedure: "[Procedure]"
+  Question: "[Question]"
+  Decision: "[Decision]"
+  Answer: "[Answer]"
+  TODO: "[TODO]"
+  Approved Omission: "[Approved Omission]"
+  Requirement: "[Requirement]"
+  Opinion: "[Opinion]"
+  Answer Key: "[Answer Key]"
+  Visibility Group: "[Visibility Group]"
+  Visibility Class: "[Visibility Class]"
+  Discipline: "[Discipline]"
+  Audience: "[Audience]"
+  Step: "[Step]"
+  Outcome: "[Outcome]"
+  Artifact: "[Artifact]"
+  "[Dependency]": "[Knowledge Base Dependency]"
+  "[Bookmark]": "[Citizen Bookmark]"
+  "[Pocket]": "[Pocket Universe]"
 
 roots:
   Concept: >-
@@ -165,7 +253,7 @@ concepts:
   # The engine owns the procedure reader and the Step lift, so Procedure
   # ships here — a peer of the project's own concept categories, itself an
   # instance of Concept.
-  Procedure: >-
+  "[Procedure]": >-
     A rule-governed happening: preconditions, inputs and outputs,
     evaluations, dice, branches, and effects. Exists for comprehension
     (agents reason about it; code and prose can be generated from it),
@@ -176,35 +264,35 @@ concepts:
     (required/optional), outcome names and guarantees, completeness.
     Reads, consults, mutates, calls, and outcome effects are derived
     for transcribed procedures.
-  Question:
+  "[Question]":
     instance_of: Judgment
     doc: >-
       Something genuinely open, awaiting a ruling. Openness is DERIVED —
       no incoming RESOLVES edge — never flagged. Rows accumulate;
       nothing is deleted: the tables are the rationale record.
-  Decision:
+  "[Decision]":
     instance_of: Judgment
     doc: >-
       A ruling that WAS made: by whom, when. Supersession is EXPECTED —
       decisions flip as evidence arrives, mechanized via SUPERSEDES.
-  Answer:
+  "[Answer]":
     instance_of: Judgment
     doc: >-
       A clarification: the truth already existed; the Question dissolves
       rather than being legislated (contrast Decision, which settles
       something genuinely open).
-  TODO:
+  "[TODO]":
     instance_of: Judgment
     doc: >-
       Known work pending. A Question resolves via a Decision; a TODO
       resolves via work.
-  Approved Omission:
+  "[Approved Omission]":
     instance_of: Judgment
     doc: >-
       An editorial ruling at the parity gates: this claim of a source is
       deliberately absent from its regeneration and passes forever
       after. The claim-diff judge consults these rows.
-  Answer Key:
+  "[Answer Key]":
     instance_of: Judgment
     doc: >-
       A fidelity net between an approved program and an approved table:
@@ -219,7 +307,7 @@ concepts:
       round touches the key or the checked program's body, and on
       demand as the answer-keys sweep; a table that drifts from its
       program is named by the key that caught it.
-  "[Dependency]":
+  "[Knowledge Base Dependency]":
     instance_of: Provenance
     doc: >-
       Another knowledge base this one pins to an edition. The citizen's
@@ -233,19 +321,19 @@ concepts:
       knowledge base holding dependency entries is playing the world
       role; a dependency may itself hold dependencies. Machinery, never
       subject matter — hence bracketed.
-  "[Bookmark]":
+  "[Citizen Bookmark]":
     instance_of: Provenance
     doc: >-
       A citizen that lives in a dependency, cited from this knowledge
       base: the dependency's name, the citizen's label and name there,
       and the dependency edition it was resolved against, with exactly
-      one RESOLVES_IN edge to the [Dependency] it lives in. This
+      one RESOLVES_IN edge to the [Knowledge Base Dependency] it lives in. This
       knowledge base's own citizens point at a bookmark through their
       own relation vocabulary, authored like any ground edge, so the
       setting's fact can rest on the rulebook's citizen without either
       knowledge base holding the other's rows. Machinery, never subject
       matter — hence bracketed.
-  "[Pocket]":
+  "[Pocket Universe]":
     instance_of: Provenance
     doc: >-
       A branch's own declaration of itself as a pocket — a collaborator's
@@ -269,13 +357,13 @@ concepts:
   # flat classes only), INCLUDES (knowledge grant-inheritance), MANAGES
   # (delegated administration, enforcement at multi-user) — specs land
   # project-side with their first consumers, per the deferred pattern.
-  Visibility Group: >-
+  "[Visibility Group]": >-
     A subject of visibility: who can be granted sight. Individuals are
     size-1 groups; groups nest via MEMBER_OF, and the transitive fold
     of a subject's groups is what a visibility lens compiles from.
     Wearing a subset of one's groups (session activation) and
     subtracting a group are lens operations, never membership edits.
-  Visibility Class: >-
+  "[Visibility Class]": >-
     A named set of graph elements that visibility verdicts speak about
     — the only permission-bearing unit. kind is knowledge (assume-deny:
     hidden unless a folded group holds an allow) or masking
@@ -285,7 +373,7 @@ concepts:
     grant-inheritance (holding the child includes the parent);
     hierarchical resource trees model as OVERLAPPING MEMBERSHIPS,
     never as INCLUDES (owner-ruled at the ceremony).
-  Discipline:
+  "[Discipline]":
     instance_of: Judgment
     doc: >-
       A kind of concern — the axis a team splits its thinking along.
@@ -294,7 +382,7 @@ concepts:
       the team or discerned from the corpus as the ontology evolves.
       Judgment rows point at theirs via HAS_DISCIPLINE, so a parked
       question can be routed to the kind of thinking it needs.
-  Audience:
+  "[Audience]":
     instance_of: Judgment
     doc: >-
       Who should weigh a thing when its moment arrives — a role or
@@ -308,7 +396,7 @@ concepts:
   # mint agent Opinions in any universe), Theme by the owner's
   # many-projects prediction (every project has design intent; the
   # kernel is where "Philosophy" stops being reinvented).
-  Requirement:
+  "[Requirement]":
     instance_of: Judgment
     doc: >-
       A binding constraint the work must satisfy, held by someone — an
@@ -317,7 +405,7 @@ concepts:
       and a Requirement resolves for the Requirement, and a dispute
       about whether work satisfies one resolves at a gate. Supersession
       is expected, as with any ruling.
-  Opinion:
+  "[Opinion]":
     instance_of: Judgment
     doc: >-
       A stance held with stated confidence, not yet ruled. Agents mint
@@ -345,6 +433,73 @@ concepts:
       (what engine family), then the Ontology (what domain), then dig.
       Future strata (cross-graph stacks, overlays) arrive as instances —
       the concept is engine-owned; customers interrogate, never edit.
+
+  "[Artifact]":
+    instance_of: Provenance
+    doc: >-
+      The thing a person hands over — a document, an image, a recording,
+      a model, a link, a physical object — as canon knows it. Identity is
+      its name, a stable handle; WHERE it is lives on [Artifact Location]
+      rows behind LOCATED_AT, so moving a file never renames a citizen.
+      It carries the whole-file fingerprint and medium the gate derived
+      when a location resolved, its grade (KNOWN_AT Completeness as
+      CONTENT HELD: Cited — name and location only; Attested — a
+      description and its DEPICTS facts confirmed at the gate;
+      Transcribed — region-grain receipts), and `superseded_at` — the
+      sequence at which it stopped being an intake ruler, read by the
+      census as information, never a defect — with SUPERSEDES from a
+      newer version to the one it replaces. DEPICTS names its objective
+      contents; an [Interpretation] says what it stands for. Bracketed:
+      a designer's world has artifacts of its own.
+  "[Artifact Location]":
+    instance_of: Provenance
+    subtypes: ["[File Location]"]
+    doc: >-
+      Where an artifact can be got: `scheme` (file, https, a tool's
+      own, physical, …), `address` (free text the scheme reads), and
+      `primary` (true on exactly one of an artifact's locations).
+      VERIFICATION is this row's own fact — `verified_fingerprint`,
+      `verified_at_sequence`, `size` — written by the gate when the
+      engine or a bound [Resolver] resolved it, read by the receipts
+      sweep, never folded into the artifact's grade: a physical painting
+      can be Attested with no verification, a verified file can rest at
+      Cited. Kinds are a seam, not an enumeration: [File Location] is
+      the kernel's; a tool or project knowledge base declares its own
+      kind as a SUBTYPE_OF this one through the taxonomy ceremony, and
+      an untyped location uses the base alone. Machinery — hence
+      bracketed.
+  "[File Location]":
+    instance_of: Provenance
+    doc: >-
+      An [Artifact Location] the engine resolves natively: `address` is
+      a path under the knowledge base, read at the gate — fingerprint
+      and medium derived onto the artifact, verification written here.
+      A file that cannot be read, or a declared fingerprint the bytes do
+      not match, refuses by name.
+  "[Interpretation]":
+    instance_of: Judgment
+    doc: >-
+      What an artifact stands for to a world, per intent — the
+      subjective layer over DEPICTS' objective one; many per artifact,
+      each citing any subset (or none) of the depicted things. Carries
+      `intent` in the world's own words (intention belongs to the
+      person, so it is a property, never a citizen), who and when; one
+      ABOUT edge to its artifact, INTERPRETED_AS to what it stands for,
+      DRAWS_ON to the depicted citizens it uses. A ruled reading of the
+      meaning seam, beside the four rulings of the intake seam.
+      Placement ("the illustration in chapter eleven") is composition,
+      deliberately not this; [Intended Use] is reserved for it.
+      Bracketed: a story may have interpretations of its own.
+  "[Resolver]":
+    instance_of: Provenance
+    doc: >-
+      How this knowledge base opens a kind of location: named for its
+      scheme, bound by OPENS_WITH to the procedure that opens it — a
+      local [Procedure], or a [Citizen Bookmark] into the tool knowledge base
+      that owns the how — for one location kind. The executable binding
+      (a project path, a command, credentials) is settings, never canon.
+      Vocabulary at this rung: the verb that runs a resolver awaits the
+      first tool knowledge base.
 
 facets:
   # The common library: natively supported, used by MANY (not all) projects.
@@ -392,7 +547,7 @@ facets:
     ordered: true
     values: [Cited, Attested, Transcribed]
     doc: >-
-      How much of a procedure the graph holds — coverage, not accuracy
+      How much of a procedure — or of an artifact — the graph holds — coverage, not accuracy
       (accuracy is guarded by the approved_hash tripwire and derivation
       answer-keys) and not trust. Procedures point at their level via
       KNOWN_AT; the per-section *_closed markers are the same dimension

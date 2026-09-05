@@ -139,7 +139,7 @@ ONTOLOGY = """\
         relationships:
           - { type: ABOUT, to: any, column: About,
               on_missing: report, unmatched_property: about_text }
-      Artifact:
+      "[Artifact]":
         values: [docs/guide.md]
         concept: File
         fingerprint: true
@@ -150,7 +150,7 @@ ONTOLOGY = """\
           heading: { type: text, doc: "heading" }
           file: { type: text, doc: "path" }
         relationships:
-          - { type: PART_OF,  to: Artifact, parser: part_of }
+          - { type: PART_OF,  to: "[Artifact]", parser: part_of }
           - { type: MENTIONS, parser: mentions }
     """
 
@@ -249,7 +249,7 @@ class TestProseAndTables:
     def test_part_of_artifact(self, make_repo):
         graph, _ = run(make_repo)
         assert ("DocSection", "guide § Overview",
-                "Artifact", "docs/guide.md") in edges_of(graph, "PART_OF")
+                "[Artifact]", "docs/guide.md") in edges_of(graph, "PART_OF")
 
     def test_mentions_exact_and_bounded(self, make_repo):
         graph, _ = run(make_repo)
@@ -460,7 +460,7 @@ class TestMetamodel:
         assert ("Archetype", "Heading",
                 "Archetype", "Doc Structure") in instance
         assert ("Archetype", "DocSection", "Archetype", "Heading") in instance
-        assert ("Archetype", "Artifact", "Archetype", "File") in instance
+        assert ("Archetype", "[Artifact]", "Archetype", "File") in instance
 
     def test_segment_scheme_ladder_is_coarse_to_fine(self, make_repo):
         graph, _ = run(make_repo)
@@ -489,7 +489,7 @@ class TestMetamodel:
         graph, _ = run(make_repo)
         expected = hashlib.sha256(
             textwrap.dedent(FILES["docs/guide.md"]).encode("utf-8"))
-        assert graph.nodes[("Artifact", "docs/guide.md")]["fingerprint"] \
+        assert graph.nodes[("[Artifact]", "docs/guide.md")]["fingerprint"] \
             == expected.hexdigest()
 
     def test_graph_answers_what_built_it(self, make_repo):

@@ -724,7 +724,8 @@ def approved_omissions_for(base_dir, scope, ledger_path=None):
     if nodes_path.exists():
         for line in nodes_path.read_text(encoding="utf-8").splitlines():
             record = json.loads(line)
-            if record["label"] != "Approved Omission":
+            from .ontology import KERNEL_APPROVED_OMISSION_LABEL
+            if record["label"] != KERNEL_APPROVED_OMISSION_LABEL:
                 continue
             row_scope = (record["properties"].get("scope") or "").strip()
             if _scope_covers(row_scope, scope):

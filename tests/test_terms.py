@@ -107,7 +107,7 @@ def _build_terms_canon(root):
     # of the glossary's known vocabulary and is genuinely unresolved (then
     # suppressed) when it surfaces in prose.
     for index, term in enumerate(RULED_REJECTS, start=1):
-        graph.nodes[("Decision", f"Glossary sitting: ruling {index}")] = \
+        graph.nodes[("[Decision]", f"Glossary sitting: ruling {index}")] = \
             {"rejected_term": term}
     export_mod.write_export(graph, root / "graph" / "export")
     return root

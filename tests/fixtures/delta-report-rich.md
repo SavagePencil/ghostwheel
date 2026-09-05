@@ -9,7 +9,7 @@ The items below cannot become canon as written — each says why, and what to do
 - ⚠ Attempted to birth 'Rune' as a new Archetype LABEL, but the base already holds 1 ground row under that label (Ancient Mark). Failed due to: this schema change is outside the ceremony's classes (new declared concepts, label births, doc edits, added aliases, render-mapping edits, source unregistration, removal of unreferenced rows) — changes to an EXISTING label or spec move data underneath them and ride the migration charter. Propose the change to the owner at the plan gate instead.
 - ⚠ Attempted to author 'Myth' as a new Archetype concept without declaring it. Failed due to: a ceremony concept arrives WITH its DECLARED_IN edge (and usually an INSTANCE_OF into its parent concept) in the same round — an undeclared schema row would be invisible to the schema readers. Add the declaration in scratch, or delete the node.
 - ⚠ a Object node was created without a name — every citizen needs one. Give it a name property or delete it from scratch.
-- ⚠ 'Ghost Step' can't be created as a Step — nodes of that kind are built automatically by the system, never by hand (machine label). If you meant to propose a new concept or step, say so in the plan and the owner will place it. To undo: delete the node from scratch, or reset scratch entirely (python -m graph load --database scratch).
+- ⚠ 'Ghost Step' can't be created as a [Step] — nodes of that kind are built automatically by the system, never by hand (machine label). If you meant to propose a new concept or step, say so in the plan and the owner will place it. To undo: delete the node from scratch, or reset scratch entirely (python -m graph load --database scratch).
 - ⚠ Attempted to remove the connection (Tool)-[:INSTANCE_OF]->(Concept). Failed due to: INSTANCE_OF links are part of the graph's own schema, and this schema change is outside the ceremony's classes (new declared concepts, label births, doc edits, added aliases, render-mapping edits, source unregistration, removal of unreferenced rows) — changes to an EXISTING label or spec move data underneath them and ride the migration charter. Propose the change to the owner at the plan gate instead. To undo: reset scratch entirely (python -m graph load --database scratch).
 - ⚠ Attempted to author membership (Object)-[:DECLARED_MEMBER_OF]->(Tool). Failed due to: the edge runs FROM an Archetype, which is the tower/roster shape, not an authored membership — a declared membership is written FROM a citizen. To undo: point the edge from the citizen, or MATCH it in scratch and DELETE it.
 - ⚠ Attempted to author membership (Golden Key)-[:DECLARED_MEMBER_OF]->(Ordered). Failed due to: 'Ordered' is not an existing Concept-rooted Archetype — authored membership classifies a citizen against subject-matter Concepts only (never a Facet, a label's Archetype, or a missing node), and it never re-homes the citizen. To undo: point the edge at a Concept Archetype, or DELETE it from scratch.
@@ -35,7 +35,7 @@ The rows below change the graph's OWN SCHEMA. They are within the ceremony's per
 - (Archetype) **Rune** — spec_json: '{}'
 - (Object) **None**
 - (Object) **Silver Bell** — from_text: 'rings at dusk'
-- (Step) **Ghost Step**
+- ([Step]) **Ghost Step**
 
 ## Nodes changed (before → after)
 

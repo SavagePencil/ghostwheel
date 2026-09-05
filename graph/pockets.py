@@ -7,7 +7,7 @@ log, and pin. What makes it a POCKET is its declaration: who cut it,
 when, who is invited to look, the base kind, and the canon identity and
 sequence it forked from. The declaration lives in two in-band places
 and no file: the branch database's identity stamp, and a bracketed
-machinery citizen [Pocket] (kernel 0.16.0) named for the branch in the
+machinery citizen [Pocket Universe] (kernel 0.16.0) named for the branch in the
 branch's own graph, so the front door can ask "who cut this, who may
 look" and the backup carries the answer.
 
@@ -32,7 +32,7 @@ REPORT_FILE = "branches-report.json"
 
 
 def declaration(by, invited, forked_from, forked_sequence, cut_at=None):
-    """The pocket's facts, as the [Pocket] row carries them."""
+    """The pocket's facts, as the [Pocket Universe] row carries them."""
     return {
         "cut_by": by,
         "cut_at": cut_at or datetime.now(timezone.utc).isoformat(
@@ -53,7 +53,7 @@ def clone_graph(graph):
 
 
 def with_declaration(graph, branch, facts):
-    """A copy of the graph carrying the branch's [Pocket] row."""
+    """A copy of the graph carrying the branch's [Pocket Universe] row."""
     copy = clone_graph(graph)
     copy.ensure_node(KERNEL_POCKET_LABEL, branch, **dict(facts))
     return copy

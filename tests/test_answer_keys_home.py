@@ -62,7 +62,7 @@ def _with_keys(graph, keys=KEYS, procedure="Wilt"):
     for name, props in keys.items():
         graph.ensure_node(KERNEL_ANSWER_KEY_LABEL, name, **props)
         graph.edges.append(make_edge(CHECKS_EDGE, KERNEL_ANSWER_KEY_LABEL,
-                                     name, "Procedure", procedure))
+                                     name, "[Procedure]", procedure))
     return graph
 
 
@@ -140,7 +140,7 @@ def test_uncheckable_citizens_are_named_not_skipped(tmp_path):
                           {"from_colun": "From Vigor",
                            "to_column": "To Vigor"})})
     graph.edges.append(make_edge(CHECKS_EDGE, KERNEL_ANSWER_KEY_LABEL,
-                                 "Misspelled", "Procedure", "Wilt"))
+                                 "Misspelled", "[Procedure]", "Wilt"))
     graph.ensure_node(KERNEL_ANSWER_KEY_LABEL, "Checks a ghost",
                       derives="transitions",
                       table="data/wilt-transitions.csv",
@@ -148,7 +148,7 @@ def test_uncheckable_citizens_are_named_not_skipped(tmp_path):
                           {"from_column": "From Vigor",
                            "to_column": "To Vigor"})})
     graph.edges.append(make_edge(CHECKS_EDGE, KERNEL_ANSWER_KEY_LABEL,
-                                 "Checks a ghost", "Procedure", "Bloom"))
+                                 "Checks a ghost", "[Procedure]", "Bloom"))
     rows = {r["name"]: r for r in canon_check(
         graph, ontology_from_graph(graph, base_dir), base_dir)}
     assert rows["Garbled"]["code"] == UNREADABLE
@@ -179,7 +179,7 @@ def test_a_body_edit_that_breaks_a_key_refuses_at_the_gate(tmp_path):
     _with_keys(base)
     ontology = ontology_from_graph(base, base_dir)
     scratch = _clone(base)
-    node = scratch.nodes[("Procedure", "Wilt")]
+    node = scratch.nodes[("[Procedure]", "Wilt")]
     node["body"] = node["body"].replace("Rot > 10", "Rot > 11")
     delta = diff(base, scratch)
     verdicts = gate_verdicts(delta, scratch, ontology, base_dir)
@@ -219,7 +219,7 @@ def test_a_key_landing_without_its_program_refuses(tmp_path):
     assert "checks no program" in verdict.message
     # landing the key WITH its edge, against a faithful program: clean
     scratch.edges.append(make_edge(CHECKS_EDGE, KERNEL_ANSWER_KEY_LABEL,
-                                   "Orphan", "Procedure", "Wilt"))
+                                   "Orphan", "[Procedure]", "Wilt"))
     scratch.nodes[(KERNEL_ANSWER_KEY_LABEL, "Orphan")][KEY_JSON_PROP] = \
         json.dumps({"from_column": "From Vigor", "to_column": "To Vigor"})
     assert gate_verdicts(diff(base, scratch), scratch, ontology,

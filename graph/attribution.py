@@ -89,7 +89,8 @@ import simplemma
 
 from .comprehension import is_row_text, markdown_table_claims
 from .judge import claims_of, normalize
-from .ontology import UNAUTHORABLE_EDGE_TYPES
+from .ontology import (KERNEL_PROCEDURE_LABEL, STEP_LABEL,
+                       UNAUTHORABLE_EDGE_TYPES)
 from .refs import CitizenRef
 
 PROPERTIES = "properties"
@@ -265,7 +266,7 @@ class CanonIndex:
                 continue
             props = props or {}
             name_tokens = _tokens(str(name))
-            is_step = label == "Step"
+            is_step = label == STEP_LABEL
             value_tokens = set()
             prop_words = set()
             receipt_sentences = []
@@ -317,7 +318,7 @@ class CanonIndex:
                 "prose": [s for s in prose_sentences if s],
             }
             self.entries.append(entry)
-            if label == "Procedure":
+            if label == KERNEL_PROCEDURE_LABEL:
                 proc_of_entry[str(name)] = entry
         # attach each procedure's lifted step text to the procedure's own
         # entry (receipt rung, cited AS the procedure). The step name's
@@ -326,7 +327,7 @@ class CanonIndex:
         for owner, sentences in step_lifts.items():
             entry = proc_of_entry.get(owner)
             if entry is None:
-                entry = {"key": ("Procedure", owner), "name_canon":
+                entry = {"key": (KERNEL_PROCEDURE_LABEL, owner), "name_canon":
                          _canon_set(_tokens(owner)), "value_canon": set(),
                          "prop_canon": set(),
                          "receipts": [], "step_lifts": [], "prose": []}

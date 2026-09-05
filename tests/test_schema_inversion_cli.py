@@ -70,7 +70,7 @@ nodes:
   Program:
     source: data/procedures/awakening.yaml
     reader: procedure_yaml
-    concept: Procedure
+    concept: "[Procedure]"
   Chronicle:
     values: [docs/tale.md]
     fingerprint: true
@@ -102,13 +102,13 @@ def _build_canon(root):
 
     # The masking Visibility Class rides as a kernel citizen (the lens reads
     # its declarations from the graph, not a file).
-    graph.nodes[("Visibility Class", MASK_CLASS)] = {
+    graph.nodes[("[Visibility Class]", MASK_CLASS)] = {
         "kind": "masking", "labels": ["Gem"]}
     # Ruled rejects as Judgment citizens — the machine key on a
     # generically-named ruling (the term is kept out of citizen names so it
     # stays genuinely unresolved when it surfaces in prose).
     for index, term in enumerate(RULED_REJECTS, start=1):
-        graph.nodes[("Decision", f"Glossary sitting: ruling {index}")] = \
+        graph.nodes[("[Decision]", f"Glossary sitting: ruling {index}")] = \
             {"rejected_term": term}
     export_mod.write_export(graph, root / "graph" / "export")
     return root

@@ -40,14 +40,14 @@ def test_a_reader_without_a_source_loads_as_a_released_label(tmp_path):
     ontology, findings = load_ontology(path, base_dir)
     assert ontology is not None
     assert _errors(findings) == [], findings
-    assert "source" not in ontology.nodes["Procedure"]
-    assert ontology.nodes["Procedure"]["reader"] == "procedure_yaml"
+    assert "source" not in ontology.nodes["[Procedure]"]
+    assert ontology.nodes["[Procedure]"]["reader"] == "procedure_yaml"
     # nothing to read from sources: no citizens, no findings under it
     graph, extract_findings = extract(ontology)
     assert _errors(extract_findings) == []
-    assert not [n for (label, n) in graph.nodes if label == "Procedure"]
+    assert not [n for (label, n) in graph.nodes if label == "[Procedure]"]
     # and the embedding carries the released spec verbatim
-    row = graph.nodes[(ARCHETYPE_LABEL, "Procedure")]
+    row = graph.nodes[(ARCHETYPE_LABEL, "[Procedure]")]
     assert "source" not in json.loads(row["spec_json"])
 
 
@@ -61,7 +61,7 @@ def test_the_released_spec_matches_canon_with_no_fold(tmp_path):
         base_dir / "graph" / "ontology.yaml", base_dir)
     assert yaml_ontology is not None and _errors(findings) == []
     rec = ontology_from_graph(resident, base_dir)
-    assert yaml_ontology.nodes["Procedure"] == rec.nodes["Procedure"]
+    assert yaml_ontology.nodes["[Procedure]"] == rec.nodes["[Procedure]"]
     # the lift reads the resident bodies under either ontology alike
     from_yaml, f1 = derive(yaml_ontology, resident)
     from_canon, f2 = derive(rec, resident)

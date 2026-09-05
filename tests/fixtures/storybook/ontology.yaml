@@ -25,7 +25,7 @@ nodes:
   Place:
     implicit: true
     concept: Story Concept
-  Artifact:
+  "[Artifact]":
     values: [docs/tale.md]
     fingerprint: true
-    concept: [Provenance, Book]
+    concept: "[Artifact]"

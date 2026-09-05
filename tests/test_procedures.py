@@ -107,7 +107,7 @@ ONTOLOGY = """\
         source: data/reserves.csv
         key: Reserve
         concept: Tale Concept
-      Artifact:
+      "[Artifact]":
         values: [docs/rules.md]
       DocSection:
         source: [docs/rules.md]
@@ -115,11 +115,11 @@ ONTOLOGY = """\
           heading: { type: text, doc: "heading" }
           file:    { type: text, doc: "path" }
         relationships:
-          - { type: PART_OF, to: Artifact, parser: part_of }
-      Procedure:
+          - { type: PART_OF, to: "[Artifact]", parser: part_of }
+      "[Procedure]":
         source: [data/procedures/test.yaml, data/procedures/tend.yaml]
         reader: procedure_yaml
-        concept: Procedure
+        concept: "[Procedure]"
     """
 
 
@@ -372,14 +372,14 @@ def edges(graph, edge_type):
 def test_procedure_node_props(make_repo):
     graph, findings = run(make_repo)
     assert not [f for f in findings if f.severity == ERROR]
-    node = graph.nodes[("Procedure", "Wilt")]
+    node = graph.nodes[("[Procedure]", "Wilt")]
     assert node["precondition"] == "the frost arrived"
     assert node["completeness"] == "transcribed"
     assert "beast: who wilts" in node["inputs"]
     assert ("ward: a warding bloom (optional; when absent: "
             "no shelter applies)") in node["inputs"]
     assert node["reads_closed"] and node["mutates_closed"]
-    tend = graph.nodes[("Procedure", "Tend")]
+    tend = graph.nodes[("[Procedure]", "Tend")]
     assert tend["completeness"] == "cited"
     assert tend["description"] == "mends beasts"
     assert not tend["reads_closed"]
@@ -387,23 +387,23 @@ def test_procedure_node_props(make_repo):
 
 def test_steps_materialized_and_chained(make_repo):
     graph, _ = run(make_repo)
-    assert graph.nodes[("Step", "Wilt §1")]["kind"] == "branch"
-    assert graph.nodes[("Step", "Wilt §1.Fresh.2")]["condition"] == "Sap > 0"
-    assert ("Procedure", "Wilt", "Step", "Wilt §1") in edges(graph, "FIRST_STEP")
+    assert graph.nodes[("[Step]", "Wilt §1")]["kind"] == "branch"
+    assert graph.nodes[("[Step]", "Wilt §1.Fresh.2")]["condition"] == "Sap > 0"
+    assert ("[Procedure]", "Wilt", "[Step]", "Wilt §1") in edges(graph, "FIRST_STEP")
 
 
 def test_cases_plug_into_states(make_repo):
     graph, _ = run(make_repo)
     assert edges(graph, "MATCHES") == {
-        ("Step", "Wilt §1.Fresh", "Condition", "Fresh"),
-        ("Step", "Wilt §1.Weary", "Condition", "Weary")}
+        ("[Step]", "Wilt §1.Fresh", "Condition", "Fresh"),
+        ("[Step]", "Wilt §1.Weary", "Condition", "Weary")}
 
 
 def test_specified_in_resolves(make_repo):
     graph, _ = run(make_repo)
     spec_edges = edges(graph, "SPECIFIED_IN")
-    assert ("Procedure", "Wilt", "DocSection", "rules § Overview") in spec_edges
-    assert ("Procedure", "Tend", "DocSection", "rules § Overview") in spec_edges
+    assert ("[Procedure]", "Wilt", "DocSection", "rules § Overview") in spec_edges
+    assert ("[Procedure]", "Tend", "DocSection", "rules § Overview") in spec_edges
 
 
 # -- artifact + span citations (canon thinning: canon holds no sections) ------
@@ -446,7 +446,7 @@ def test_artifact_span_citation_lands_on_the_artifact(make_repo):
     edge = [e for e in graph.edges if e.type == "SPECIFIED_IN"
             and e.from_name == "Spanned"]
     assert [(e.to_label, e.to_name, dict(e.props)["section"])
-            for e in edge] == [("Artifact", "docs/rules.md", "Overview")]
+            for e in edge] == [("[Artifact]", "docs/rules.md", "Overview")]
     # the hash verified against the file's bytes: no drift warning
     assert not [f for f in findings if "has since changed" in f.detail]
 
@@ -469,9 +469,9 @@ def test_artifact_span_missing_section_warns(make_repo):
 def test_step_references_scanned(make_repo):
     graph, _ = run(make_repo)
     refs = edges(graph, "REFERENCES")
-    assert ("Step", "Wilt §1.Fresh.2.1", "Reserve", "Sap") in refs
-    assert ("Step", "Wilt §1.Fresh.2.else.1", "Condition", "Weary") in refs
-    assert ("Step", "Wilt §1.Weary.1.2", "Condition", "Spent") in refs
+    assert ("[Step]", "Wilt §1.Fresh.2.1", "Reserve", "Sap") in refs
+    assert ("[Step]", "Wilt §1.Fresh.2.else.1", "Condition", "Weary") in refs
+    assert ("[Step]", "Wilt §1.Weary.1.2", "Condition", "Spent") in refs
     # case steps point via ON, not REFERENCES
     assert not any(f == "Wilt §1.Fresh" for (_, f, _, _) in refs)
 
@@ -480,36 +480,36 @@ def test_step_references_scanned(make_repo):
 
 def test_outcome_nodes_projected(make_repo):
     graph, _ = run(make_repo)
-    shrug = graph.nodes[("Outcome", "Wilt: Shrugged Off")]
+    shrug = graph.nodes[("[Outcome]", "Wilt: Shrugged Off")]
     assert shrug["guarantee"] == "fails-with-side-effects"
     assert shrug["doc"] == "still lively"
     assert edges(graph, "HAS_POSSIBLE_OUTCOME") == {
-        ("Procedure", "Wilt", "Outcome", "Wilt: Shrugged Off"),
-        ("Procedure", "Wilt", "Outcome", "Wilt: Withered"),
-        ("Procedure", "Wilt", "Outcome", "Wilt: Lost For Good")}
-    assert ("Outcome", "Wilt: Shrugged Off", "Step", "Wilt §1.Fresh.2.2") in \
+        ("[Procedure]", "Wilt", "[Outcome]", "Wilt: Shrugged Off"),
+        ("[Procedure]", "Wilt", "[Outcome]", "Wilt: Withered"),
+        ("[Procedure]", "Wilt", "[Outcome]", "Wilt: Lost For Good")}
+    assert ("[Outcome]", "Wilt: Shrugged Off", "[Step]", "Wilt §1.Fresh.2.2") in \
         edges(graph, "ENDS_AT")
 
 
 def test_outcome_effects_derived(make_repo):
     graph, _ = run(make_repo)
-    assert ("Outcome", "Wilt: Lost For Good", "Condition", "Spent") in \
+    assert ("[Outcome]", "Wilt: Lost For Good", "Condition", "Spent") in \
         edges(graph, "ASSIGNS_CONDITION")
-    assert ("Outcome", "Wilt: Shrugged Off", "Reserve", "Sap") in \
+    assert ("[Outcome]", "Wilt: Shrugged Off", "Reserve", "Sap") in \
         edges(graph, "MUTATES")
 
 
 def test_procedure_rollups_derived(make_repo):
     graph, _ = run(make_repo)
-    assert ("Procedure", "Wilt", "Reserve", "Sap") in edges(graph, "READS")
+    assert ("[Procedure]", "Wilt", "Reserve", "Sap") in edges(graph, "READS")
     # a branch observes the concept it switches on, not one named value
-    assert ("Procedure", "Wilt", "Archetype", "Condition") in edges(graph, "READS")
+    assert ("[Procedure]", "Wilt", "Archetype", "Condition") in edges(graph, "READS")
     mutates = edges(graph, "MUTATES")
-    assert ("Procedure", "Wilt", "Reserve", "Sap") in mutates
-    assert ("Procedure", "Wilt", "Condition", "Weary") in mutates
-    assert ("Procedure", "Wilt", "Condition", "Spent") in mutates
+    assert ("[Procedure]", "Wilt", "Reserve", "Sap") in mutates
+    assert ("[Procedure]", "Wilt", "Condition", "Weary") in mutates
+    assert ("[Procedure]", "Wilt", "Condition", "Spent") in mutates
     assert edges(graph, "CALLS") == {
-        ("Procedure", "Wilt", "Procedure", "Tend")}
+        ("[Procedure]", "Wilt", "[Procedure]", "Tend")}
 
 
 # compute: a calculation step reads what it names — never mutates. The
@@ -553,16 +553,16 @@ def test_compute_projects_reads_not_mutates(make_repo):
     assert not [f for f in findings if f.severity == ERROR]
     reads = edges(graph, "READS")
     # a value citizen named in a compute step is read
-    assert ("Procedure", "Tally", "Reserve", "Sap") in reads
+    assert ("[Procedure]", "Tally", "Reserve", "Sap") in reads
     # a label word resolves via the Archetype scan (candidates exclude them)
-    assert ("Procedure", "Tally", "Archetype", "Condition") in reads
+    assert ("[Procedure]", "Tally", "Archetype", "Condition") in reads
     # the plural "Reserves" resolves through the term index to Archetype
     # Reserve — plural spellings project concept READS
-    assert ("Procedure", "Tally", "Archetype", "Reserve") in reads
+    assert ("[Procedure]", "Tally", "Archetype", "Reserve") in reads
     # plural VALUE-citizen mentions resolve to the canonical node too
-    assert ("Procedure", "Tally", "Reserve", "Bounty") in reads
+    assert ("[Procedure]", "Tally", "Reserve", "Bounty") in reads
     refs = edges(graph, "REFERENCES")
-    assert ("Step", "Tally §3", "Reserve", "Bounty") in refs
+    assert ("[Step]", "Tally §3", "Reserve", "Bounty") in refs
     # compute never mutates
     assert not [e for e in edges(graph, "MUTATES") if e[1] == "Tally"]
 
@@ -582,7 +582,7 @@ def test_compute_reads_resolve_the_project_layer_only(make_repo):
     graph, findings = run(make_repo, files=files, ontology=ontology)
     assert not [f for f in findings if f.severity == ERROR]
     reads = edges(graph, "READS")
-    assert ("Procedure", "Tally", "Archetype", "Condition") in reads
+    assert ("[Procedure]", "Tally", "Archetype", "Condition") in reads
     kernel_reads = [e for e in reads if e[1] == "Tally"
                     and e[2] == "Archetype"
                     and e[3] in ("Completeness", "Ordered")]
@@ -592,8 +592,8 @@ def test_compute_reads_resolve_the_project_layer_only(make_repo):
 def test_known_at_completeness_archetypes(make_repo):
     graph, _ = run(make_repo)
     known = edges(graph, "KNOWN_AT")
-    assert ("Procedure", "Wilt", "Archetype", "Transcribed") in known
-    assert ("Procedure", "Tend", "Archetype", "Cited") in known
+    assert ("[Procedure]", "Wilt", "Archetype", "Transcribed") in known
+    assert ("[Procedure]", "Tend", "Archetype", "Cited") in known
     # the levels are doc-bearing instances of the Completeness facet
     assert ("Archetype", "Transcribed", "Archetype", "Completeness") in \
         edges(graph, "INSTANCE_OF")
@@ -615,8 +615,8 @@ def test_completeness_ladder_is_ordered(make_repo):
 
 def test_outcomes_not_in_metamodel(make_repo):
     graph, _ = run(make_repo)
-    assert ("Archetype", "Outcome") not in graph.nodes
-    assert not any(e.from_label == "Outcome" for e in graph.edges
+    assert ("Archetype", "[Outcome]") not in graph.nodes
+    assert not any(e.from_label == "[Outcome]" for e in graph.edges
                    if e.type == "INSTANCE_OF")
 
 
@@ -653,15 +653,15 @@ def test_attested_asserted_signature(make_repo):
     files, ontology = attested_repo_files()
     graph, findings = run(make_repo, files, ontology)
     assert not [f for f in findings if f.severity == ERROR]
-    node = graph.nodes[("Procedure", "Shield")]
+    node = graph.nodes[("[Procedure]", "Shield")]
     assert node["completeness"] == "attested"
     assert node["reads_closed"] and not node["mutates_closed"]
-    assert ("Procedure", "Shield", "Reserve", "Sap") in edges(graph, "READS")
-    assert ("Procedure", "Shield", "Reserve", "Sap") in edges(graph, "MUTATES")
-    shielded = graph.nodes[("Outcome", "Shield: Shielded")]
+    assert ("[Procedure]", "Shield", "Reserve", "Sap") in edges(graph, "READS")
+    assert ("[Procedure]", "Shield", "Reserve", "Sap") in edges(graph, "MUTATES")
+    shielded = graph.nodes[("[Outcome]", "Shield: Shielded")]
     assert shielded["guarantee"] == "cannot-fail"
     assert shielded["doc"] == "sheltered now"
-    assert ("Outcome", "Shield: Shielded", "Condition", "Weary") in \
+    assert ("[Outcome]", "Shield: Shielded", "Condition", "Weary") in \
         edges(graph, "ASSIGNS_CONDITION")
     # no hash tripwire on an attested procedure -> drift risk surfaced softly
     assert any(f.severity == INFO and "no approved_hash" in f.detail
@@ -700,7 +700,7 @@ def test_attested_assigns_a_second_domain(make_repo):
         "data/procedures/tend.yaml, data/procedures/cheer.yaml]")
     graph, findings = run(make_repo, files=files, ontology=ontology)
     assert not [f for f in findings if f.severity == ERROR]
-    assert ("Outcome", "Cheer: Gladdened", "Spirit", "Merry") in \
+    assert ("[Outcome]", "Cheer: Gladdened", "Spirit", "Merry") in \
         edges(graph, "ASSIGNS_SPIRIT")
     # and it is NOT misfiled under some other domain's edge type
     assert not [e for e in edges(graph, "ASSIGNS_CONDITION")
@@ -728,7 +728,7 @@ def overview_hash():
 def test_matching_hash_is_silent(make_repo):
     graph, findings = run(make_repo, hash_repo_files(overview_hash()))
     assert not [f for f in findings if "has since changed" in f.detail]
-    assert ("Procedure", "Wilt", "DocSection", "rules § Overview") in \
+    assert ("[Procedure]", "Wilt", "DocSection", "rules § Overview") in \
         edges(graph, "SPECIFIED_IN")
 
 
@@ -897,13 +897,13 @@ def test_bad_program_reports_and_skips(make_repo):
     graph, findings = extract(ontology)
     assert any(f.severity == ERROR and f.category == "procedure"
                for f in findings)
-    assert ("Procedure", "Broken") not in graph.nodes
+    assert ("[Procedure]", "Broken") not in graph.nodes
 
 
 def test_step_and_outcome_are_reserved_labels(make_repo):
     base, path = make_repo(FILES,
-                           ONTOLOGY + "\n      Step: { values: [Impostor] }\n"
-                                      "      Outcome: { values: [Sneaky] }\n")
+                           ONTOLOGY + "\n      \"[Step]\": { values: [Impostor] }\n"
+                                      "      \"[Outcome]\": { values: [Sneaky] }\n")
     _, findings = load_ontology(path, base)
     reserved = [f.detail for f in findings if "engine-reserved" in f.detail]
     assert len(reserved) == 2
@@ -1000,7 +1000,7 @@ def test_roster_flags_a_registered_file_without_its_citizen(make_repo):
     # a re-derivation lifts steps from a body already on the graph and
     # never re-adds the procedure node — drop one to model the file that
     # shipped without its citizen
-    del graph.nodes[("Procedure", "Tend")]
+    del graph.nodes[("[Procedure]", "Tend")]
     findings = check(ontology_obj, graph)
     assert len(findings) == 1
     finding = findings[0]
@@ -1008,7 +1008,7 @@ def test_roster_flags_a_registered_file_without_its_citizen(make_repo):
     assert finding.detail == (
         "Attempted to verify the procedure roster with 2 registered "
         "program files. Failed: data/procedures/tend.yaml has no "
-        "Procedure citizen — the file shipped without its node. Land "
+        "[Procedure] citizen — the file shipped without its node. Land "
         "the citizen through the delta path.")
 
 
@@ -1019,10 +1019,10 @@ def test_derive_refuses_when_a_registered_file_has_no_citizen(make_repo):
     base, path = make_repo(FILES, ONTOLOGY)
     ontology_obj, _ = load_ontology(path, base)
     graph, _ = extract(ontology_obj)
-    del graph.nodes[("Procedure", "Tend")]
+    del graph.nodes[("[Procedure]", "Tend")]
     _, findings = derive(ontology_obj, graph)
     assert any(f.severity == ERROR
-               and "data/procedures/tend.yaml has no Procedure citizen"
+               and "data/procedures/tend.yaml has no [Procedure] citizen"
                in f.detail for f in findings)
 
 
@@ -1106,7 +1106,7 @@ def test_approved_in_parses_and_lands_on_the_citizen(make_repo):
     ontology, findings = load_ontology(path, base)
     assert ontology is not None, findings
     graph, _ = extract(ontology)
-    assert graph.nodes[("Procedure", "Wilt")]["approved_in"] \
+    assert graph.nodes[("[Procedure]", "Wilt")]["approved_in"] \
         == "https://example.test/repo/pull/7"
 
 

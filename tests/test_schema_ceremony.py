@@ -31,14 +31,14 @@ def base_graph():
     g.ensure_node("Terrain", "Mesa")
     g.ensure_node("Archetype", "Forgotten Motif", doc="never referenced")
     g.ensure_node("Archetype", "Anchored Motif", doc="carries a judgment")
-    g.ensure_node("Decision", "Motifs stay moody")
+    g.ensure_node("[Decision]", "Motifs stay moody")
     g.edges.append(make_edge("DECLARED_IN", "Archetype", "Theme",
                              "Archetype", "Ontology"))
     g.edges.append(make_edge("DECLARED_IN", "Archetype", "Forgotten Motif",
                              "Archetype", "Ontology"))
     g.edges.append(make_edge("DECLARED_IN", "Archetype", "Anchored Motif",
                              "Archetype", "Ontology"))
-    g.edges.append(make_edge("ABOUT", "Decision", "Motifs stay moody",
+    g.edges.append(make_edge("ABOUT", "[Decision]", "Motifs stay moody",
                              "Archetype", "Anchored Motif"))
     return g
 

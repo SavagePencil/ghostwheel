@@ -26,9 +26,9 @@ def declarations():
             "villager-knowledge": {"kind": "knowledge",
                                    "includes": ["common-knowledge"]},
             "judgment": {"kind": "masking",
-                         "labels": ["Question", "Decision", "Answer",
-                                    "Opinion", "Requirement", "TODO",
-                                    "Approved Omission",
+                         "labels": ["[Question]", "[Decision]", "[Answer]",
+                                    "[Opinion]", "[Requirement]", "[TODO]",
+                                    "[Approved Omission]",
                                     "Approved Difference"]},
             "sunstone-secret": {"kind": "knowledge"},
         },
@@ -59,14 +59,14 @@ def small_graph():
     graph.ensure_node("Verbatim", "the sunstone is hidden in the hollow oak")
     graph.ensure_node("Verbatim", "acorns fall in autumn")
     graph.ensure_node("Verbatim", "market day is on saturday")
-    graph.ensure_node("Decision", "the sunstone stays hidden", status="ruled")
+    graph.ensure_node("[Decision]", "the sunstone stays hidden", status="ruled")
     graph.edges.append(make_edge(
         "HIDDEN_IN", "Gem", "Sunstone", "Grove", "The Hollow Oak"))
     graph.edges.append(make_edge(
         "QUOTED_IN", "Verbatim", "the sunstone is hidden in the hollow oak",
         "Gem", "Sunstone"))
     graph.edges.append(make_edge(
-        "ABOUT", "Decision", "the sunstone stays hidden", "Gem", "Sunstone"))
+        "ABOUT", "[Decision]", "the sunstone stays hidden", "Gem", "Sunstone"))
     return graph
 
 
@@ -191,13 +191,13 @@ def test_masking_assumes_allow():
     decls, graph = declarations(), small_graph()
     # no mask: the Decision row stays (assume-allow), no subject given
     identity = compile_lens(decls, graph)
-    assert ("Decision", "the sunstone stays hidden") in \
+    assert ("[Decision]", "the sunstone stays hidden") in \
         visible_nodes(graph, identity)
     # masked: the Decision row is gone; nothing else moves
     masked = compile_lens(decls, graph, mask=("judgment",))
     nodes = visible_nodes(graph, masked)
-    assert ("Decision", "the sunstone stays hidden") not in nodes
-    assert nodes == set(graph.nodes) - {("Decision",
+    assert ("[Decision]", "the sunstone stays hidden") not in nodes
+    assert nodes == set(graph.nodes) - {("[Decision]",
                                          "the sunstone stays hidden")}
 
 
@@ -314,13 +314,13 @@ def test_judgment_mask_strips_decision_rows_while_canon_survives():
     graph.ensure_node("Terrain", "Bramble")
     graph.ensure_node("Terrain", "Fog")
     graph.ensure_node("Knack", "Leap")
-    graph.ensure_node("Decision", "fog stacks with bramble")
+    graph.ensure_node("[Decision]", "fog stacks with bramble")
     graph.ensure_node("Verbatim", "the teller's hidden twist")
     graph.edges.append(make_edge("INSTANCE_OF", "Terrain", "Bramble",
                                  "Archetype", "Terrain"))
     graph.edges.append(make_edge("INSTANCE_OF", "Terrain",
                                  "Fog", "Archetype", "Terrain"))
-    graph.edges.append(make_edge("ABOUT", "Decision",
+    graph.edges.append(make_edge("ABOUT", "[Decision]",
                                  "fog stacks with bramble",
                                  "Terrain", "Fog"))
     decls = {
@@ -329,8 +329,8 @@ def test_judgment_mask_strips_decision_rows_while_canon_survives():
             "table-knowledge": {"kind": "knowledge"},
             "teller-secrets": {"kind": "knowledge"},
             "judgment": {"kind": "masking",
-                         "labels": ["Question", "Decision", "Answer",
-                                    "Opinion", "Requirement"]},
+                         "labels": ["[Question]", "[Decision]", "[Answer]",
+                                    "[Opinion]", "[Requirement]"]},
         },
         "membership": {
             "teller-secrets": {
@@ -345,7 +345,7 @@ def test_judgment_mask_strips_decision_rows_while_canon_survives():
                             mask=("judgment",))
     lensed = apply_lens(graph, lens_obj)
     # the Judgment stratum is stripped, edge and all
-    assert ("Decision", "fog stacks with bramble") not in lensed.nodes
+    assert ("[Decision]", "fog stacks with bramble") not in lensed.nodes
     assert not any(edge.type == "ABOUT" for edge in lensed.edges)
     # the knowledge gate holds against the reader subject
     assert ("Verbatim", "the teller's hidden twist") not in lensed.nodes
@@ -419,7 +419,7 @@ def test_you_see_the_doors_your_keys_open_and_no_others():
     assert classes_seen == {"a-secrets"}
     # and the no-lens view (super admin) still sees the whole vocabulary
     everything = apply_lens(graph, compile_lens(decls, graph))
-    assert ("Visibility Class", "b-secrets") in everything.nodes
+    assert ("[Visibility Class]", "b-secrets") in everything.nodes
 
 
 def test_the_roster_hides_by_coherence():
@@ -434,7 +434,7 @@ def test_the_roster_hides_by_coherence():
                                  "somebody-else", GROUP_LABEL, "group-a"))
     decls = declarations_from_graph(graph)
     lensed = apply_lens(graph, compile_lens(decls, graph, subject="me"))
-    assert ("Visibility Group", "somebody-else") not in lensed.nodes
+    assert ("[Visibility Group]", "somebody-else") not in lensed.nodes
     rosters = [e for e in lensed.edges if e.type == "MEMBER_OF"
                and e.from_name == "somebody-else"]
     assert rosters == []
@@ -448,9 +448,9 @@ def test_redacted_explain_is_one_uniform_string():
     hidden_fact = explain(decls, "me", ("Fact", "The B secret"),
                           candid=False)
     hidden_class = explain(decls, "me",
-                           ("Visibility Class", "b-secrets"),
+                           ("[Visibility Class]", "b-secrets"),
                            candid=False)
-    hidden_group = explain(decls, "me", ("Visibility Group", "group-c"),
+    hidden_group = explain(decls, "me", ("[Visibility Group]", "group-c"),
                            candid=False)
     assert hidden_fact == hidden_class == hidden_group == \
         REDACTED_REFUSAL
