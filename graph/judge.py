@@ -23,7 +23,7 @@ spot-checks (D13) enter. A smarter matcher may replace the internals
 later; the fixtures pin this contract, not the smarts.
 
 Approved omissions are graph citizens (Judgment stratum, label
-"Approved Omission", source data/approved-omissions.csv); the judge
+"[Approved Omission]", source data/approved-omissions.csv); the judge
 consults the same rows the graph holds.
 """
 

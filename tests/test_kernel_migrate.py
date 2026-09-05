@@ -264,7 +264,7 @@ def enriched_kb(tmp_path):
     base_dir = seeded_kb(tmp_path)
     export_dir = base_dir / "graph" / "export"
     graph = read_export(export_dir)
-    question = graph.nodes[(ARCHETYPE_LABEL, "Question")]
+    question = graph.nodes[(ARCHETYPE_LABEL, "[Question]")]
     question["spec_json"] = '{"catalog": {"asked_by": "text"}}'
     question["doc"] = "a world-reworded doc the kernel will win back"
     export_mod.write_export(graph, export_dir)
@@ -281,14 +281,14 @@ def test_canon_enrichment_rides_the_splice_and_the_seed_wins_its_keys(
     new_nodes, new_edges = km.kernel_stratum(seed)
     spliced, carried = km.splice(ground, set(old_nodes), new_nodes,
                                  new_edges)
-    after = spliced.nodes[(ARCHETYPE_LABEL, "Question")]
+    after = spliced.nodes[(ARCHETYPE_LABEL, "[Question]")]
     # the world's own key rides through unchanged...
     assert after["spec_json"] == '{"catalog": {"asked_by": "text"}}'
     # ...the seed wins the key it defines...
-    assert after["doc"] == new_nodes["Question"]["doc"]
+    assert after["doc"] == new_nodes["[Question]"]["doc"]
     assert "reworded" not in after["doc"]
     # ...and the carried map names exactly what rode
-    assert carried == {"Question": ["spec_json"]}
+    assert carried == {"[Question]": ["spec_json"]}
 
 
 def test_a_removed_citizens_enrichment_does_not_resurrect(tmp_path):
@@ -313,7 +313,7 @@ def test_the_dry_run_names_what_rode(tmp_path, capsys):
     nxt = modified_kernel(tmp_path, add="Minted Kernel Concept")
     assert cmd_kernel_migrate(base_dir, metaontology_path=nxt) == 0
     out = capsys.readouterr().out
-    assert "carried (1): Question (spec_json)" in out
+    assert "carried (1): [Question] (spec_json)" in out
     assert "rides the migration unchanged" in out
     assert "orphan check: clean" in out
     assert "Dry run: nothing written" in out
@@ -327,7 +327,7 @@ def test_the_applied_migration_keeps_the_enrichment(tmp_path, capsys,
     assert cmd_kernel_migrate(base_dir, apply=True,
                               metaontology_path=nxt) == 0
     after = read_export(base_dir / "graph" / "export")
-    question = after.nodes[(ARCHETYPE_LABEL, "Question")]
+    question = after.nodes[(ARCHETYPE_LABEL, "[Question]")]
     assert question["spec_json"] == '{"catalog": {"asked_by": "text"}}'
     assert "reworded" not in question["doc"]
 

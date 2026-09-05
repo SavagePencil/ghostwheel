@@ -151,7 +151,7 @@ def test_subjects_carry_the_citizen_ref_shape(tmp_path):
     doc = json.loads(render_json(rich_report(tmp_path)))
     by_code = {v["code"]: v for v in doc["verdicts"]}
     node = by_code["machine-label-authored"]["subject"]
-    assert node == {"kind": "citizen", "label": "Step",
+    assert node == {"kind": "citizen", "label": "[Step]",
                     "name": "Ghost Step"}
     edge = by_code["membership-basis-blanked"]["subject"]
     assert edge["kind"] == "connection" \

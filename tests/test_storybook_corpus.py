@@ -28,7 +28,7 @@ def test_storybook_loads_with_zero_errors():
     # citizens, implicit places, fingerprints, and the scheme all arrive
     assert graph.nodes[("Character", "Pip")]["temperament"] == "curious"
     assert ("Place", "The Hollow Oak") in graph.nodes
-    assert graph.nodes[("Artifact", "docs/tale.md")]["fingerprint"]
+    assert graph.nodes[("[Artifact]", "docs/tale.md")]["fingerprint"]
     assert graph.nodes[("Archetype", "Page")].get("recursive") is True
     assert any(e.type == "LIVES_IN" and e.to_name == "Lantern Bay"
                for e in graph.edges)

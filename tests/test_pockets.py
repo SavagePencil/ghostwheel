@@ -4,7 +4,7 @@ A collaborator's own version of a knowledge base is a branch born from
 canon's whole graph, hard-isolated from canon like every branch. Its
 declaration — who cut it, when, who is invited, the canon identity and
 sequence it forked from — lives on the branch database's identity stamp
-and as a bracketed [Pocket] citizen (kernel 0.16.0) in the branch's own
+and as a bracketed [Pocket Universe] citizen (kernel 0.16.0) in the branch's own
 graph and export; no file. The engine writes it and the invite verbs
 rewrite it; nobody authors it by hand; it is set aside from the line's
 content identity, so an invite change moves no chain; succession strips
@@ -57,7 +57,7 @@ def _land_round(base, fake, branch, node):
 def test_the_kernel_declares_pocket_under_provenance_bracketed(tmp_path):
     seed, findings = fresh_kernel(tmp_path)
     assert seed is not None, findings
-    assert POCKET == "[Pocket]"
+    assert POCKET == "[Pocket Universe]"
     assert (ARCHETYPE_LABEL, POCKET) in seed.nodes
     parents = {e.to_name for e in seed.edges
                if e.type == "INSTANCE_OF"

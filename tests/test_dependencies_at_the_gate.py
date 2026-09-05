@@ -1,7 +1,7 @@
 """Bookmarks at the gate: the pin against its checkout, the citation
 against what lives there, the behind-pin advisory, and the drift verb.
 
-A [Dependency]'s checkout is reached by a settings line
+A [Knowledge Base Dependency]'s checkout is reached by a settings line
 (GHOSTWHEEL_DEPENDENCY_<NAME>=<path>) and read as a committed backup:
 identity hash, anchor sequence, declared name. At the delta gate a
 dependency the round touches must be pinned at what its checkout

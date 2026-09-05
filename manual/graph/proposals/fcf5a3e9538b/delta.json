@@ -1,0 +1,1326 @@
+{
+ "edges_added": [
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Canon changes (full flow: the agentic-intake skill)",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Dispatch — which job serves the input",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Dispatch — which job serves the input",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Generation",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Dispatch — which job serves the input",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Querying the rules graph",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Dynamic-ontology intake",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Posture",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Procedure (Dynamic-ontology intake)",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Procedure (Dynamic-ontology intake)",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "The maintenance loop",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Procedure (Procedure intake)",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Procedure intake",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "The flow",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Dynamic-ontology intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "The flow",
+   "props": {},
+   "to_label": "[Procedure]",
+   "to_name": "Procedure intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Answer Key]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Answer]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Approved Omission]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Artifact Location]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Artifact]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Audience]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Citizen Bookmark]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Decision]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Discipline]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[File Location]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Interpretation]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Knowledge Base Dependency]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Opinion]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Pocket Universe]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Procedure]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Question]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Requirement]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Resolver]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[TODO]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Visibility Class]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Visibility Group]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "[Question]",
+   "from_name": "Does severity draw the frame?",
+   "props": {},
+   "to_label": "[Tenet]",
+   "to_name": "Severity draws the frame",
+   "type": "DISCUSSES"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Answer Key]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Answer]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Approved Omission]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Artifact Location]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Artifact]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Audience]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Citizen Bookmark]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Decision]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Discipline]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[File Location]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Interpretation]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Knowledge Base Dependency]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Opinion]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Pocket Universe]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Procedure]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Concept",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Question]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Requirement]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Resolver]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[TODO]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Visibility Class]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Concept",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Visibility Group]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Concept",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[File Location]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "[Artifact Location]",
+   "type": "SUBTYPE_OF"
+  }
+ ],
+ "edges_changed": [],
+ "edges_removed": [
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Canon changes (full flow: the agentic-intake skill)",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Dispatch — which job serves the input",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Dispatch — which job serves the input",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Generation",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Dispatch — which job serves the input",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Querying the rules graph",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Dynamic-ontology intake",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Posture",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Procedure (Dynamic-ontology intake)",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Procedure (Dynamic-ontology intake)",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "The maintenance loop",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Procedure (Procedure intake)",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "Procedure intake",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Agentic intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "The flow",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Dynamic-ontology intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "[Conduct Section]",
+   "from_name": "The flow",
+   "props": {},
+   "to_label": "Procedure",
+   "to_name": "Procedure intake",
+   "type": "CITES"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Answer",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Answer Key",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Approved Omission",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Audience",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Decision",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Discipline",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Opinion",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Procedure",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Question",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Requirement",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "TODO",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Visibility Class",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Visibility Group",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Bookmark]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Dependency]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Pocket]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Metaontology",
+   "type": "DECLARED_IN"
+  },
+  {
+   "from_label": "Question",
+   "from_name": "Does severity draw the frame?",
+   "props": {},
+   "to_label": "[Tenet]",
+   "to_name": "Severity draws the frame",
+   "type": "DISCUSSES"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Answer",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Answer Key",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Approved Omission",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Audience",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Decision",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Discipline",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Opinion",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Procedure",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Concept",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Question",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Requirement",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "TODO",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Judgment",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Visibility Class",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Concept",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "Visibility Group",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Concept",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Bookmark]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Dependency]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  },
+  {
+   "from_label": "Archetype",
+   "from_name": "[Pocket]",
+   "props": {},
+   "to_label": "Archetype",
+   "to_name": "Provenance",
+   "type": "INSTANCE_OF"
+  }
+ ],
+ "nodes_added": [
+  [
+   "Archetype",
+   "[Answer Key]",
+   {
+    "doc": "A fidelity net between an approved program and an approved table: the program's derived facts must equal the table's rows. Three kinds — transitions (the program's ladder walk equals the table's from/to rows), thresholds (each table row's condition appears verbatim in the program's branch case), recompute (each worked example's asserted numbers recompute from the approved tables). A citizen carries its kind, its table, and the remaining declaration as JSON, and one CHECKS edge to the Procedure it holds still. The engine re-runs every key at the delta gate when a round touches the key or the checked program's body, and on demand as the answer-keys sweep; a table that drifts from its program is named by the key that caught it."
+   }
+  ],
+  [
+   "Archetype",
+   "[Answer]",
+   {
+    "doc": "A clarification: the truth already existed; the Question dissolves rather than being legislated (contrast Decision, which settles something genuinely open)."
+   }
+  ],
+  [
+   "Archetype",
+   "[Approved Omission]",
+   {
+    "doc": "An editorial ruling at the parity gates: this claim of a source is deliberately absent from its regeneration and passes forever after. The claim-diff judge consults these rows."
+   }
+  ],
+  [
+   "Archetype",
+   "[Artifact Location]",
+   {
+    "doc": "Where an artifact can be got: `scheme` (file, https, a tool's own, physical, …), `address` (free text the scheme reads), and `primary` (true on exactly one of an artifact's locations). VERIFICATION is this row's own fact — `verified_fingerprint`, `verified_at_sequence`, `size` — written by the gate when the engine or a bound [Resolver] resolved it, read by the receipts sweep, never folded into the artifact's grade: a physical painting can be Attested with no verification, a verified file can rest at Cited. Kinds are a seam, not an enumeration: [File Location] is the kernel's; a tool or project knowledge base declares its own kind as a SUBTYPE_OF this one through the taxonomy ceremony, and an untyped location uses the base alone. Machinery — hence bracketed."
+   }
+  ],
+  [
+   "Archetype",
+   "[Artifact]",
+   {
+    "doc": "The thing a person hands over — a document, an image, a recording, a model, a link, a physical object — as canon knows it. Identity is its name, a stable handle; WHERE it is lives on [Artifact Location] rows behind LOCATED_AT, so moving a file never renames a citizen. It carries the whole-file fingerprint and medium the gate derived when a location resolved, its grade (KNOWN_AT Completeness as CONTENT HELD: Cited — name and location only; Attested — a description and its DEPICTS facts confirmed at the gate; Transcribed — region-grain receipts), and `superseded_at` — the sequence at which it stopped being an intake ruler, read by the census as information, never a defect — with SUPERSEDES from a newer version to the one it replaces. DEPICTS names its objective contents; an [Interpretation] says what it stands for. Bracketed: a designer's world has artifacts of its own."
+   }
+  ],
+  [
+   "Archetype",
+   "[Audience]",
+   {
+    "doc": "Who should weigh a thing when its moment arrives — a role or group a judgment is routed to, not a named person. The kernel declares only the class: every project's audiences are its own, disclosed by the team or discerned as the ontology evolves. Judgment rows point at theirs via HAS_AUDIENCE."
+   }
+  ],
+  [
+   "Archetype",
+   "[Citizen Bookmark]",
+   {
+    "doc": "A citizen that lives in a dependency, cited from this knowledge base: the dependency's name, the citizen's label and name there, and the dependency edition it was resolved against, with exactly one RESOLVES_IN edge to the [Knowledge Base Dependency] it lives in. This knowledge base's own citizens point at a bookmark through their own relation vocabulary, authored like any ground edge, so the setting's fact can rest on the rulebook's citizen without either knowledge base holding the other's rows. Machinery, never subject matter — hence bracketed."
+   }
+  ],
+  [
+   "Archetype",
+   "[Decision]",
+   {
+    "doc": "A ruling that WAS made: by whom, when. Supersession is EXPECTED — decisions flip as evidence arrives, mechanized via SUPERSEDES."
+   }
+  ],
+  [
+   "Archetype",
+   "[Discipline]",
+   {
+    "doc": "A kind of concern — the axis a team splits its thinking along. The kernel declares only the class: every project's disciplines are its own (a film crew's are not a game studio's), disclosed by the team or discerned from the corpus as the ontology evolves. Judgment rows point at theirs via HAS_DISCIPLINE, so a parked question can be routed to the kind of thinking it needs."
+   }
+  ],
+  [
+   "Archetype",
+   "[File Location]",
+   {
+    "doc": "An [Artifact Location] the engine resolves natively: `address` is a path under the knowledge base, read at the gate — fingerprint and medium derived onto the artifact, verification written here. A file that cannot be read, or a declared fingerprint the bytes do not match, refuses by name."
+   }
+  ],
+  [
+   "Archetype",
+   "[Interpretation]",
+   {
+    "doc": "What an artifact stands for to a world, per intent — the subjective layer over DEPICTS' objective one; many per artifact, each citing any subset (or none) of the depicted things. Carries `intent` in the world's own words (intention belongs to the person, so it is a property, never a citizen), who and when; one ABOUT edge to its artifact, INTERPRETED_AS to what it stands for, DRAWS_ON to the depicted citizens it uses. A ruled reading of the meaning seam, beside the four rulings of the intake seam. Placement (\"the illustration in chapter eleven\") is composition, deliberately not this; [Intended Use] is reserved for it. Bracketed: a story may have interpretations of its own."
+   }
+  ],
+  [
+   "Archetype",
+   "[Knowledge Base Dependency]",
+   {
+    "doc": "Another knowledge base this one pins to an edition. The citizen's name is that knowledge base's own declared name; it carries the edition it is pinned to (the dependency's committed backup identity hash and its event-log sequence), the intent this knowledge base holds toward it (read, or write when a shared activity may land rounds there), and the git ref the edition was tagged at — that ref is provenance only. Where the dependency's checkout lives on this machine is settings, never canon. A knowledge base holding dependency entries is playing the world role; a dependency may itself hold dependencies. Machinery, never subject matter — hence bracketed."
+   }
+  ],
+  [
+   "Archetype",
+   "[Opinion]",
+   {
+    "doc": "A stance held with stated confidence, not yet ruled. Agents mint Opinions during runs (mapping choices, judgment calls, classifications); people hold them too. An Opinion carries its holder and its confidence, is preserved rather than averaged, and binds nothing until ratified — ratification promotes its content into a Decision carrying the ratifier's authority."
+   }
+  ],
+  [
+   "Archetype",
+   "[Pocket Universe]",
+   {
+    "doc": "A branch's own declaration of itself as a pocket — a collaborator's version of this knowledge base, cut as a clone of canon and hard-isolated from it. The citizen is named for the branch and carries who cut it, when, who is invited to look, the base kind, and the canon identity and sequence it forked from. The engine writes it at the cut and rewrites it when the invite list changes; nobody authors it by hand, it is set aside from the line's content identity, and succession strips it — canon is never a pocket. Machinery, never subject matter — hence bracketed."
+   }
+  ],
+  [
+   "Archetype",
+   "[Procedure]",
+   {
+    "doc": "A rule-governed happening: preconditions, inputs and outputs, evaluations, dice, branches, and effects. Exists for comprehension (agents reason about it; code and prose can be generated from it), not direct execution. Every Procedure is KNOWN_AT one of the Completeness levels (see that facet); its possible Outcomes carry plain-English guarantees: read-only, cannot-fail, fails-clean, fails-with-side-effects. Only what cannot be derived is authored: inputs (required/optional), outcome names and guarantees, completeness. Reads, consults, mutates, calls, and outcome effects are derived for transcribed procedures."
+   }
+  ],
+  [
+   "Archetype",
+   "[Question]",
+   {
+    "doc": "Something genuinely open, awaiting a ruling. Openness is DERIVED — no incoming RESOLVES edge — never flagged. Rows accumulate; nothing is deleted: the tables are the rationale record."
+   }
+  ],
+  [
+   "Archetype",
+   "[Requirement]",
+   {
+    "doc": "A binding constraint the work must satisfy, held by someone — an individual or a group/org — and checkable where its wording allows. Requirements outrank preference: a dispute between taste and a Requirement resolves for the Requirement, and a dispute about whether work satisfies one resolves at a gate. Supersession is expected, as with any ruling."
+   }
+  ],
+  [
+   "Archetype",
+   "[Resolver]",
+   {
+    "doc": "How this knowledge base opens a kind of location: named for its scheme, bound by OPENS_WITH to the procedure that opens it — a local [Procedure], or a [Citizen Bookmark] into the tool knowledge base that owns the how — for one location kind. The executable binding (a project path, a command, credentials) is settings, never canon. Vocabulary at this rung: the verb that runs a resolver awaits the first tool knowledge base."
+   }
+  ],
+  [
+   "Archetype",
+   "[TODO]",
+   {
+    "doc": "Known work pending. A Question resolves via a Decision; a TODO resolves via work."
+   }
+  ],
+  [
+   "Archetype",
+   "[Visibility Class]",
+   {
+    "doc": "A named set of graph elements that visibility verdicts speak about — the only permission-bearing unit. kind is knowledge (assume-deny: hidden unless a folded group holds an allow) or masking (assume-allow: removed only when a mask names it); postures are fixed per kind, never switchable. Elements join by IN_CLASS edges or by declared label/type selectors. INCLUDES carries knowledge grant-inheritance (holding the child includes the parent); hierarchical resource trees model as OVERLAPPING MEMBERSHIPS, never as INCLUDES (owner-ruled at the ceremony)."
+   }
+  ],
+  [
+   "Archetype",
+   "[Visibility Group]",
+   {
+    "doc": "A subject of visibility: who can be granted sight. Individuals are size-1 groups; groups nest via MEMBER_OF, and the transitive fold of a subject's groups is what a visibility lens compiles from. Wearing a subset of one's groups (session activation) and subtracting a group are lens operations, never membership edits."
+   }
+  ],
+  [
+   "[Decision]",
+   "Answer keys enter the kernel (0.14.0)",
+   {
+    "decided_by": "James Clarendon",
+    "decided_on": "2026-09-03",
+    "doc": "Kernel ceremony ruling: the answer key — the fidelity net holding a table to its approved program (transitions, thresholds, worked-example recomputes) — becomes a kernel Judgment concept, Answer Key, with one CHECKS edge to the Procedure it holds still. The engine owns the check, so the engine owns the vocabulary; a corpus retiring its bootstrap schema file keeps its net. The check runs at the delta gate when a round touches a key or a checked program's body, and as the DB-free answer-keys sweep. Additive; kernel 0.13.0 -> 0.14.0, delivered to existing knowledge bases by kernel-migrate."
+   }
+  ],
+  [
+   "[Decision]",
+   "Dependencies and bookmarks enter the kernel (0.15.0)",
+   {
+    "decided_by": "James Clarendon",
+    "decided_on": "2026-09-04",
+    "doc": "Kernel ceremony ruling: a knowledge base gains the vocabulary to pin another knowledge base and to cite a citizen that lives there. [Dependency] pins another knowledge base to an edition (its committed backup's identity hash and event-log sequence) with a read or write intent; [Bookmark] names a citizen in a dependency (its knowledge base, label, name, and the edition it was resolved against) with exactly one RESOLVES_IN edge to that dependency. Both are Provenance-rooted machinery, bracketed because a designer never authors either as subject matter — and named dependency, not member, because a pinned edition of another knowledge base is precisely a dependency, while membership is the kernel's word for a citizen belonging to a concept. Where a dependency lives on disk is settings, never canon, and a knowledge base's own citizens point at a bookmark through their own relation vocabulary. Any knowledge base holding dependency entries plays the world role — a role, never a type; init --world seeds the same knowledge base plus the dependency settings block, and the first gated round pins the dependencies. The delta gate checks their shape; resolution against the dependency's backup, the behind-pin advisory, and the drift query are the next rung. Additive; kernel 0.14.0 -> 0.15.0, delivered to existing knowledge bases by kernel-migrate."
+   }
+  ],
+  [
+   "[Decision]",
+   "The pocket declares itself (0.16.0)",
+   {
+    "decided_by": "James Clarendon",
+    "decided_on": "2026-09-04",
+    "doc": "Kernel ceremony ruling: a named branch cut as a clone of canon is a pocket — a collaborator's own version of a knowledge base, hard-isolated from canon like every branch. Its declaration (who cut it, when, who is invited to look, the base kind, the canon identity and sequence it forked from) lives in-band and in no file: on the branch database's identity stamp and as the bracketed machinery citizen [Pocket], named for the branch, in the branch's own graph and export, so the front door can ask who cut this and who may look. The engine writes the row at the cut and rewrites it through the invite verbs; nobody authors it by hand (the diff gate refuses that); it is set aside from the line's content identity so an invite change moves no chain; succession strips it — canon is never a pocket. Readability is declarative at this rung; making it physical is a later rung. Additive; kernel 0.15.0 -> 0.16.0, delivered to existing knowledge bases by kernel-migrate."
+   }
+  ],
+  [
+   "[Procedure]",
+   "Agentic intake",
+   {
+    "description": "Drive a full graph-native intake end to end — recon, plan gate, scratch authoring via MCP, delta review, canonize, drain to zero. Use when the submitter hands over a source (doc, table, notes) and says \"intake this\" / \"let's ingest X\", for any data-plane intake. For classification interviews alone use ontology-intake; for procedure-shaped sources use procedure-intake inside this flow.",
+    "handle": "agentic-intake",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Procedure]",
+   "Dynamic-ontology intake",
+   {
+    "description": "Classify a new artifact (CSV table, doc section, design note) against the existing ontology and grow the project ontology through owner dialogue. Use when mapping an unmapped CSV, ingesting prose rules, or when the submitter says \"let's intake/map/classify X\".",
+    "handle": "ontology-intake",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Procedure]",
+   "Generation",
+   {
+    "description": "Generate artifacts of any medium — documents, images, tables, examples, illustrations — from the graph, with optional owner steering and iteration loops to course-correct. Canon is the only source of facts; steering shapes presentation. Use whenever the owner asks to generate something from canon.",
+    "handle": "generation",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Procedure]",
+   "Merging lines",
+   {
+    "description": "Merge one line's rounds into another while both persist — a pocket taking up canon's newer rounds, or canon landing a pocket's work — three-way at citizen grain from the fork, prepared as the target's ordinary gated round. Use when the owner asks to bring a pocket's work into canon, refresh a pocket from canon, or reconcile two lines of the same knowledge base.",
+    "handle": "merging-lines",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Procedure]",
+   "Procedure intake",
+   {
+    "description": "Assess a procedure (source prose describing a process, an in-world resolution, an external tool operation) and produce the right approved artifact for its Completeness level — a full program (transcribed), an asserted signature (attested), or a bare reference (cited). Use when the submitter says \"let's intake/program/transcribe procedure X\" or when a source section describes a process.",
+    "handle": "procedure-intake",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Procedure]",
+   "Querying the rules graph",
+   {
+    "description": "Answer questions about the corpus's values, rules, and structure by querying the Neo4j graph via MCP instead of grepping source files. Use for \"what does X do\", \"which members of a catalog...\", \"what kind of thing is...\", consistency lookups, and metamodel questions.",
+    "handle": "graph-query",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Procedure]",
+   "The front door",
+   {
+    "description": "Be the designer-facing voice over every job — render approval gates, answer questions, take in artifacts, hold debate threads — in the designer's own language, learned live from canon. Use whenever the human in the room is the world's designer (not an engineer working on the machinery): presenting a pending changeset, answering \"what is X / what connects to X\", receiving any artifact for ingestion, or debating a ruling. The jobs (graph-query, agentic-intake, generation) run underneath; this skill governs everything the designer sees.",
+    "handle": "front-door",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Procedure]",
+   "The maintenance loop",
+   {
+    "description": "Restore, re-derive, validate, and verify the canon Neo4j graph. Use after a schema-bootstrap edit, when a database looks stale or drifted, when the golden test fails, or when a human asks to reload/refresh/reset the graph.",
+    "handle": "rebuild-graph",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "[Question]",
+   "Does severity draw the frame?",
+   {
+    "doc": "The severity line is provisional by the tenet's own text — owner: \"start with that as the line, try it to see the feel\" — revisit on evidence from live gates."
+   }
+  ]
+ ],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "Completeness",
+   {
+    "doc": [
+     "How much of a procedure the graph holds — coverage, not accuracy (accuracy is guarded by the approved_hash tripwire and derivation answer-keys) and not trust. Procedures point at their level via KNOWN_AT; the per-section *_closed markers are the same dimension at section granularity. The two-axis test decides the level: does an agent need the inner workings, and do we own the source?",
+     "How much of a procedure — or of an artifact — the graph holds — coverage, not accuracy (accuracy is guarded by the approved_hash tripwire and derivation answer-keys) and not trust. Procedures point at their level via KNOWN_AT; the per-section *_closed markers are the same dimension at section granularity. The two-axis test decides the level: does an agent need the inner workings, and do we own the source?"
+    ]
+   }
+  ],
+  [
+   "Archetype",
+   "Metaontology",
+   {
+    "fingerprint": [
+     "d9dc1deac19be9e1acd7166543b29b68d47a8f489c2ada02a11f435f380b9023",
+     "9920dcd56b34e819ceba91e99dbe77cdea923d8fcbe558c742462e877abfacc8"
+    ],
+    "version": [
+     "0.16.0",
+     "0.17.0"
+    ]
+   }
+  ],
+  [
+   "Archetype",
+   "[Conduct Section]",
+   {
+    "spec_json": [
+     "{\"concept\": \"[Conduct Section]\", \"reader\": \"markdown_sections\", \"relationships\": [{\"column\": \"procedure\", \"parser\": \"part_of\", \"to\": \"Procedure\", \"type\": \"PART_OF\"}]}",
+     "{\"concept\": \"[Conduct Section]\", \"reader\": \"markdown_sections\", \"relationships\": [{\"column\": \"procedure\", \"parser\": \"part_of\", \"to\": \"[Procedure]\", \"type\": \"PART_OF\"}]}"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": [
+  [
+   "Archetype",
+   "Answer",
+   {
+    "doc": "A clarification: the truth already existed; the Question dissolves rather than being legislated (contrast Decision, which settles something genuinely open)."
+   }
+  ],
+  [
+   "Archetype",
+   "Answer Key",
+   {
+    "doc": "A fidelity net between an approved program and an approved table: the program's derived facts must equal the table's rows. Three kinds — transitions (the program's ladder walk equals the table's from/to rows), thresholds (each table row's condition appears verbatim in the program's branch case), recompute (each worked example's asserted numbers recompute from the approved tables). A citizen carries its kind, its table, and the remaining declaration as JSON, and one CHECKS edge to the Procedure it holds still. The engine re-runs every key at the delta gate when a round touches the key or the checked program's body, and on demand as the answer-keys sweep; a table that drifts from its program is named by the key that caught it."
+   }
+  ],
+  [
+   "Archetype",
+   "Approved Omission",
+   {
+    "doc": "An editorial ruling at the parity gates: this claim of a source is deliberately absent from its regeneration and passes forever after. The claim-diff judge consults these rows."
+   }
+  ],
+  [
+   "Archetype",
+   "Audience",
+   {
+    "doc": "Who should weigh a thing when its moment arrives — a role or group a judgment is routed to, not a named person. The kernel declares only the class: every project's audiences are its own, disclosed by the team or discerned as the ontology evolves. Judgment rows point at theirs via HAS_AUDIENCE."
+   }
+  ],
+  [
+   "Archetype",
+   "Decision",
+   {
+    "doc": "A ruling that WAS made: by whom, when. Supersession is EXPECTED — decisions flip as evidence arrives, mechanized via SUPERSEDES."
+   }
+  ],
+  [
+   "Archetype",
+   "Discipline",
+   {
+    "doc": "A kind of concern — the axis a team splits its thinking along. The kernel declares only the class: every project's disciplines are its own (a film crew's are not a game studio's), disclosed by the team or discerned from the corpus as the ontology evolves. Judgment rows point at theirs via HAS_DISCIPLINE, so a parked question can be routed to the kind of thinking it needs."
+   }
+  ],
+  [
+   "Archetype",
+   "Opinion",
+   {
+    "doc": "A stance held with stated confidence, not yet ruled. Agents mint Opinions during runs (mapping choices, judgment calls, classifications); people hold them too. An Opinion carries its holder and its confidence, is preserved rather than averaged, and binds nothing until ratified — ratification promotes its content into a Decision carrying the ratifier's authority."
+   }
+  ],
+  [
+   "Archetype",
+   "Procedure",
+   {
+    "doc": "A rule-governed happening: preconditions, inputs and outputs, evaluations, dice, branches, and effects. Exists for comprehension (agents reason about it; code and prose can be generated from it), not direct execution. Every Procedure is KNOWN_AT one of the Completeness levels (see that facet); its possible Outcomes carry plain-English guarantees: read-only, cannot-fail, fails-clean, fails-with-side-effects. Only what cannot be derived is authored: inputs (required/optional), outcome names and guarantees, completeness. Reads, consults, mutates, calls, and outcome effects are derived for transcribed procedures."
+   }
+  ],
+  [
+   "Archetype",
+   "Question",
+   {
+    "doc": "Something genuinely open, awaiting a ruling. Openness is DERIVED — no incoming RESOLVES edge — never flagged. Rows accumulate; nothing is deleted: the tables are the rationale record."
+   }
+  ],
+  [
+   "Archetype",
+   "Requirement",
+   {
+    "doc": "A binding constraint the work must satisfy, held by someone — an individual or a group/org — and checkable where its wording allows. Requirements outrank preference: a dispute between taste and a Requirement resolves for the Requirement, and a dispute about whether work satisfies one resolves at a gate. Supersession is expected, as with any ruling."
+   }
+  ],
+  [
+   "Archetype",
+   "TODO",
+   {
+    "doc": "Known work pending. A Question resolves via a Decision; a TODO resolves via work."
+   }
+  ],
+  [
+   "Archetype",
+   "Visibility Class",
+   {
+    "doc": "A named set of graph elements that visibility verdicts speak about — the only permission-bearing unit. kind is knowledge (assume-deny: hidden unless a folded group holds an allow) or masking (assume-allow: removed only when a mask names it); postures are fixed per kind, never switchable. Elements join by IN_CLASS edges or by declared label/type selectors. INCLUDES carries knowledge grant-inheritance (holding the child includes the parent); hierarchical resource trees model as OVERLAPPING MEMBERSHIPS, never as INCLUDES (owner-ruled at the ceremony)."
+   }
+  ],
+  [
+   "Archetype",
+   "Visibility Group",
+   {
+    "doc": "A subject of visibility: who can be granted sight. Individuals are size-1 groups; groups nest via MEMBER_OF, and the transitive fold of a subject's groups is what a visibility lens compiles from. Wearing a subset of one's groups (session activation) and subtracting a group are lens operations, never membership edits."
+   }
+  ],
+  [
+   "Archetype",
+   "[Bookmark]",
+   {
+    "doc": "A citizen that lives in a dependency, cited from this knowledge base: the dependency's name, the citizen's label and name there, and the dependency edition it was resolved against, with exactly one RESOLVES_IN edge to the [Dependency] it lives in. This knowledge base's own citizens point at a bookmark through their own relation vocabulary, authored like any ground edge, so the setting's fact can rest on the rulebook's citizen without either knowledge base holding the other's rows. Machinery, never subject matter — hence bracketed."
+   }
+  ],
+  [
+   "Archetype",
+   "[Dependency]",
+   {
+    "doc": "Another knowledge base this one pins to an edition. The citizen's name is that knowledge base's own declared name; it carries the edition it is pinned to (the dependency's committed backup identity hash and its event-log sequence), the intent this knowledge base holds toward it (read, or write when a shared activity may land rounds there), and the git ref the edition was tagged at — that ref is provenance only. Where the dependency's checkout lives on this machine is settings, never canon. A knowledge base holding dependency entries is playing the world role; a dependency may itself hold dependencies. Machinery, never subject matter — hence bracketed."
+   }
+  ],
+  [
+   "Archetype",
+   "[Pocket]",
+   {
+    "doc": "A branch's own declaration of itself as a pocket — a collaborator's version of this knowledge base, cut as a clone of canon and hard-isolated from it. The citizen is named for the branch and carries who cut it, when, who is invited to look, the base kind, and the canon identity and sequence it forked from. The engine writes it at the cut and rewrites it when the invite list changes; nobody authors it by hand, it is set aside from the line's content identity, and succession strips it — canon is never a pocket. Machinery, never subject matter — hence bracketed."
+   }
+  ],
+  [
+   "Decision",
+   "Answer keys enter the kernel (0.14.0)",
+   {
+    "decided_by": "James Clarendon",
+    "decided_on": "2026-09-03",
+    "doc": "Kernel ceremony ruling: the answer key — the fidelity net holding a table to its approved program (transitions, thresholds, worked-example recomputes) — becomes a kernel Judgment concept, Answer Key, with one CHECKS edge to the Procedure it holds still. The engine owns the check, so the engine owns the vocabulary; a corpus retiring its bootstrap schema file keeps its net. The check runs at the delta gate when a round touches a key or a checked program's body, and as the DB-free answer-keys sweep. Additive; kernel 0.13.0 -> 0.14.0, delivered to existing knowledge bases by kernel-migrate."
+   }
+  ],
+  [
+   "Decision",
+   "Dependencies and bookmarks enter the kernel (0.15.0)",
+   {
+    "decided_by": "James Clarendon",
+    "decided_on": "2026-09-04",
+    "doc": "Kernel ceremony ruling: a knowledge base gains the vocabulary to pin another knowledge base and to cite a citizen that lives there. [Dependency] pins another knowledge base to an edition (its committed backup's identity hash and event-log sequence) with a read or write intent; [Bookmark] names a citizen in a dependency (its knowledge base, label, name, and the edition it was resolved against) with exactly one RESOLVES_IN edge to that dependency. Both are Provenance-rooted machinery, bracketed because a designer never authors either as subject matter — and named dependency, not member, because a pinned edition of another knowledge base is precisely a dependency, while membership is the kernel's word for a citizen belonging to a concept. Where a dependency lives on disk is settings, never canon, and a knowledge base's own citizens point at a bookmark through their own relation vocabulary. Any knowledge base holding dependency entries plays the world role — a role, never a type; init --world seeds the same knowledge base plus the dependency settings block, and the first gated round pins the dependencies. The delta gate checks their shape; resolution against the dependency's backup, the behind-pin advisory, and the drift query are the next rung. Additive; kernel 0.14.0 -> 0.15.0, delivered to existing knowledge bases by kernel-migrate."
+   }
+  ],
+  [
+   "Decision",
+   "The pocket declares itself (0.16.0)",
+   {
+    "decided_by": "James Clarendon",
+    "decided_on": "2026-09-04",
+    "doc": "Kernel ceremony ruling: a named branch cut as a clone of canon is a pocket — a collaborator's own version of a knowledge base, hard-isolated from canon like every branch. Its declaration (who cut it, when, who is invited to look, the base kind, the canon identity and sequence it forked from) lives in-band and in no file: on the branch database's identity stamp and as the bracketed machinery citizen [Pocket], named for the branch, in the branch's own graph and export, so the front door can ask who cut this and who may look. The engine writes the row at the cut and rewrites it through the invite verbs; nobody authors it by hand (the diff gate refuses that); it is set aside from the line's content identity so an invite change moves no chain; succession strips it — canon is never a pocket. Readability is declarative at this rung; making it physical is a later rung. Additive; kernel 0.15.0 -> 0.16.0, delivered to existing knowledge bases by kernel-migrate."
+   }
+  ],
+  [
+   "Procedure",
+   "Agentic intake",
+   {
+    "description": "Drive a full graph-native intake end to end — recon, plan gate, scratch authoring via MCP, delta review, canonize, drain to zero. Use when the submitter hands over a source (doc, table, notes) and says \"intake this\" / \"let's ingest X\", for any data-plane intake. For classification interviews alone use ontology-intake; for procedure-shaped sources use procedure-intake inside this flow.",
+    "handle": "agentic-intake",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Procedure",
+   "Dynamic-ontology intake",
+   {
+    "description": "Classify a new artifact (CSV table, doc section, design note) against the existing ontology and grow the project ontology through owner dialogue. Use when mapping an unmapped CSV, ingesting prose rules, or when the submitter says \"let's intake/map/classify X\".",
+    "handle": "ontology-intake",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Procedure",
+   "Generation",
+   {
+    "description": "Generate artifacts of any medium — documents, images, tables, examples, illustrations — from the graph, with optional owner steering and iteration loops to course-correct. Canon is the only source of facts; steering shapes presentation. Use whenever the owner asks to generate something from canon.",
+    "handle": "generation",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Procedure",
+   "Merging lines",
+   {
+    "description": "Merge one line's rounds into another while both persist — a pocket taking up canon's newer rounds, or canon landing a pocket's work — three-way at citizen grain from the fork, prepared as the target's ordinary gated round. Use when the owner asks to bring a pocket's work into canon, refresh a pocket from canon, or reconcile two lines of the same knowledge base.",
+    "handle": "merging-lines",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Procedure",
+   "Procedure intake",
+   {
+    "description": "Assess a procedure (source prose describing a process, an in-world resolution, an external tool operation) and produce the right approved artifact for its Completeness level — a full program (transcribed), an asserted signature (attested), or a bare reference (cited). Use when the submitter says \"let's intake/program/transcribe procedure X\" or when a source section describes a process.",
+    "handle": "procedure-intake",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Procedure",
+   "Querying the rules graph",
+   {
+    "description": "Answer questions about the corpus's values, rules, and structure by querying the Neo4j graph via MCP instead of grepping source files. Use for \"what does X do\", \"which members of a catalog...\", \"what kind of thing is...\", consistency lookups, and metamodel questions.",
+    "handle": "graph-query",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Procedure",
+   "The front door",
+   {
+    "description": "Be the designer-facing voice over every job — render approval gates, answer questions, take in artifacts, hold debate threads — in the designer's own language, learned live from canon. Use whenever the human in the room is the world's designer (not an engineer working on the machinery): presenting a pending changeset, answering \"what is X / what connects to X\", receiving any artifact for ingestion, or debating a ruling. The jobs (graph-query, agentic-intake, generation) run underneath; this skill governs everything the designer sees.",
+    "handle": "front-door",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Procedure",
+   "The maintenance loop",
+   {
+    "description": "Restore, re-derive, validate, and verify the canon Neo4j graph. Use after a schema-bootstrap edit, when a database looks stale or drifted, when the golden test fails, or when a human asks to reload/refresh/reset the graph.",
+    "handle": "rebuild-graph",
+    "known_at": "Attested"
+   }
+  ],
+  [
+   "Question",
+   "Does severity draw the frame?",
+   {
+    "doc": "The severity line is provisional by the tenet's own text — owner: \"start with that as the line, try it to see the feel\" — revisit on evidence from live gates."
+   }
+  ]
+ ]
+}

@@ -153,7 +153,12 @@ def test_the_receipt_verb_prints_and_records_every_file(driven_kb, capsys):
     [sketch, notes] = record["receipts"]
     assert sketch == {"file": "falchion-sketch.png", "fingerprint": digest,
                       "bytes": len(PNG), "medium": "image",
+                      "location": {"kind": "[File Location]", "scheme": "file",
+                                   "address": "falchion-sketch.png",
+                                   "primary": True},
                       "code": "receipt-issued", "ref": "identity-recorded"}
+    assert "location: ([File Location]) scheme: file · address: " \
+           "falchion-sketch.png · primary: true" in out
     assert notes["medium"] == "text"
     # an unreadable file collates and fails the run; the rest still issue
     assert main_mod.cmd_receipt(base, ["falchion-sketch.png",

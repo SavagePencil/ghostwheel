@@ -834,14 +834,33 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
         return 1
     version, _fingerprint = km.installed_kernel_identity(metaontology_path)
     ground = strip_derived(base)
+    # the rename rule: names this kernel renamed are rewritten across
+    # the canon BEFORE the splice — citizens, edges, Archetype rows,
+    # spec bindings — and a project row renamed onto a kernel name is
+    # adopted; a new name the canon already uses refuses by name
+    renames = km.installed_renames(metaontology_path)
+    rename_refusals = km.rename_problems(ground, renames)
+    if rename_refusals:
+        print("kernel-migrate refused — a renamed kernel name collides "
+              "with this canon's own; nothing was written:",
+              file=sys.stderr)
+        for problem in rename_refusals:
+            print(f"  ⚠ {problem}", file=sys.stderr)
+        return 1
+    pre_rename = ground
+    ground, adoptions = km.apply_renames(ground, renames, str(version))
+    relabeled = km.relabel_census(pre_rename, renames)
     old_nodes, old_edges = km.kernel_stratum(ground)
     new_nodes, new_edges = km.kernel_stratum(seed)
-    if old_nodes == new_nodes and old_edges == new_edges:
+    if old_nodes == new_nodes and old_edges == new_edges and not relabeled:
         print(f"This canon already carries the installed kernel "
               f"({version}) — nothing to migrate.")
         return 0
     old_names = set(old_nodes)
     removed = old_names - set(new_nodes)
+    # an adopted project row is replaced by the kernel's own at the
+    # splice — it leaves with the old stratum and arrives with the new
+    old_names |= {a["new"] for a in adoptions}
     orphans = km.orphaned_references(ground, removed, old_names)
     if orphans:
         print("kernel-migrate refused — removing these kernel names "
@@ -856,8 +875,14 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
               file=sys.stderr)
         return 1
     spliced, carried = km.splice(ground, old_names, new_nodes, new_edges)
-    changes = delta_mod.diff(ground, spliced)
-    leak = km.leaks(changes, old_names | set(new_nodes))
+    # the migration delta is judged against the canon as it WAS: the
+    # relabels are its content, and the leak check admits exactly them
+    changes = delta_mod.diff(pre_rename, spliced)
+    leak = km.leaks(changes, old_names | set(new_nodes) | set(renames)
+                    | set(renames.values()),
+                    relabeled_labels=set(renames) | set(renames.values()),
+                    adopted={a["label"] for a in adoptions}
+                    | {a["new"] for a in adoptions})
     if leak:
         print("kernel-migrate refused — the splice reached beyond the "
               "kernel stratum (an engine fault, not a fault in your "
@@ -868,6 +893,26 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
     old_version = old_nodes.get(km.KERNEL_ANCHOR, {}).get(
         "version", "unknown")
     print(f"Kernel migration: {old_version} -> {version}.")
+    if relabeled:
+        print(f"  renamed ({len(relabeled)}): " + ", ".join(
+            f"{old} -> {renames[old]} ({count} citizen"
+            f"{'s' if count != 1 else ''} relabeled)"
+            for old, count in relabeled))
+    for adoption in adoptions:
+        keys = ", ".join(adoption["retired_spec_keys"]) or "none"
+        members = (", ".join(adoption["memberships"])
+                   if adoption["memberships"] else "none")
+        print(f"  adopted (1): project label '{adoption['label']}' -> "
+              f"{adoption['new']} — {adoption['citizens']} citizens keep "
+              f"their rows; the row becomes kernel-declared; its spec "
+              f"retires (keys: {keys}); extra concept bindings kept as "
+              f"declared memberships: {members}")
+        if adoption.get("bindings_dropped"):
+            print(f"    binding{'s' if len(adoption['bindings_dropped']) != 1 else ''} to "
+                  f"{', '.join(adoption['bindings_dropped'])} retired with "
+                  "the spec — not a subject-matter concept, so no declared "
+                  "membership can carry it; if this world needs that fact, "
+                  "declare it a kind through the taxonomy ceremony.")
     for word, names in (
             ("entering", sorted(set(new_nodes) - old_names)),
             ("leaving", sorted(removed)),
@@ -939,6 +984,14 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
               file=sys.stderr)
         return 1
     export_mod.write_export(dumped, base_dir / "graph" / "export")
+    if relabeled:
+        # the attribution ledger is the current record the census
+        # audits: its refs move with the canon they name
+        rewritten = km.rewrite_attribution_labels(base_dir, renames)
+        if rewritten:
+            print(f"  attribution ledger: {rewritten} row"
+                  f"{'s' if rewritten != 1 else ''} rewritten under the "
+                  "renamed labels.")
     # --- the event log: the migration is a first-class round ----------
     delta_text = proposal_mod.serialize_delta(changes)
     delta_hash = proposal_mod.content_hash(delta_text)
@@ -1411,6 +1464,10 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         skip={v.subject.name for v in dependency_refusals
               if v.subject is not None
               and v.subject.label == dependencies_mod.KERNEL_DEPENDENCY_LABEL})
+    # artifacts: locations read, grades earned, depictions and
+    # interpretations well-formed, resolvers bound
+    from . import artifacts as artifacts_mod
+    violations += artifacts_mod.gate_verdicts(changes, scratch, base_dir)
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,
@@ -1828,6 +1885,21 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         for problem in stamp_problems:
             print(f"  ⚠ {problem}", file=sys.stderr)
         return bail("anchor-unstampable", text, stamp_problems)
+    # --- verification: what the engine read for every file location of
+    # the artifacts this round touched is stamped on the location row
+    # (fingerprint, size, this round's sequence) and the artifact's own
+    # fingerprint and medium — verify-all before apply-any
+    from . import artifacts as artifacts_mod
+    verify_problems = artifacts_mod.verification_stamp(
+        new_graph, base_dir, version,
+        artifacts_mod.touched_artifacts(pinned_delta, new_graph))
+    if verify_problems:
+        text = ("a file location of an artifact this round touches cannot "
+                "be read; nothing was written:")
+        print("--apply refused — " + text, file=sys.stderr)
+        for problem in verify_problems:
+            print(f"  ⚠ {problem}", file=sys.stderr)
+        return bail("file-location-unreadable", text, verify_problems)
 
     # --- write: load the target, re-export the backup FROM the database
     from . import workspace as workspace_mod
@@ -2386,9 +2458,21 @@ def cmd_receipt(base_dir, files):
                          "problem": text})
             continue
         issued = comprehension.receipt(data)
+        # the location row this file would be cited at: a [File Location]
+        # of an [Artifact], address relative to the knowledge base
+        try:
+            address = str(path.resolve().relative_to(
+                Path(base_dir).resolve()))
+        except ValueError:
+            address = str(relpath)
+        location = {"kind": "[File Location]", "scheme": "file",
+                    "address": address, "primary": True}
         print(f"{relpath}: fingerprint {issued['fingerprint']} · "
               f"{issued['bytes']} bytes · {issued['medium']}")
-        rows.append({"file": str(relpath), **issued,
+        print(f"  location: ([File Location]) scheme: file · address: "
+              f"{address} · primary: true — LOCATED_AT from the [Artifact] "
+              "it belongs to")
+        rows.append({"file": str(relpath), **issued, "location": location,
                      "code": "receipt-issued",
                      "ref": report_mod.REF_KEYS["receipt-issued"]})
     doc = report_mod.record_header(base_dir, "receipt-report")
@@ -2796,7 +2880,7 @@ _DEPENDENCY_SETTINGS_BLOCK = (
     "# Dependencies this knowledge base pins — one line per dependency,\n"
     "# naming where that knowledge base's checkout lives on this machine\n"
     "# (its committed backup is read there). Settings, never canon: the\n"
-    "# pin itself is a [Dependency] entry authored in a gated round, at\n"
+    "# pin itself is a [Knowledge Base Dependency] entry authored in a gated round, at\n"
     "# the dependency's edition.\n"
     f"# {DEPENDENCY_PATH_PREFIX}<name>=/path/to/that/knowledge-base\n")
 
@@ -2810,7 +2894,7 @@ def cmd_init(target, name=None, world=False):
     the first `restore` there brings the DBMS into the story.
     `world` seeds exactly the same knowledge base and adds the
     dependency settings block to its .env plus the next step — a world
-    is a role a knowledge base plays by holding [Dependency] entries,
+    is a role a knowledge base plays by holding [Knowledge Base Dependency] entries,
     authored in a gated round, never a type the seed marks."""
     from .extract import Extractor, schema_only
     from .ontology import ARCHETYPE_LABEL, ERROR, kernel_ontology
@@ -2884,7 +2968,7 @@ def cmd_init(target, name=None, world=False):
     print("Next: python -m graph restore (build its canon database from "
           f"the backup), then restore --database {scratch_db} to cut "
           "the first authoring round"
-          + (" — and in that round pin each dependency as a [Dependency] "
+          + (" — and in that round pin each dependency as a [Knowledge Base Dependency] "
              "entry (its name = that knowledge base's declared name; "
              "edition and sequence from its committed backup; intent read "
              "or write), naming each dependency's path in .env."
@@ -2980,10 +3064,23 @@ def cmd_receipts(base_dir, branch=None):
     report_path = reports_dir / "receipts.md"
     report_path.write_text(report, encoding="utf-8")
     # the same sweep as records beside the prose — one row per quote
-    report_mod.write_record(base_dir, receipts_mod.RECEIPTS_REPORT_FILE,
-                            receipts_mod.sweep_report(base_dir, result,
-                                                      branch))
+    doc = receipts_mod.sweep_report(base_dir, result, branch)
+    # artifact locations ride the same sweep: is each file still what
+    # the gate verified? Other kinds are unverifiable by design.
+    from . import artifacts as artifacts_mod
+    doc["locations"] = artifacts_mod.location_rows(base, base_dir)
+    report_mod.write_record(base_dir, receipts_mod.RECEIPTS_REPORT_FILE, doc)
     print(report)
+    if doc["locations"]:
+        counts = {}
+        for row in doc["locations"]:
+            counts[row["status"]] = counts.get(row["status"], 0) + 1
+        print("Artifact locations: " + ", ".join(
+            f"{n} {status}" for status, n in sorted(counts.items())) + ".")
+        for row in doc["locations"]:
+            if row["status"] in ("stale", "unreadable"):
+                print(f"  ⚠ {row['status']}: '{row['artifact']}' at "
+                      f"{row['address']} ({row['kind']})")
     print(f"Report: {report_path.relative_to(base_dir)}")
     return 0
 
@@ -3127,7 +3224,7 @@ def cmd_merge(base_dir, source, target, database=None):
 
 def cmd_branch(base_dir, branch, invite=None, uninvite=None):
     """A pocket's declaration, shown or changed. With --invite/--uninvite
-    the [Pocket] row in the branch's backup is rewritten, the branch
+    the [Pocket Universe] row in the branch's backup is rewritten, the branch
     database reloaded from it and read back byte-identical, and the
     identity stamp re-written with the new facts — the line's content
     identity does not move (the declaration is set aside from it), so
@@ -3227,7 +3324,7 @@ def cmd_branches(base_dir):
 
 
 def cmd_dependencies(base_dir, branch=None):
-    """The drift query: every [Dependency] on canon against what its
+    """The drift query: every [Knowledge Base Dependency] on canon against what its
     checkout holds now — held, behind, or unreachable — printed one per
     line and recorded as dependencies-report.json; exit 1 when any pin
     is behind or cannot be reached, so a later tool can alert on it."""
@@ -3347,7 +3444,7 @@ def main(argv=None):
         "branch",
         help="a pocket's declaration: show who cut it and who may look, "
              "or change the invite list (--invite / --uninvite) — the "
-             "stamp and the [Pocket] row are rewritten; nothing else "
+             "stamp and the [Pocket Universe] row are rewritten; nothing else "
              "moves, and the line's identity stays put")
     branch_parser.add_argument("name", help="the branch")
     branch_parser.add_argument("--invite", action="append", default=None,
@@ -3491,7 +3588,7 @@ def main(argv=None):
         "--world", action="store_true",
         help="seed the same knowledge base and add the dependency "
              "settings block to its .env — a world is a role a knowledge "
-             "base plays by holding [Dependency] entries, authored in its "
+             "base plays by holding [Knowledge Base Dependency] entries, authored in its "
              "first gated round")
     init_parser.add_argument(
         "--name", default=None,

@@ -45,10 +45,10 @@ ONTOLOGY = """\
         source: data/vigors.csv
         key: Vigor
         concept: [Tale Concept, Exclusive, Stateful]
-      Procedure:
+      "[Procedure]":
         source: [data/procedures/wilt.yaml]
         reader: procedure_yaml
-        concept: Procedure
+        concept: "[Procedure]"
     answer_keys:
 {keys}
     """
@@ -172,12 +172,12 @@ def test_second_stateful_concept_derives_without_subjects(make_repo):
         "        from_column: From Mood\n"
         "        to_column: To Mood\n")
     ontology_text = ONTOLOGY.replace(
-        "      Procedure:",
+        '      "[Procedure]":',
         "      Mood:\n"
         "        source: data/moods.csv\n"
         "        key: Mood\n"
         "        concept: [Tale Concept, Exclusive, Stateful]\n"
-        "      Procedure:").replace(
+        '      "[Procedure]":').replace(
         "source: [data/procedures/wilt.yaml]",
         "source: [data/procedures/wilt.yaml, "
         "data/procedures/bloom.yaml]").format(keys=keys)
@@ -275,10 +275,10 @@ RECOMPUTE_ONTOLOGY = """\
     concepts:
       Tale Concept: {{ instance_of: Concept }}
     nodes:
-      Procedure:
+      "[Procedure]":
         source: [data/procedures/score.yaml]
         reader: procedure_yaml
-        concept: Procedure
+        concept: "[Procedure]"
     answer_keys:
 {keys}
     """

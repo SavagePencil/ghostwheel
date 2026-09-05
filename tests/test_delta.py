@@ -134,7 +134,7 @@ def test_lint_rejects_derived_edges_machine_and_schema():
     # keeps the machinery message.
     base = base_graph()
     scratch = scratch_from(base)
-    scratch.ensure_node("Step", "Turn the page")       # machine label
+    scratch.ensure_node("[Step]", "Turn the page")       # machine label
     scratch.ensure_node("Archetype", "Woven Concept")  # schema label (frozen)
     scratch.ensure_node("Terrain", None)               # unnamed
     scratch.edges.append(make_edge("INSTANCE_OF", "Terrain", "Marsh",
@@ -158,7 +158,7 @@ def test_machine_label_node_keeps_the_derived_machinery_message():
     # by the schema freeze (they are not schema, they are machine layers)
     base = base_graph()
     scratch = scratch_from(base)
-    scratch.ensure_node("Step", "Turn the page")
+    scratch.ensure_node("[Step]", "Turn the page")
     d = diff(base, scratch)
     problems = " | ".join(lint(d))
     assert "built automatically by the system" in problems
@@ -262,7 +262,7 @@ def test_machine_layer_drift_is_left_to_rederivation():
     # (covered below), never treated as drift.
     base = base_graph()
     scratch = scratch_from(base)
-    base.ensure_node("Step", "Turn the page", body="reworded by re-lift")
+    base.ensure_node("[Step]", "Turn the page", body="reworded by re-lift")
     d = diff(base, scratch)
     assert d.empty
     assert lint(d) == []
@@ -276,7 +276,7 @@ def test_stale_machine_layer_round_applies_cleanly():
     base = base_graph()
     scratch = scratch_from(base)
     scratch.ensure_node("Terrain", "Fog")
-    base.ensure_node("Step", "Turn the page", body="reworded by re-lift")
+    base.ensure_node("[Step]", "Turn the page", body="reworded by re-lift")
     d = diff(base, scratch)
     assert [name for _, name, _ in d.nodes_added] == ["Fog"]
     assert d.nodes_changed == [] and d.nodes_removed == []

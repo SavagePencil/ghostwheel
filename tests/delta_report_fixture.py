@@ -94,7 +94,7 @@ def rich_materials(tmp_path):
     scratch.edges = [e for e in scratch.edges if e.type != "GUARDS"]
 
     # -- lint refusals, one per family ------------------------------------
-    scratch.ensure_node("Step", "Ghost Step")               # machine label
+    scratch.ensure_node("[Step]", "Ghost Step")               # machine label
     scratch.ensure_node("Object", None)                     # unnamed node
     scratch.edges.append(make_edge(                         # derived add
         "INSTANCE_OF", "Object", "Silver Bell", "Archetype", "Tool"))

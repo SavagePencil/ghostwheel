@@ -391,8 +391,8 @@ def test_numeric_rosters_order_as_a_ladder(make_repo):
     assert _members(g, "Rung") == ["3", "4", "10", "18"]
     h = GraphData()
     for n in ["Rung 10", "Rung 3", "Rung 18"]:
-        h.ensure_node("Step", n)
-    assert _members(h, "Step") == ["Rung 3", "Rung 10", "Rung 18"]
+        h.ensure_node("[Step]", n)
+    assert _members(h, "[Step]") == ["Rung 3", "Rung 10", "Rung 18"]
 
 
 def test_multi_label_contributors_align_by_column_name(make_repo):

@@ -65,7 +65,7 @@ def test_truncation_ignores_quoted_and_comment_shapes():
 
 def _graph_with_body(source_path, body):
     graph = GraphData()
-    graph.ensure_node("Procedure", "T", body=body,
+    graph.ensure_node("[Procedure]", "T", body=body,
                       source_path=source_path)
     return graph
 

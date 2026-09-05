@@ -1300,6 +1300,17 @@ class Extractor:
             parent = spec.get("instance_of")
             if parent:
                 instance_edge(ARCHETYPE_LABEL, concept, parent)
+            # Genuine taxonomy (`subtypes:`) is emitted in the second
+            # pass below, once every concept node exists — a kernel kind
+            # may be declared after the concept it is a kind of.
+        # Archetype-level ladders (e.g. Completeness: Cited < Attested <
+        # Transcribed) — same Ordered treatment value labels get. A
+        # SECOND pass, after every concept node exists: a ladder is free
+        # to be declared above its members (the kernel's own Completeness
+        # is), and the member filter below must see them all — inside the
+        # first loop it silently dropped any member declared later.
+        for concept, spec in self.ontology.concepts.items():
+            spec = spec or {}
             # Genuine taxonomy: `subtypes:` names citizens that are KINDS
             # of this concept. Targets may be citizens born only by delta,
             # so a from-sources build drops them as dangling; derivation
@@ -1314,14 +1325,6 @@ class Extractor:
                     self.graph.edges.append(make_edge(
                         "SUBTYPE_OF", sub_label, detail,
                         ARCHETYPE_LABEL, concept))
-        # Archetype-level ladders (e.g. Completeness: Cited < Attested <
-        # Transcribed) — same Ordered treatment value labels get. A
-        # SECOND pass, after every concept node exists: a ladder is free
-        # to be declared above its members (the kernel's own Completeness
-        # is), and the member filter below must see them all — inside the
-        # first loop it silently dropped any member declared later.
-        for concept, spec in self.ontology.concepts.items():
-            spec = spec or {}
             if spec.get("ordered") and spec.get("values"):
                 instance_edge(ARCHETYPE_LABEL, concept, ORDERED_CONCEPT)
                 ladder = [value for value in spec["values"]
@@ -1433,6 +1436,41 @@ class Extractor:
                         "PRECEDES", label, lower, label, higher))
                     self.graph.edges.append(make_edge(
                         "FOLLOWS", label, higher, label, lower))
+        # Citizens under a kernel concept's own label (a [Decision], a
+        # [File Location]) are instances of that concept too.
+        kernel_labels = {name for name in self.ontology.kernel_names
+                         if (ARCHETYPE_LABEL, name) in self.graph.nodes
+                         and name not in self.ontology.nodes}  # bound above
+        for (node_label, name) in list(self.graph.nodes):
+            if node_label in kernel_labels:
+                self.graph.edges.append(make_edge(
+                    "INSTANCE_OF", node_label, name, ARCHETYPE_LABEL,
+                    node_label))
+        # The taxonomy-membership rule: a citizen's INSTANCE_OF folds up
+        # its label's SUBTYPE_OF chain — a row of a kind is an instance of
+        # every concept that kind is a kind of. Concept-level SUBTYPE_OF
+        # only (Archetype -> Archetype); cycles are refused at the schema
+        # ceremony, and a walk guards against one regardless.
+        parents = {}
+        for edge in self.graph.edges:
+            if edge.type == "SUBTYPE_OF" and edge.from_label == ARCHETYPE_LABEL \
+                    and edge.to_label == ARCHETYPE_LABEL:
+                parents.setdefault(edge.from_name, set()).add(edge.to_name)
+        if parents:
+            folded = []
+            for (node_label, name) in list(self.graph.nodes):
+                if node_label == ARCHETYPE_LABEL or node_label not in parents:
+                    continue
+                seen, frontier = set(), list(parents.get(node_label, ()))
+                while frontier:
+                    ancestor = frontier.pop()
+                    if ancestor in seen:
+                        continue
+                    seen.add(ancestor)
+                    folded.append(make_edge("INSTANCE_OF", node_label, name,
+                                            ARCHETYPE_LABEL, ancestor))
+                    frontier.extend(parents.get(ancestor, ()))
+            self.graph.edges.extend(folded)
         self.fold_declared_memberships()
 
     def fold_declared_memberships(self):

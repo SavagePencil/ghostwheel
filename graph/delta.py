@@ -806,13 +806,71 @@ def ceremony_records(delta, base=None):
                 permitted_edges.add(id(edge))
                 continue
             permitted_edges.add(id(edge))
+            # The taxonomy is a DAG: a declaration that would make a
+            # concept a kind of itself, through any chain, refuses.
+            parents = {}
+            for known in list(base.edges) + list(delta.edges_added):
+                if known.type == "SUBTYPE_OF" \
+                        and known.from_label == ARCHETYPE_LABEL \
+                        and known.to_label == ARCHETYPE_LABEL:
+                    parents.setdefault(known.from_name, set()).add(
+                        known.to_name)
+            if edge.from_label == ARCHETYPE_LABEL:
+                seen, frontier = set(), [edge.to_name]
+                cycle = False
+                while frontier:
+                    ancestor = frontier.pop()
+                    if ancestor == edge.from_name:
+                        cycle = True
+                        break
+                    if ancestor in seen:
+                        continue
+                    seen.add(ancestor)
+                    frontier.extend(parents.get(ancestor, ()))
+                if cycle:
+                    violations.append(Verdict(
+                        code="taxonomy-cycle",
+                        subject=connection_ref(edge),
+                        message=(
+                            f"Attempted to declare ({edge.from_name}) a "
+                            f"kind of ({edge.to_name}). Failed due to: "
+                            f"({edge.to_name}) is already a kind of "
+                            f"({edge.from_name}) through the taxonomy, so "
+                            "the declaration would make a concept a kind "
+                            "of itself — a taxonomy has no cycles. Retire "
+                            "one of the links."),
+                        remedy="Retire one of the taxonomy links."))
+                    continue
+            # The consequence report: membership folds up the taxonomy
+            # at derivation, so the owner rules on what the declaration
+            # DOES — how many citizens become instances of the concept.
+            if edge.from_label == ARCHETYPE_LABEL:
+                kinds = {edge.from_name}
+                grew = True
+                while grew:
+                    grew = False
+                    for child, ups in parents.items():
+                        if child not in kinds and ups & kinds:
+                            kinds.add(child)
+                            grew = True
+                matches = sum(1 for (lbl, _n) in list(base.nodes) + [
+                    (l, n) for l, n, _ in delta.nodes_added] if lbl in kinds)
+                consequence = (f"; {matches} citizen"
+                               f"{'s' if matches != 1 else ''} of that kind "
+                               f"become instances of ({edge.to_name}) at "
+                               "derivation")
+            else:
+                matches = 1
+                consequence = (f"; ({edge.from_name}) becomes an instance "
+                               f"of ({edge.to_name}) at derivation")
             items.append(CeremonyItem(
                 code="taxonomy-declared",
                 subject=connection_ref(edge),
                 message=(f"TAXONOMY DECLARED — ({edge.from_name}) is a "
                          f"kind of ({edge.to_name}); the graph carries "
                          "the declaration itself, and reconstruction "
-                         "reads it back")))
+                         "reads it back" + consequence),
+                data={"matches": matches, "concept": edge.to_name}))
 
     return items, violations, permitted_nodes, permitted_edges
 
