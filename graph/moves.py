@@ -188,15 +188,16 @@ def move_records(delta, base):
                   "edges": edges, "specs": specs}))
     renamed_to = dict(moves.get(RENAME) or {})
     for source, targets in (moves.get(REHOME) or {}).items():
-        # a kind this round declares (its edge or its stitch) counts
-        kinds = kinds_of(base, source,
+        # a kind this round declares (its edge or its stitch) counts; a
+        # source or target spelled under a name this round renames is
+        # judged under the name that exists at the gate (the old one)
+        reverse_names = {new: old for old, new in renamed_to.items()}
+        source_old = reverse_names.get(source, source)
+        kinds = kinds_of(base, source_old,
                          list(delta.edges_added) + list(delta.stitch or []))
-        # the source and kinds may themselves be renamed in this round:
-        # a kind named after the rename is judged under its old name
-        reverse = {new: old for old, new in renamed_to.items()}
         for target, names in targets.items():
             subject = CitizenRef(ARCHETYPE_LABEL, target)
-            target_old = reverse.get(target, target)
+            target_old = reverse_names.get(target, target)
             if target_old not in kinds and target not in kinds:
                 violations.append(Verdict(
                     code="rehome-not-a-kind", subject=subject,
@@ -211,7 +212,9 @@ def move_records(delta, base):
                              "round's stitch), or drop the move."),
                     remedy="Declare the kind first, or drop the move."))
                 continue
-            missing = [n for n in names if (source, n) not in base.nodes]
+            missing = [n for n in names
+                       if (source_old, n) not in base.nodes
+                       and (source, n) not in base.nodes]
             if missing:
                 violations.append(Verdict(
                     code="rehome-citizen-missing", subject=subject,
@@ -225,16 +228,21 @@ def move_records(delta, base):
                     remedy="Fix the citizen names.",
                     data={"missing": missing}))
                 continue
+            # the item names the labels as they will stand after the
+            # round's renames — what the owner approves is what lands
+            final_source = renamed_to.get(source, source)
+            final_target = renamed_to.get(target, target)
             items.append(CeremonyItem(
                 code="citizens-rehomed", subject=subject,
                 message=(f"RE-HOMED — {len(names)} citizen"
-                         f"{'s' if len(names) != 1 else ''} of '{source}' "
-                         f"become '{target}' (a kind of '{source}'); their "
-                         "properties and connections travel with them, "
-                         "and derivation keeps them instances of "
-                         f"'{source}' through the taxonomy"),
-                data={"source": source, "target": target, "count": len(names),
-                      "citizens": names}))
+                         f"{'s' if len(names) != 1 else ''} of "
+                         f"'{final_source}' become '{final_target}' (a kind "
+                         f"of '{final_source}'); their properties and "
+                         "connections travel with them, and derivation "
+                         f"keeps them instances of '{final_source}' through "
+                         "the taxonomy"),
+                data={"source": final_source, "target": final_target,
+                      "count": len(names), "citizens": names}))
     return items, violations
 
 
@@ -253,8 +261,14 @@ def apply_moves(ground, moves, kernel):
     if rehomes:
         out = GraphData()
         relabel = {}
+        # a re-home spelled in the round's OLD names (the only ones that
+        # exist when it is declared) resolves through the same round's
+        # renames: the rename ran first, so source and target are read
+        # under their new names
         for source, targets in rehomes.items():
+            source = renames.get(source, source)
             for target, names in targets.items():
+                target = renames.get(target, target)
                 for name in names:
                     relabel[(source, name)] = target
         for (label, name), props in moved.nodes.items():

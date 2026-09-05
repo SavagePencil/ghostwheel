@@ -130,6 +130,8 @@ REF_KEYS = {
     "rehome-citizen-missing": "citizen-not-under-source",
     "moves-file-unreadable": "declaration-unreadable",
     "move-failed": "move-failed",
+    "citizen-label-undeclared": "unknown-kind",
+    "derived-edges-leaving": "connections-lost",
     "taxonomy-cycle": "kind-of-itself",
     "artifact-edge-misused": "artifact-link-misused",
     "location-kind-unknown": "location-kind-unknown",
