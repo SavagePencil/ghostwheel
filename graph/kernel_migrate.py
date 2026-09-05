@@ -108,6 +108,19 @@ def kernel_skew(base, metaontology_path=None):
             f"{MIGRATE_COMMAND} to migrate the canon.")
 
 
+def sweep_skew_refusal(base, verb, metaontology_path=None):
+    """A verb whose VERDICT depends on reading canon by kernel label
+    refuses on kernel skew — its rows are not where this engine looks,
+    so any verdict would be silence read as held. Returns the refusal,
+    or None when the canon carries the installed kernel."""
+    skew = kernel_skew(base, metaontology_path)
+    if not skew:
+        return None
+    return (f"Attempted to run {verb}. Failed due to: {skew} Until then its "
+            "rows are not where this engine looks, and any verdict would be "
+            "silence read as held — nothing was checked, nothing written.")
+
+
 def orphaned_references(ground, removed_names, old_names):
     """Ground edges that would dangle if the removed kernel names left:
     anything pointing AT a removed name from outside the old kernel

@@ -3057,6 +3057,11 @@ def cmd_receipts(base_dir, branch=None):
               f"sweep. Failed due to: {exc}.", file=sys.stderr)
         return 1
     from . import report as report_mod
+    from .kernel_migrate import sweep_skew_refusal
+    refusal = sweep_skew_refusal(base, "the receipt sweep")
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return 1
     result = receipts_mod.sweep(base_dir, base)
     report = receipts_mod.render_report(result)
     reports_dir = base_dir / "graph" / "reports"
@@ -3099,6 +3104,11 @@ def cmd_answer_keys(base_dir, branch=None):
     except FileNotFoundError as exc:
         print("Attempted to read the committed backup for the answer-key "
               f"sweep. Failed due to: {exc}.", file=sys.stderr)
+        return 1
+    from .kernel_migrate import sweep_skew_refusal
+    refusal = sweep_skew_refusal(base, "the answer-key sweep")
+    if refusal:
+        print(refusal, file=sys.stderr)
         return 1
     ontology = ontology_from_graph(base, base_dir)
     rows = answer_keys_mod.canon_check(base, ontology, base_dir)
@@ -3148,6 +3158,13 @@ def cmd_merge(base_dir, source, target, database=None):
     if problems:
         print("\n".join(problems), file=sys.stderr)
         return 1
+    from .kernel_migrate import sweep_skew_refusal
+    for line in (src, tgt):
+        refusal = sweep_skew_refusal(
+            graphs[line], f"a merge over {merge_mod.describe(line)}")
+        if refusal:
+            print(refusal, file=sys.stderr)
+            return 1
     source_graph, target_graph = graphs[src], graphs[tgt]
     fork, _pocket, problem = merge_mod.fork_point(
         base_dir, src, tgt, source_graph, target_graph)
@@ -3316,6 +3333,17 @@ def cmd_branches(base_dir):
     adopted — printed and recorded. No DBMS needed."""
     from . import pockets as pockets_mod
     from . import report as report_mod
+    from .kernel_migrate import sweep_skew_refusal
+    try:
+        canon = canon_base(base_dir)
+    except FileNotFoundError as exc:
+        print("Attempted to read the committed backup for the branch "
+              f"roster. Failed due to: {exc}.", file=sys.stderr)
+        return 1
+    refusal = sweep_skew_refusal(canon, "the branch roster")
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return 1
     rows = pockets_mod.branch_rows(base_dir)
     doc = pockets_mod.branches_report(base_dir, rows)
     report_mod.write_record(base_dir, pockets_mod.REPORT_FILE, doc)
@@ -3336,6 +3364,11 @@ def cmd_dependencies(base_dir, branch=None):
     except FileNotFoundError as exc:
         print("Attempted to read the committed backup for the dependency "
               f"drift query. Failed due to: {exc}.", file=sys.stderr)
+        return 1
+    from .kernel_migrate import sweep_skew_refusal
+    refusal = sweep_skew_refusal(base, "the dependency drift query")
+    if refusal:
+        print(refusal, file=sys.stderr)
         return 1
     config = load_mod.read_config(base_dir)
     rows = dependencies_mod.drift_rows(base, config)

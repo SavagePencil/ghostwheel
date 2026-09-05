@@ -165,6 +165,12 @@ def test_the_cli_sweeps_and_files_the_report(tmp_path, monkeypatch,
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("GHOSTWHEEL_BASE", raising=False)
     graph = storybook(tmp_path)
+    # a canon carries the kernel it was built with: the sweep refuses a
+    # canon whose kernel is not the engine's (silence would read as held)
+    from graph.kernel_migrate import KERNEL_ANCHOR, installed_kernel_identity
+    version, fingerprint = installed_kernel_identity()
+    graph.ensure_node("Archetype", KERNEL_ANCHOR, version=version,
+                      fingerprint=fingerprint)
     export_mod.write_export(graph, tmp_path / "graph" / "export")
     assert main(["receipts"]) == 0
     out = capsys.readouterr().out
