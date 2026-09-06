@@ -43,6 +43,9 @@ honest:
   artifacts of its own). Roots, facets, and the Metaontology/Ontology anchors
   are Archetype-row vocabulary and stay plain; `Theme` stays plain as designer
   lexicon. In Cypher a bracketed label is backticked: `` MATCH (d:`[Decision]`) ``.
+  Every citizen whose label has a schema row is a direct instance of that
+  row, and its membership then folds up the label's `SUBTYPE_OF` chain (a
+  row of a kind is an instance of every concept that kind is a kind of).
   A kernel ceremony may rename what it declares: the metaontology's `renamed`
   map drives `kernel-migrate`, which relabels every citizen, re-points every
   edge, rewrites project specs and the attribution ledger, adopts a same-named
