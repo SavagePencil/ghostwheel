@@ -1549,21 +1549,65 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     # will actually produce (changeset applied, machine layers
     # re-derived) — the diff gate must never approve a connection that
     # stitches to nothing
-    if changes.stitch and ontology is not None:
+    # The landing preview: the graph this round will actually produce —
+    # changeset applied, moves performed, machine layers re-derived. The
+    # stitch is checked against it, and every derived connection that
+    # LEAVES is itemized: a citizen that vanishes takes its memberships
+    # and its resolved citations with it, and the owner rules on that
+    # consequence rather than discovering it in a count.
+    derived_advisories = []
+    if ontology is not None and not violations:
         from .extract import derive, strip_derived
+        from .ontology import is_derived_edge
         preview = strip_derived(base)
         if not proposal_mod.apply_delta(preview, changes):
             if changes.moves and not move_refusals:
-                # the stitch may name a label the round's moves create:
-                # preview it against the graph AFTER the moves
                 preview, _ = moves_mod.apply_moves(
                     preview, changes.moves, moves_mod.kernel_names(base))
-            derived_preview, _ = derive(
+            derived_preview, preview_findings = derive(
                 ontology_from_graph(preview, base_dir), preview)
+            if changes.stitch:
+                violations += [
+                    report_mod.Verdict(code="stitch-landing", message=problem)
+                    for problem in proposal_mod.apply_stitch(
+                        derived_preview, changes.stitch)]
+            # an unknown label refuses here as it will at apply
             violations += [
-                report_mod.Verdict(code="stitch-landing", message=problem)
-                for problem in proposal_mod.apply_stitch(derived_preview,
-                                                         changes.stitch)]
+                report_mod.Verdict(code=f.verdict_code, message=f.detail,
+                                   remedy=f.remedy)
+                for f in preview_findings
+                if f.verdict_code == "citizen-label-undeclared"]
+            before = {e for e in base.edges if is_derived_edge(e)}
+            after = {e for e in derived_preview.edges if is_derived_edge(e)}
+            leaving = sorted(before - after,
+                             key=lambda e: (e.type, e.from_label,
+                                            str(e.from_name), str(e.to_name)))
+            by_type = {}
+            for edge in leaving:
+                by_type.setdefault(edge.type, []).append(edge)
+            for edge_type, edges in sorted(by_type.items()):
+                sample = "; ".join(
+                    f"({e.from_label}) {e.from_name} -> ({e.to_label}) "
+                    f"{e.to_name}" for e in edges[:3])
+                derived_advisories.append(report_mod.Verdict(
+                    code="derived-edges-leaving",
+                    severity=report_mod.ADVISORY,
+                    message=(f"{len(edges)} derived {edge_type} connection"
+                             f"{'s' if len(edges) != 1 else ''} leave with "
+                             f"this round ({sample}"
+                             f"{'; …' if len(edges) > 3 else ''}) — the "
+                             "machine layer re-derives them from the facts "
+                             "you changed; if they should stay, the facts "
+                             "they hung on must stay."),
+                    remedy="Keep the facts those connections hang on, or "
+                           "approve their leaving knowingly.",
+                    data={"type": edge_type, "count": len(edges),
+                          "examples": [
+                              {"from": {"label": e.from_label,
+                                        "name": e.from_name},
+                               "to": {"label": e.to_label,
+                                      "name": e.to_name}}
+                              for e in edges[:10]]}))
     # one report model, two renderings: the markdown the approver reads
     # and the same facts as records (verdict codes, subject refs,
     # remedies) for machine consumers. The JSON is a rendering, not a
@@ -1586,7 +1630,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     report_model = delta_mod.build_report(
         changes, violations, ceremony_items,
         roster_advisories + receipt_advisories + dependency_advisories
-        + merge_advisories)
+        + merge_advisories + derived_advisories)
     report = report_mod.render_markdown(report_model)
     reports_dir = base_dir / "graph" / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -1911,6 +1955,17 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         for item in items:
             print(f"  ⚠ {item}", file=sys.stderr)
         return bail("derive-error", text, items, findings=derive_errors)
+    # derived connections that leave with this round are named, never
+    # discovered in a count
+    from .ontology import is_derived_edge
+    leaving = {e for e in base.edges if is_derived_edge(e)} - {
+        e for e in new_graph.edges if is_derived_edge(e)}
+    if leaving:
+        by_type = {}
+        for edge in leaving:
+            by_type[edge.type] = by_type.get(edge.type, 0) + 1
+        print("  derived connections leaving with this round: " + ", ".join(
+            f"{n} {t}" for t, n in sorted(by_type.items())) + ".")
     # The stitch mechanism: the stitch lands IN MEMORY, after re-derivation births the
     # round's new citizens and before anything is written — same
     # verify-all-before-apply-any window as everything above

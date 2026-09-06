@@ -1741,4 +1741,42 @@ def derive(ontology, graph):
     extractor.derive_instance_metamodel()
     extractor.findings.extend(
         procedure_roster_findings(ontology, extractor.graph))
+    # an unknown label is not nothing: a citizen whose label has no
+    # schema row gets no membership and its derived connections would
+    # silently vanish — refuse by name instead
+    extractor.findings.extend(orphan_citizen_findings(extractor.graph))
     return extractor.graph, extractor.findings
+
+
+def orphan_citizen_findings(graph):
+    """ERROR per citizen label that has no Archetype row and is neither
+    a machine label nor the schema stratum itself — the lesser default
+    (treat it as nothing) is exactly what the bright line forbids."""
+    from .ontology import MACHINE_LABELS, SCHEMA_LABELS
+    from .workspace import WORKSPACE_LABEL
+    declared = {name for (label, name) in graph.nodes
+                if label == ARCHETYPE_LABEL}
+    orphans = {}
+    for (label, name) in graph.nodes:
+        if label in SCHEMA_LABELS or label in MACHINE_LABELS \
+                or label == WORKSPACE_LABEL or label in declared:
+            continue
+        orphans.setdefault(label, []).append(str(name))
+    findings = []
+    for label in sorted(orphans):
+        names = sorted(orphans[label])
+        sample = ", ".join(f"'{n}'" for n in names[:3])
+        findings.append(Finding(
+            ERROR, Category.ONTOLOGY, "canon", f"label {label}",
+            f"Attempted to derive over {len(names)} citizen"
+            f"{'s' if len(names) != 1 else ''} under '{label}' ({sample}"
+            f"{', …' if len(names) > 3 else ''}). Failed due to: no schema "
+            f"row declares '{label}' — an unknown label would mean no "
+            "membership and silently dropped connections, and the engine "
+            "never treats a citizen as nothing. Declare the label (a "
+            "label birth at the ceremony) or move the citizens under one "
+            "that exists (a declared move).",
+            code="citizen-label-undeclared",
+            remedy="Declare the label, or move the citizens under one that "
+                   "exists."))
+    return findings

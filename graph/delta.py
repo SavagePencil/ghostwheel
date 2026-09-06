@@ -905,6 +905,12 @@ def lint_verdicts(delta, base=None):
     of refusing; everything else on the stratum still refuses by name."""
     (_, violations, ceremony_nodes,
      ceremony_edges) = ceremony_records(delta, base)
+    declared = set()
+    if base is not None:
+        declared = {name for (label, name) in base.nodes
+                    if label == ARCHETYPE_LABEL}
+    declared |= {name for label, name, _ in delta.nodes_added
+                 if label == ARCHETYPE_LABEL}
     for label, name, _ in delta.nodes_added:
         if label in SCHEMA_LABELS:
             # Schema adds are fully adjudicated by ceremony_records:
@@ -923,6 +929,21 @@ def lint_verdicts(delta, base=None):
                 remedy="Delete the row from scratch; use python -m graph "
                        "branch <name> --invite/--uninvite to change a "
                        "declaration."))
+        elif base is not None and label not in declared \
+                and label not in UNAUTHORABLE_LABELS:
+            violations.append(Verdict(
+                code="citizen-label-undeclared",
+                subject=CitizenRef(label, name),
+                message=(
+                    f"Attempted to author '{name}' under '{label}'. Failed "
+                    f"due to: no schema row declares '{label}' — an unknown "
+                    "label would mean no membership and silently dropped "
+                    "connections, and the engine never treats a citizen as "
+                    "nothing. Declare the label in this round (a label "
+                    "birth at the ceremony), pick a label that exists, or "
+                    "declare a move."),
+                remedy="Declare the label, pick one that exists, or declare "
+                       "a move."))
         elif label in UNAUTHORABLE_LABELS:
             violations.append(Verdict(
                 code="machine-label-authored",
