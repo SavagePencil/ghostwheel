@@ -605,19 +605,37 @@ class Extractor:
                     self.graph.edges.append(make_edge(
                         rel["type"], label, name, target_label, hit))
 
-    def resolve_any(self, raw_target):
+    def resolve_any(self, raw_target, prefer=None):
         """Label-agnostic name resolution for `to: any` relationships.
 
         Accepts an optional "Label: Name" qualifier (only honored when the
-        prefix is a declared label, so names containing ': ' stay safe).
-        Returns (label, name) on a unique match, or (None, reason) otherwise.
+        prefix is a declared label, so names containing ': ' stay safe —
+        ': ' is the one reserved qualifier syntax). With `prefer` (a set of
+        labels), a unique match among THOSE labels wins before the bare
+        name is tried across every label — an artifact citation resolves
+        among artifact kinds, so a location row or any other machinery row
+        sharing the name never competes. Returns (label, name) on a unique
+        match, or (None, reason) otherwise; an ambiguity names the labels
+        matched and both remedies.
         """
         qualifier, sep, rest = raw_target.partition(": ")
         if sep and (qualifier in self.ontology.nodes
-                    or qualifier == ARCHETYPE_LABEL):
+                    or qualifier == ARCHETYPE_LABEL
+                    or (ARCHETYPE_LABEL, qualifier) in self.graph.nodes):
             if (qualifier, rest.strip()) in self.graph.nodes:
                 return qualifier, rest.strip()
             return None, f"no {qualifier} named '{rest.strip()}'"
+        if prefer:
+            preferred = [(node_label, name)
+                         for (node_label, name) in self.graph.nodes
+                         if name == raw_target and node_label in prefer]
+            if len(preferred) == 1:
+                return preferred[0]
+            if len(preferred) > 1:
+                labels = ", ".join(sorted(m[0] for m in preferred))
+                return None, (f"'{raw_target}' is ambiguous ({labels}) — "
+                              f"qualify it as 'Label: {raw_target}', or "
+                              "rename one of them")
         matches = [(node_label, name)
                    for (node_label, name) in self.graph.nodes
                    if name == raw_target]
@@ -627,7 +645,25 @@ class Extractor:
             return None, f"no node named '{raw_target}'"
         labels = ", ".join(sorted(m[0] for m in matches))
         return None, (f"'{raw_target}' is ambiguous ({labels}) — qualify "
-                      f"as 'Label: {raw_target}'")
+                      f"it as 'Label: {raw_target}', or rename one of them")
+
+    def artifact_labels(self):
+        """[Artifact] and every kind of it through the taxonomy — the
+        labels an artifact citation resolves among first."""
+        from .ontology import KERNEL_ARTIFACT_LABEL
+        kinds = {KERNEL_ARTIFACT_LABEL}
+        grew = True
+        while grew:
+            grew = False
+            for edge in self.graph.edges:
+                if edge.type == "SUBTYPE_OF" \
+                        and edge.from_label == ARCHETYPE_LABEL \
+                        and edge.to_label == ARCHETYPE_LABEL \
+                        and edge.to_name in kinds \
+                        and edge.from_name not in kinds:
+                    kinds.add(edge.from_name)
+                    grew = True
+        return kinds
 
     def link(self, rel, from_label, from_name, to_label, raw_target,
              file, location, props=None):
@@ -936,6 +972,24 @@ class Extractor:
                   "be verified")
         return None
 
+    def lost_citation(self, label, proc_name, relpath, cited, detail):
+        """A citation that resolves to nothing, or to several: never a
+        dropped edge with a warning. An ERROR by name — the derived
+        connection would leave because the facts cannot re-derive it, a
+        lost fact rather than a departure — which every apply, rederive,
+        and kernel migration refuses on, and the delta gate previews."""
+        self.findings.append(Finding(
+            ERROR, Category.DANGLING_REF, relpath,
+            f"{label} '{proc_name}' specified_in",
+            f"Attempted to resolve the citation '{cited}' that ({label}) "
+            f"'{proc_name}' specifies itself in. Failed due to: {detail}. "
+            "The SPECIFIED_IN connection would be lost — a fact the round "
+            "cannot re-derive, not a departure — so nothing lands until "
+            "the citation resolves to exactly one citizen.",
+            code="derived-edge-lost",
+            remedy="Qualify the citation as 'Label: name', or rename the "
+                   "colliding citizen."))
+
     def link_specified_in(self, label, proc_name, proc_spec, relpath):
         """SPECIFIED_IN edge + approved_hash tripwire. Returns the resolved
         source body text (for receipts and the term tripwire), or None.
@@ -958,10 +1012,10 @@ class Extractor:
                        for s in sections)
                       if b is not None]
             body = "\n\n".join(bodies) if bodies else None
-            resolved_label, detail = self.resolve_any(artifact)
+            resolved_label, detail = self.resolve_any(
+                artifact, prefer=self.artifact_labels())
             if resolved_label is None:
-                self.note(WARNING, Category.DANGLING_REF, relpath,
-                          "specified_in", f"{detail}; edge dropped")
+                self.lost_citation(label, proc_name, relpath, artifact, detail)
             else:
                 self.graph.edges.append(make_edge(
                     "SPECIFIED_IN", label, proc_name, resolved_label,
@@ -970,8 +1024,7 @@ class Extractor:
             section = sections[0] if sections else ""
             resolved_label, detail = self.resolve_any(section)
             if resolved_label is None:
-                self.note(WARNING, Category.DANGLING_REF, relpath,
-                          "specified_in", f"{detail}; edge dropped")
+                self.lost_citation(label, proc_name, relpath, section, detail)
                 return None
             self.graph.edges.append(make_edge(
                 "SPECIFIED_IN", label, proc_name, resolved_label, detail))

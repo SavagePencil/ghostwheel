@@ -43,6 +43,22 @@ VERIFIED_AT = "verified_at_sequence"
 SIZE = "size"
 
 
+def artifact_labels(graph):
+    """[Artifact] and every kind of it through the taxonomy: a citizen
+    re-homed under a kind is an artifact to every rule here."""
+    kinds = {KERNEL_ARTIFACT_LABEL}
+    grew = True
+    while grew:
+        grew = False
+        for edge in graph.edges:
+            if edge.type == "SUBTYPE_OF" and edge.from_label == ARCHETYPE_LABEL \
+                    and edge.to_label == ARCHETYPE_LABEL \
+                    and edge.to_name in kinds and edge.from_name not in kinds:
+                kinds.add(edge.from_name)
+                grew = True
+    return kinds
+
+
 def location_labels(graph):
     """Every label that is an [Artifact Location] kind: the base and
     everything SUBTYPE_OF it, however deep."""
@@ -77,33 +93,34 @@ def file_path(base_dir, address):
 
 
 def touched_artifacts(delta, scratch):
-    """The artifacts the round touches: added or changed rows, the
+    """The artifacts the round touches, as (label, name) keys — an
+    artifact is [Artifact] or any kind of it: added or changed rows, the
     artifact behind any location, depiction, or supersession edge the
     round adds or removes, the artifact behind a location row the round
     touches, and the artifact an added interpretation is ABOUT."""
-    artifact = KERNEL_ARTIFACT_LABEL
-    names = {n for l, n, _ in delta.nodes_added if l == artifact}
-    names |= {n for l, n, _ in delta.nodes_changed if l == artifact}
+    artifacts = artifact_labels(scratch)
+    keys = {(l, n) for l, n, _ in delta.nodes_added if l in artifacts}
+    keys |= {(l, n) for l, n, _ in delta.nodes_changed if l in artifacts}
     kinds = location_labels(scratch)
     touched_rows = {(l, n) for l, n, _ in delta.nodes_added if l in kinds}
     touched_rows |= {(l, n) for l, n, _ in delta.nodes_changed if l in kinds}
     for edge in list(delta.edges_added) + list(delta.edges_removed):
         if edge.type in (LOCATED_AT, DEPICTS, SUPERSEDES) \
-                and edge.from_label == artifact:
-            names.add(edge.from_name)
-        if edge.type == ABOUT and edge.to_label == artifact:
-            names.add(edge.to_name)
+                and edge.from_label in artifacts:
+            keys.add((edge.from_label, edge.from_name))
+        if edge.type == ABOUT and edge.to_label in artifacts:
+            keys.add((edge.to_label, edge.to_name))
     for edge in _edges(scratch, LOCATED_AT):
         if (edge.to_label, edge.to_name) in touched_rows \
-                and edge.from_label == artifact:
-            names.add(edge.from_name)
-    return {n for n in names if (artifact, n) in scratch.nodes}
+                and edge.from_label in artifacts:
+            keys.add((edge.from_label, edge.from_name))
+    return {k for k in keys if k in scratch.nodes}
 
 
 def gate_verdicts(delta, scratch, base_dir):
     """The artifact rules at the delta gate, collated."""
     verdicts = []
-    artifact = KERNEL_ARTIFACT_LABEL
+    artifacts = artifact_labels(scratch)
     kinds = location_labels(scratch)
     located = _edges(scratch, LOCATED_AT)
     depicts = _edges(scratch, DEPICTS)
@@ -115,7 +132,7 @@ def gate_verdicts(delta, scratch, base_dir):
     # -- edges only an artifact may author ------------------------------
     for edge in delta.edges_added:
         if edge.type in (LOCATED_AT, DEPICTS, SUPERSEDES) \
-                and edge.from_label != artifact:
+                and edge.from_label not in artifacts:
             verdicts.append(Verdict(
                 code="artifact-edge-misused",
                 subject=connection_ref(edge),
@@ -139,7 +156,7 @@ def gate_verdicts(delta, scratch, base_dir):
                     "location as one of those."),
                 remedy="Author the location as an [Artifact Location] "
                        "kind."))
-        elif edge.type == SUPERSEDES and edge.to_label != artifact:
+        elif edge.type == SUPERSEDES and edge.to_label not in artifacts:
             verdicts.append(Verdict(
                 code="artifact-edge-misused",
                 subject=connection_ref(edge),
@@ -163,10 +180,11 @@ def gate_verdicts(delta, scratch, base_dir):
                 remedy="Create the citizen here, or record the omission."))
 
     # -- each touched artifact -----------------------------------------------
-    for name in sorted(touched_artifacts(delta, scratch), key=str):
-        props = scratch.nodes.get((artifact, name)) or {}
-        ref = CitizenRef(artifact, name)
-        rows = [e for e in located if e.from_name == name
+    for label, name in sorted(touched_artifacts(delta, scratch), key=str):
+        props = scratch.nodes.get((label, name)) or {}
+        ref = CitizenRef(label, name)
+        rows = [e for e in located if (e.from_label, e.from_name) == (label,
+                                                                       name)
                 and e.to_label in kinds]  # a wrong kind is named above
         primaries = []
         for edge in rows:
@@ -340,7 +358,7 @@ def gate_verdicts(delta, scratch, base_dir):
                 remedy="Add intent in scratch."))
         abouts = [e for e in scratch.edges if e.type == ABOUT
                   and (e.from_label, e.from_name) == key
-                  and e.to_label == artifact]
+                  and e.to_label in artifacts]
         if len(abouts) != 1:
             verdicts.append(Verdict(
                 code="interpretation-about",
@@ -438,17 +456,19 @@ def sniff_medium(data):
 
 def verification_stamp(graph, base_dir, sequence, artifacts):
     """Stamp verification onto every [File Location] of the named
-    artifacts IN PLACE — fingerprint, size, the round's sequence — and
-    the artifact's own fingerprint and medium from its primary file
-    location (or its first). Returns collated problems; nothing is
-    stamped unless every file reads (verify-all before apply-any)."""
-    artifact = KERNEL_ARTIFACT_LABEL
+    artifacts (as (label, name) keys — [Artifact] or any kind of it) IN
+    PLACE — fingerprint, size, the round's sequence — and the artifact's
+    own fingerprint and medium from its primary file location (or its
+    first). Returns collated problems; nothing is stamped unless every
+    file reads (verify-all before apply-any)."""
     plans, problems = [], []
-    for name in sorted(artifacts, key=str):
-        if (artifact, name) not in graph.nodes:
+    for key in sorted(artifacts, key=str):
+        if key not in graph.nodes:
             continue
+        label, name = key
         rows = [e for e in _edges(graph, LOCATED_AT)
-                if e.from_name == name and e.to_label == KERNEL_FILE_LOCATION_LABEL
+                if (e.from_label, e.from_name) == key
+                and e.to_label == KERNEL_FILE_LOCATION_LABEL
                 and (e.to_label, e.to_name) in graph.nodes]
         read = []
         for edge in rows:
@@ -466,11 +486,11 @@ def verification_stamp(graph, base_dir, sequence, artifacts):
                                 f"({exc})")
                 continue
             read.append((edge.to_name, row, data))
-        plans.append((name, read))
+        plans.append((key, read))
     if problems:
         return problems
-    for name, read in plans:
-        node = graph.nodes[(artifact, name)]
+    for key, read in plans:
+        node = graph.nodes[key]
         chosen = None
         for row_name, row, data in read:
             digest = hashlib.sha256(data).hexdigest()
