@@ -1489,13 +1489,19 @@ class Extractor:
                         "PRECEDES", label, lower, label, higher))
                     self.graph.edges.append(make_edge(
                         "FOLLOWS", label, higher, label, lower))
-        # Citizens under a kernel concept's own label (a [Decision], a
-        # [File Location]) are instances of that concept too.
-        kernel_labels = {name for name in self.ontology.kernel_names
-                         if (ARCHETYPE_LABEL, name) in self.graph.nodes
-                         and name not in self.ontology.nodes}  # bound above
+        # Every citizen whose label has a schema row is a direct instance
+        # of that row — a kernel concept's own label (a [Decision], a
+        # [File Location]) and a world's concept used as a label (a
+        # re-homed row under a declared kind) alike; concept-bound project
+        # labels were handled above. A declared label means membership,
+        # for every declared label; the fold below then climbs from it.
+        from .ontology import MACHINE_LABELS
+        declared_labels = {name for (label, name) in self.graph.nodes
+                           if label == ARCHETYPE_LABEL
+                           and name not in self.ontology.nodes
+                           and name not in MACHINE_LABELS}
         for (node_label, name) in list(self.graph.nodes):
-            if node_label in kernel_labels:
+            if node_label in declared_labels and node_label != ARCHETYPE_LABEL:
                 self.graph.edges.append(make_edge(
                     "INSTANCE_OF", node_label, name, ARCHETYPE_LABEL,
                     node_label))
