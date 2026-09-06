@@ -132,6 +132,7 @@ REF_KEYS = {
     "move-failed": "move-failed",
     "citizen-label-undeclared": "unknown-kind",
     "derived-edges-leaving": "connections-lost",
+    "derived-edge-lost": "citation-lost",
     "taxonomy-cycle": "kind-of-itself",
     "artifact-edge-misused": "artifact-link-misused",
     "location-kind-unknown": "location-kind-unknown",

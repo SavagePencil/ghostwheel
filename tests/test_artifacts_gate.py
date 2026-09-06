@@ -297,10 +297,10 @@ def test_the_stamp_refuses_before_writing_when_a_file_cannot_be_read(tmp_path):
                       address="art/missing.png", primary=True)
     canon.edges.append(make_edge(LOCATED_AT, ART, "ghost", FILE, "ghost@file"))
     before = export_mod.serialize(canon)
-    problems = verification_stamp(canon, tmp_path, 1, {"ghost"})
+    problems = verification_stamp(canon, tmp_path, 1, {(ART, "ghost")})
     assert problems and "not readable" in problems[0]
     assert export_mod.serialize(canon) == before
     # nothing to stamp for an artifact with no file location
     canon.ensure_node(ART, "painting")
-    assert verification_stamp(canon, tmp_path, 1, {"painting"}) == []
+    assert verification_stamp(canon, tmp_path, 1, {(ART, "painting")}) == []
     assert location_rows(canon, tmp_path)[0]["status"] == "unreadable"

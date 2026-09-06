@@ -1571,12 +1571,18 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                     report_mod.Verdict(code="stitch-landing", message=problem)
                     for problem in proposal_mod.apply_stitch(
                         derived_preview, changes.stitch)]
-            # an unknown label refuses here as it will at apply
+            # what re-derivation would refuse at apply refuses here: an
+            # unknown label, a citation that resolves to nothing or to
+            # several (a lost connection is not a departure) — except the
+            # roster on a branch, which stays advisory mid-rebuild
+            from .ontology import Category as _Category
+            from .ontology import ERROR as _ERROR
             violations += [
                 report_mod.Verdict(code=f.verdict_code, message=f.detail,
                                    remedy=f.remedy)
                 for f in preview_findings
-                if f.verdict_code == "citizen-label-undeclared"]
+                if f.severity == _ERROR
+                and not (branch and f.category == _Category.ROSTER)]
             before = {e for e in base.edges if is_derived_edge(e)}
             after = {e for e in derived_preview.edges if is_derived_edge(e)}
             leaving = sorted(before - after,
