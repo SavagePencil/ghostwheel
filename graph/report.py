@@ -131,6 +131,7 @@ REF_KEYS = {
     "moves-file-unreadable": "declaration-unreadable",
     "move-failed": "move-failed",
     "citizen-label-undeclared": "unknown-kind",
+    "label-reader-unknown": "bodies-unreadable",
     "derived-edges-leaving": "connections-lost",
     "derived-edge-lost": "citation-lost",
     "taxonomy-cycle": "kind-of-itself",
