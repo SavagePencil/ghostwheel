@@ -290,6 +290,57 @@ def _source_unregistration(before, after):
     return released == a and node_reader(a) == Reader.PROCEDURE_YAML
 
 
+def _source_release(before, after):
+    """True when a spec_json change does exactly one thing: the source
+    registration leaves — the node-level `source`, `source` keys inside
+    relationship entries, or both — with the reader unchanged (an
+    extension-inferred reader survives only by being declared explicitly
+    in the same edit; a release never silently changes how bodies read).
+    The program-label case (reader procedure_yaml) stays with its own
+    class and its body checks. Anything else stays out of class."""
+    if not isinstance(before, str) or not isinstance(after, str):
+        return False
+    try:
+        b, a = json.loads(before), json.loads(after)
+    except ValueError:
+        return False
+    if not isinstance(b, dict) or not isinstance(a, dict):
+        return False
+    if node_reader(b) == Reader.PROCEDURE_YAML:
+        return False  # the program-release class owns that road
+    # only a derive-meaningful reader must survive the release: a
+    # markdown label's containment and mentions derive from its reader,
+    # so losing an extension-inferred one would silently change canon;
+    # a rows-era reader drives nothing post-closure and may lapse
+    if node_reader(b) == Reader.MARKDOWN_SECTIONS \
+            and node_reader(a) != Reader.MARKDOWN_SECTIONS:
+        return False
+    stripped = {key: value for key, value in b.items() if key != "source"}
+    rels = stripped.get("relationships")
+    if isinstance(rels, list):
+        stripped = dict(stripped)
+        stripped["relationships"] = [
+            ({k: v for k, v in rel.items() if k != "source"}
+             if isinstance(rel, dict) else rel)
+            for rel in rels]
+    reader_declared = dict(stripped)
+    if "reader" not in reader_declared and a.get("reader"):
+        reader_declared["reader"] = a["reader"]
+    return a in (stripped, reader_declared) and a != b
+
+
+def _released_sources(before):
+    """The registrations a release drops, named for the gate."""
+    spec = json.loads(before)
+    files = spec.get("source")
+    files = [] if files is None else (
+        [files] if isinstance(files, str) else list(files))
+    for rel in spec.get("relationships") or []:
+        if isinstance(rel, dict) and rel.get("source"):
+            files.append(rel["source"])
+    return files
+
+
 def _citizens_still_needing_files(label_name, delta, base):
     """The citizens under a program label that could NOT live without
     its files after this round: those left without a carried body, or
@@ -540,6 +591,8 @@ def ceremony_records(delta, base=None):
             if "spec_json" in changes else None
         unregistered = "spec_json" in changes and \
             _source_unregistration(*changes["spec_json"])
+        released = "spec_json" in changes and not unregistered and \
+            _source_release(*changes["spec_json"])
         # KB-name adoption: the one non-doc property edit the ceremony
         # admits, on exactly the Ontology anchor — a knowledge base
         # declaring (or changing) its own name through a gated round.
@@ -548,7 +601,8 @@ def ceremony_records(delta, base=None):
         kb_named = ((label, name) == (ARCHETYPE_LABEL, ONTOLOGY_ANCHOR)
                     and bool(changes.get(KB_NAME_PROP, ("", ""))[1]))
         permitted_props = CEREMONY_DOC_PROPS | CEREMONY_RENDER_PROPS \
-            | ({"spec_json"} if alias_added or unregistered else set()) \
+            | ({"spec_json"} if alias_added or unregistered
+               or released else set()) \
             | ({KB_NAME_PROP} if kb_named else set())
         out_of_class = sorted(set(changes) - permitted_props)
         if out_of_class:
@@ -649,6 +703,18 @@ def ceremony_records(delta, base=None):
         permitted_nodes.add((label, name))
         for prop, (before, after) in changes.items():
             if prop == "spec_json" and alias_added:
+                continue
+            if prop == "spec_json" and released:
+                files = _released_sources(before)
+                items.append(CeremonyItem(
+                    code="source-released",
+                    subject=CitizenRef(label, name),
+                    message=(f"SOURCE RELEASED from '{name}' — "
+                             f"{len(files)} registration"
+                             f"{'s' if len(files) != 1 else ''} leave the "
+                             "spec; no verb reads them, and the schema "
+                             "keeps only what still means something"),
+                    data={"property": prop, "files": files}))
                 continue
             if prop == "spec_json" and unregistered:
                 files = json.loads(before).get("source")
