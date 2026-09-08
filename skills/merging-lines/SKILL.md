@@ -1,6 +1,6 @@
 ---
 name: merging-lines
-description: Merge one line's rounds into another while both persist — a pocket taking up canon's newer rounds, or canon landing a pocket's work — three-way at citizen grain from the fork, prepared as the target's ordinary gated round. Use when the owner asks to bring a pocket's work into canon, refresh a pocket from canon, or reconcile two lines of the same knowledge base.
+description: Merge one line's rounds into another while both persist — a Pocket Universe taking up canon's newer rounds, or canon landing its work — three-way at citizen grain from the fork, prepared as the target's ordinary gated round. Use when the owner asks to bring a Pocket Universe's work into canon, refresh one from canon, or reconcile two lines of the same knowledge base.
 ---
 
 # merging-lines (trigger stub)

@@ -1,0 +1,119 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [
+  [
+   "[Section]",
+   "The gate's guarantees: silence never reads as held",
+   {
+    "body": "## The gate's guarantees: silence never reads as held\n\nThe round machinery's rulers share one law: a check that cannot judge\nrefuses aloud, and an absence is a verdict, never a shrug. The named\nguarantees:\n\n- **Sweeps refuse on kernel skew.** A verdict-bearing sweep over a\n  backup written by a different kernel refuses by name rather than\n  judging with the wrong dictionary — a clean report over skewed\n  vocabulary would be a lie of silence.\n- **An undeclared kind is an ERROR, not nothing.** A citizen whose\n  label has no schema row is named at derivation and refused at the\n  gate; facts never ride into canon under a label the schema cannot\n  see.\n- **A citation that stops resolving is an ERROR, not a dropped\n  edge.** A derived connection that can no longer find its target is\n  named by citation and subject — a connection leaving canon silently\n  is the one thing the diff gate exists to prevent. Citations resolve\n  among artifact kinds first ([artifact-model.md](artifact-model.md)).\n- **The landing preview judges the graph the round will actually\n  produce.** The gate re-derives over base-plus-changeset, declared\n  moves applied, and promotes derivation's ERRORs to refusals — what\n  apply would refuse, the gate refuses first — while connections that\n  would leave are itemized as advisories the approver reads. (One\n  check stays advisory by design: a branch line's roster completeness,\n  mid-rebuild, per the branches passage below.)",
+    "rank": 6,
+    "record": "Agentic ETL — the Persistent-Graph Era"
+   }
+  ]
+ ],
+ "nodes_changed": [
+  [
+   "[Conduct Section]",
+   "Cautions (Merging lines)",
+   {
+    "body": [
+     "## Cautions (Merging lines)\n\n- Merge runs between canon and a pocket, either direction. Two pockets\n  share no fork point: merge each with canon. A rebuild line (cut\n  schema-only) shares no ground with canon and becomes canon by\n  succession, never by merge.\n- Contested is judged at whole-citizen grain: whichever properties\n  moved, the citizen is the owner's to rule. Property-level three-way is\n  a later refinement, not a promise.\n- Re-cutting the working copy discards a prepared merge (the replay\n  lived in that copy); the note says so — merge again.\n- A source round the applier cannot replay (an endpoint gone on the\n  target) is reported by name under \"could not take up\"; land what did\n  replay, then author the rest deliberately.\n",
+     "## Cautions (Merging lines)\n\n- Merge runs between canon and a Pocket Universe, either direction.\n  Two Pocket Universes share no fork point: merge each with canon. A rebuild line (cut\n  schema-only) shares no ground with canon and becomes canon by\n  succession, never by merge.\n- Contested is judged at whole-citizen grain: whichever properties\n  moved, the citizen is the owner's to rule. Property-level three-way is\n  a later refinement, not a promise.\n- Re-cutting the working copy discards a prepared merge (the replay\n  lived in that copy); the note says so — merge again.\n- A source round the applier cannot replay (an endpoint gone on the\n  target) is reported by name under \"could not take up\"; land what did\n  replay, then author the rest deliberately.\n"
+    ]
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "Merging lines",
+   {
+    "body": [
+     "---\nname: merging-lines\ndescription: Merge one line's rounds into another while both persist — a pocket taking up canon's newer rounds, or canon landing a pocket's work — three-way at citizen grain from the fork, prepared as the target's ordinary gated round. Use when the owner asks to bring a pocket's work into canon, refresh a pocket from canon, or reconcile two lines of the same knowledge base.\n---\n\n# Merging lines\n\nMerge is the fifth job beside ingest, query, generate, and migrate: one\nline takes up another's rounds while both keep living. A pocket (a\nbranch cut as a clone of canon) and the canon it forked from each land\ntheir own gated rounds; merging reconciles them from the fork point,\nthree-way and at citizen grain, and it never bypasses the gate — the\nmerge PREPARES the target's ordinary round, and the round lands the way\nevery round lands.\n",
+     "---\nname: merging-lines\ndescription: Merge one line's rounds into another while both persist — a Pocket Universe taking up canon's newer rounds, or canon landing its work — three-way at citizen grain from the fork, prepared as the target's ordinary gated round. Use when the owner asks to bring a Pocket Universe's work into canon, refresh one from canon, or reconcile two lines of the same knowledge base.\n---\n\n# Merging lines\n\nMerge is the fifth job beside ingest, query, generate, and migrate: one\nline takes up another's rounds while both keep living. A Pocket\nUniverse (a branch cut as a clone of canon) and the canon it forked\nfrom each land their own gated rounds; merging reconciles them from\nthe fork point,\nthree-way and at citizen grain, and it never bypasses the gate — the\nmerge PREPARES the target's ordinary round, and the round lands the way\nevery round lands.\n"
+    ]
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "The flow (Merging lines)",
+   {
+    "body": [
+     "## The flow\n\n1. **Cut the target's working copy fresh.** `python -m graph restore --database <copy>`\n   for canon, or `restore --from graph/branches/<pocket>/export --database <pocket>-scratch`\n   for a pocket. The merge wants a copy that equals its base, so what\n   lands is exactly the rounds taken up plus the owner's rulings; a copy\n   that already differs refuses by name.\n2. **Prepare the merge.** `python -m graph merge --from <line> --into <line>`\n   (`canon` or a pocket's name on either side). The source's rounds since\n   the fork are read from its archived proposals — code carries values.\n   A citizen or connection touched by only one side is DISJOINT and\n   replays mechanically into the copy through the same applier every\n   round rides; one changed on both lines is CONTESTED — left at the\n   target's version and listed base / yours / theirs in\n   `graph/reports/merge-report.json`, with the merge record riding the\n   round as `merge.json`. Rounds already taken up by an earlier merge\n   are skipped; a round with no changeset (a derived-layer refresh) is\n   noted and skipped.\n3. **Rule the contested citizens** by ordinary authoring in the copy —\n   the front door presents each with base, yours, theirs, and a\n   recommendation; the owner rules; the agent carries judgment, never\n   the verb. A contested citizen left untouched lands the target's\n   version, knowingly: `delta` names every one as an advisory.\n4. **Land it as any round.** `delta` → the diff gate → `approve` →\n   `canonize --apply`. The target's log gains a merged-from annotation\n   naming the rounds taken up, so a second merge skips them and\n   succession's divergence advisory no longer lists rounds that already\n   rode across.\n",
+     "## The flow\n\n1. **Cut the target's working copy fresh.** `python -m graph restore --database <copy>`\n   for canon, or `restore --from graph/branches/<name>/export --database <name>-scratch`\n   for a Pocket Universe. The merge wants a copy that equals its base, so what\n   lands is exactly the rounds taken up plus the owner's rulings; a copy\n   that already differs refuses by name.\n2. **Prepare the merge.** `python -m graph merge --from <line> --into <line>`\n   (`canon` or a Pocket Universe's name on either side). The source's rounds since\n   the fork are read from its archived proposals — code carries values.\n   A citizen or connection touched by only one side is DISJOINT and\n   replays mechanically into the copy through the same applier every\n   round rides; one changed on both lines is CONTESTED — left at the\n   target's version and listed base / yours / theirs in\n   `graph/reports/merge-report.json`, with the merge record riding the\n   round as `merge.json`. Rounds already taken up by an earlier merge\n   are skipped; a round with no changeset (a derived-layer refresh) is\n   noted and skipped.\n3. **Rule the contested citizens** by ordinary authoring in the copy —\n   the front door presents each with base, yours, theirs, and a\n   recommendation; the owner rules; the agent carries judgment, never\n   the verb. A contested citizen left untouched lands the target's\n   version, knowingly: `delta` names every one as an advisory.\n4. **Land it as any round.** `delta` → the diff gate → `approve` →\n   `canonize --apply`. The target's log gains a merged-from annotation\n   naming the rounds taken up, so a second merge skips them and\n   succession's divergence advisory no longer lists rounds that already\n   rode across.\n"
+    ]
+   }
+  ],
+  [
+   "[Procedure]",
+   "Merging lines",
+   {
+    "description": [
+     "Merge one line's rounds into another while both persist — a pocket taking up canon's newer rounds, or canon landing a pocket's work — three-way at citizen grain from the fork, prepared as the target's ordinary gated round. Use when the owner asks to bring a pocket's work into canon, refresh a pocket from canon, or reconcile two lines of the same knowledge base.",
+     "Merge one line's rounds into another while both persist — a Pocket Universe taking up canon's newer rounds, or canon landing its work — three-way at citizen grain from the fork, prepared as the target's ordinary gated round. Use when the owner asks to bring a Pocket Universe's work into canon, refresh one from canon, or reconcile two lines of the same knowledge base."
+    ]
+   }
+  ],
+  [
+   "[Section]",
+   "A self-world, riding the engine's own version",
+   {
+    "body": [
+     "## A self-world, riding the engine's own version\n\nThe engine's knowledge base lives in this repo (`manual/`) and is a\nworld like any the engine serves — its own canon, its own project\nontology grown through gated rounds, its own chained event log — with\none deliberate difference: **it has no version of its own.** Its\nrounds land on this repo's main; a release tag freezes code and canon\ntogether; the packaged export ships inside the wheel the way the\nmetaontology seed does. A consuming world that pins engine X therefore\ngets the conduct and doctrine of X by construction — one pin, no\nsecond version to resolve, no compatibility matrix. Conduct is\ndocumentation of the machinery it operates; desynchronizing them is\nthe failure mode, not the flexibility.\n\nIt is ruled a *self*-world: it moves atomically with engine changes in\nthe same change set, so it does not count toward the\nmultiple-consuming-worlds thresholds elsewhere in the doctrine —\nthough it does, over time, furnish the second-project evidence that\nkernel promotions await.\n\n",
+     "## A self-world, riding the engine's own version\n\nThe engine's knowledge base lives in this repo (`manual/`) and is a\nworld like any the engine serves — its own canon, its own project\nontology grown through gated rounds, its own chained event log — with\none deliberate difference: **it has no version of its own.** Its\nrounds land on this repo's main; a release tag freezes code and canon\ntogether; the packaged export ships inside the wheel the way the\nmetaontology seed does. A consuming world that pins engine X therefore\ngets the conduct and doctrine of X by construction — one pin, no\nsecond version to resolve, no compatibility matrix. Conduct is\ndocumentation of the machinery it operates; desynchronizing them is\nthe failure mode, not the flexibility.\n\nIt is ruled a *self*-world: it moves atomically with engine changes in\nthe same change set, so it does not count toward the\nmultiple-consuming-worlds thresholds elsewhere in the doctrine —\nthough it does, over time, furnish the second-project evidence that\nkernel promotions await.\n\nKeeping code and record in step is conduct, not calendar: a change\nthat moves behavior a design or conduct record describes updates\nthat record's canon in the same ship — the way tests, docs, and\nskills ride every change — and a plan gate that opens a new\nsubsystem (new kernel concepts, a new job class) names where its\nstory will live: a section of an existing record, or a new record\nwhose first round rides the ship. A record found stale is a defect\nto fix, never a chore to schedule.\n\n"
+    ]
+   }
+  ],
+  [
+   "[Section]",
+   "Anatomy of a delta",
+   {
+    "body": [
+     "## Anatomy of a delta\n\nA delta is **comprehensive** — the complete, itemized mutation set, every\nclass enumerated so full roll-back is always possible:\n\n1. Nodes to create\n2. Existing nodes to edit (per-property before → after)\n3. Existing nodes to delete\n4. Edges to create\n5. Existing edges to edit (per-property before → after)\n6. Existing edges to delete\n7. Any other mutation class the schema grows (the list is closed per\n   delta, never implicit)\n\n**Derived edges are shadows, not itemized removals.** A machine-computed\nedge (an INSTANCE_OF, a signature projection) never enters the list as a\nbare deletion — it is a shadow of the ground-fact change that re-derives\nit, so deleting a node is never blocked by the computed edges hanging off\nit (re-derivation owns them at apply). Authored derived-edge *additions*\nand paired modifications still itemize, so the lint can refuse them and\nthe diff-gate reader sees every consequence.\n\nEvery entry records its **inverse** (the before-image), which is what\nmakes the event log reversible. Every entry carries its receipt, source\npointer, and authority grade. Every member is **tagged with the delta's\nid** — this is what lets exploration tools isolate \"just the proposal.\"\n\nOne mutation class is **distinguished above all others**: changes to the\ngraph's own schema layers — the embedded ontology and metaontology\ncitizens. These have the biggest echoes: a project-schema edit can\nre-derive edges across the whole graph, and a kernel (metaontology) edit\nis ceremony by doctrine. The delta therefore classifies schema-layer\nmutations into their own section, presented FIRST at the diff gate, with\na blast-radius summary (\"this schema change re-derives 214 edges across 6\nlabels\") — you should never discover a schema edit by stumbling over it\namong row-level facts.\n\nTwo more things ride inside the delta document itself:\n\n- **The implications narrative** — a prose explanation of what the change\n  *means*, in crisp human-comprehensible statements with concrete\n  examples pulled from the corpus wherever possible (\"The Cinder Fox now\n  guards the Hollow Gem: a reader asking what the Fox protects gets the\n  Gem…\"). Written for a person, not a parser; reviewed at the diff gate\n  alongside the itemized list.\n- **The delta's tests** — generated regression checks that ride with the\n  change (new `.cypher` invariants, answer-key assertions where a fact\n  table overlaps). They run at verification, run again at apply, and then\n  join the permanent suite — the persistent-era form of \"tests ride with\n  the feature.\" Tests are data, not code; the kernel's check-runner never\n  grows.\n\nThe delta is **live through the gates**: every human-in-the-loop\ncourse-correction at the plan or diff gate updates it in place — what you\napprove is always the current delta, and approval is what freezes it\n(hash-pinned; any change after that is a new delta).\n\n",
+     "## Anatomy of a delta\n\nA delta is **comprehensive** — the complete, itemized mutation set, every\nclass enumerated so full roll-back is always possible:\n\n1. Nodes to create\n2. Existing nodes to edit (per-property before → after)\n3. Existing nodes to delete\n4. Edges to create\n5. Existing edges to edit (per-property before → after)\n6. Existing edges to delete\n7. Any other mutation class the schema grows (the list is closed per\n   delta, never implicit)\n\n**Derived edges are shadows, not itemized removals.** A machine-computed\nedge (an INSTANCE_OF, a signature projection) never enters the list as a\nbare deletion — it is a shadow of the ground-fact change that re-derives\nit, so deleting a node is never blocked by the computed edges hanging off\nit (re-derivation owns them at apply). Authored derived-edge *additions*\nand paired modifications still itemize, so the lint can refuse them and\nthe diff-gate reader sees every consequence.\n\nEvery entry records its **inverse** (the before-image), which is what\nmakes the event log reversible. Every entry carries its receipt, source\npointer, and authority grade. Every member is **tagged with the delta's\nid** — this is what lets exploration tools isolate \"just the proposal.\"\n\nOne mutation class is **distinguished above all others**: changes to the\ngraph's own schema layers — the embedded ontology and metaontology\ncitizens. These have the biggest echoes: a project-schema edit can\nre-derive edges across the whole graph, and a kernel (metaontology) edit\nis ceremony by doctrine. The delta therefore classifies schema-layer\nmutations into their own section, presented FIRST at the diff gate, with\na blast-radius summary (\"this schema change re-derives 214 edges across 6\nlabels\") — you should never discover a schema edit by stumbling over it\namong row-level facts.\n\nThree more things ride inside the delta document itself:\n\n- **Declared moves** — a rename of the world's own label or concept,\n  or a re-homing of named citizens under a kind of what they were —\n  ride beside the changeset, embedded in the proposal so the\n  approval hash covers them. The gate itemizes each move with its\n  counts and refusals; when moves rode, the recorded inverse is the\n  FULL ground diff — the only honest walk-back for a relabel.\n\n- **The implications narrative** — a prose explanation of what the change\n  *means*, in crisp human-comprehensible statements with concrete\n  examples pulled from the corpus wherever possible (\"The Cinder Fox now\n  guards the Hollow Gem: a reader asking what the Fox protects gets the\n  Gem…\"). Written for a person, not a parser; reviewed at the diff gate\n  alongside the itemized list.\n- **The delta's tests** — generated regression checks that ride with the\n  change (new `.cypher` invariants, answer-key assertions where a fact\n  table overlaps). They run at verification, run again at apply, and then\n  join the permanent suite — the persistent-era form of \"tests ride with\n  the feature.\" Tests are data, not code; the kernel's check-runner never\n  grows.\n\nThe delta is **live through the gates**: every human-in-the-loop\ncourse-correction at the plan or diff gate updates it in place — what you\napprove is always the current delta, and approval is what freezes it\n(hash-pinned; any change after that is a new delta).\n\n"
+    ]
+   }
+  ],
+  [
+   "[Section]",
+   "Invariants (the non-negotiables)",
+   {
+    "rank": [
+     9,
+     10
+    ]
+   }
+  ],
+  [
+   "[Section]",
+   "The delta lifecycle (the artifact's own states)",
+   {
+    "rank": [
+     6,
+     7
+    ]
+   }
+  ],
+  [
+   "[Section]",
+   "The isolation decision",
+   {
+    "rank": [
+     7,
+     8
+    ]
+   }
+  ],
+  [
+   "[Section]",
+   "The micro-kernel: five organs, fixed forever",
+   {
+    "rank": [
+     8,
+     9
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}
