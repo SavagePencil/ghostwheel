@@ -12,14 +12,12 @@ section IS the ceremony ruling.
 """
 
 import json
-from pathlib import Path
 
 from graph.delta import ceremony_classify, diff, lint, render_report
-from graph.extract import GraphData, extract, make_edge, strip_derived
-from graph.ontology import ERROR, load_ontology, ontology_from_graph
+from graph.extract import GraphData, make_edge, strip_derived
+from graph.ontology import ontology_from_graph
 from graph.proposal import apply_delta
-
-STORYBOOK = Path(__file__).resolve().parent / "fixtures" / "storybook"
+from tests.test_branch import STORYBOOK, build_canon
 
 
 def base_graph():
@@ -140,10 +138,7 @@ def test_removal_without_base_refuses():
 def test_ceremony_round_end_to_end_over_the_storybook():
     # a new Theme rides a real round: diff -> clean lint -> apply to the
     # ground layer -> the reconstructed ontology KNOWS the new concept
-    ontology, findings = load_ontology(STORYBOOK / "ontology.yaml",
-                                       STORYBOOK)
-    assert not [f for f in findings if f.severity == ERROR]
-    canon, _ = extract(ontology)
+    canon = build_canon()
     scratch = clone(canon)
     scratch.ensure_node("Archetype", "Lantern Nights",
                         doc="the village gathers when the lanterns rise")

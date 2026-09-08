@@ -6,33 +6,29 @@ CHECKS edge to the Procedure it holds still. The check reads program
 bodies from canon and runs in two places: at the delta gate whenever a
 round touches a key or a checked program's body (refusal on the live
 line, advisory on a branch), and as the DB-free `answer-keys` sweep
-writing a record beside its prose. The canon path and the file path
-are one check: same findings, word for word.
+writing a record beside its prose.
 
 Storybook domain: the wilting tale from the answer-key fixtures.
 """
 
 import json
 
-import tests.conftest as conftest
 from graph import export as export_mod
 from graph.__main__ import cmd_answer_keys
 from graph.answer_keys import (ANSWER_KEYS_REPORT_FILE, CHECKS_EDGE, DRIFT,
                                HELD, INVALID, KEY_JSON_PROP,
                                PROCEDURE_MISSING, UNREADABLE,
-                               answer_keys_report, canon_check, check,
+                               answer_keys_report, canon_check,
                                gate_verdicts, keys_from_graph,
                                render_report)
 from graph.delta import diff
-from graph.extract import extract, make_edge
+from graph.extract import make_edge
 from graph.kernel_migrate import fresh_kernel
-from graph.ontology import (ARCHETYPE_LABEL, ERROR, KERNEL_ANSWER_KEY_LABEL,
-                            Category, load_ontology, ontology_from_graph)
+from graph.ontology import (ARCHETYPE_LABEL, KERNEL_ANSWER_KEY_LABEL,
+                            ontology_from_graph)
 from graph.report import ADVISORY, REFUSAL, REF_KEYS, record_path
 from graph.restore import read_export
-from tests.test_answer_keys import FILES, GOOD_KEYS, ONTOLOGY
-
-_make_repo = getattr(conftest.make_repo, "__wrapped__", conftest.make_repo)
+from tests.test_answer_keys import TABLES, build_graph, write_tables
 
 # the fixture's two declarations, as canon citizens
 KEYS = {
@@ -48,14 +44,11 @@ KEYS = {
 }
 
 
-def _corpus(tmp_path, files=None, keys=GOOD_KEYS):
-    base_dir, path = _make_repo(tmp_path)(files or FILES,
-                                          ONTOLOGY.format(keys=keys))
-    ontology, findings = load_ontology(path, base_dir)
-    assert ontology is not None, findings
-    graph, extract_findings = extract(ontology)
-    assert not [f for f in extract_findings if f.severity == ERROR]
-    return base_dir, ontology, graph
+def _corpus(tmp_path, tables=None):
+    write_tables(tmp_path, tables or TABLES)
+    graph = build_graph()
+    ontology = ontology_from_graph(graph, tmp_path)
+    return tmp_path, ontology, graph
 
 
 def _with_keys(graph, keys=KEYS, procedure="Wilt"):
@@ -64,10 +57,6 @@ def _with_keys(graph, keys=KEYS, procedure="Wilt"):
         graph.edges.append(make_edge(CHECKS_EDGE, KERNEL_ANSWER_KEY_LABEL,
                                      name, "[Procedure]", procedure))
     return graph
-
-
-def _details(findings):
-    return sorted(f.detail for f in findings)
 
 
 # -- the kernel citizen ----------------------------------------------------
@@ -99,18 +88,16 @@ def test_keys_read_back_from_their_citizens(tmp_path):
         "Rot > {value}"
 
 
-# -- one check, two homes --------------------------------------------------
+# -- the check over canon --------------------------------------------------
 
 
-def test_canon_check_matches_the_file_check_word_for_word(tmp_path):
-    base_dir, ontology, graph = _corpus(tmp_path)
+def test_canon_check_holds_then_names_the_drift(tmp_path):
+    base_dir, _, graph = _corpus(tmp_path)
     _with_keys(graph)
     rows = canon_check(graph, ontology_from_graph(graph, base_dir), base_dir)
     assert [r["status"] for r in rows] == ["held", "held"]
     assert {r["code"] for r in rows} == {HELD}
-    assert _details(check(ontology)) == []
-    # a table row the program lost, a threshold that moved: the canon
-    # path names each exactly as the file path does
+    # a table row the program lost, a threshold that moved: each named
     (base_dir / "data" / "wilt-transitions.csv").write_text(
         "From Vigor,To Vigor\nFresh,Limp\nLimp,Dozed\nDozed,Fresh\n",
         encoding="utf-8")
@@ -118,8 +105,11 @@ def test_canon_check_matches_the_file_check_word_for_word(tmp_path):
         "Vigor,Rot Needed\nFresh,12\nLimp,5\nDozed,N/A\n", encoding="utf-8")
     rows = canon_check(graph, ontology_from_graph(graph, base_dir), base_dir)
     canon_details = sorted(f.detail for r in rows for f in r["problems"])
-    assert canon_details == _details(
-        f for f in check(ontology) if f.category == Category.ANSWER_KEY)
+    assert len(canon_details) == 2
+    assert any("no longer derives the approved transition Dozed → Fresh"
+               in detail for detail in canon_details)
+    assert any("case 'Fresh'" in detail and '"Rot > 12"' in detail
+               for detail in canon_details)
     assert [r["status"] for r in rows] == ["drift", "drift"]
     assert {r["code"] for r in rows} == {DRIFT}
     assert {r["ref"] for r in rows} == {"program-table-drift"}

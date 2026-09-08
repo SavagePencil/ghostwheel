@@ -9,38 +9,50 @@ concept Treasure, so every Object is a Treasure by its roster. The Golden
 Key is ALSO declared a Tool; the Plain Pebble is not.
 """
 
+import json
+
 import pytest
 
 from graph import export as export_mod
 from graph.delta import Delta, diff, lint
-from graph.extract import GraphData, derive, extract, make_edge, strip_derived
+from graph.extract import GraphData, derive, make_edge, strip_derived
 from graph.ontology import (ARCHETYPE_LABEL, ERROR, INFO, WARNING,
-                            MEMBERSHIP_EDGE_TYPE, load_ontology)
+                            MEMBERSHIP_EDGE_TYPE, ontology_from_graph)
 from graph.proposal import apply_delta, invert_delta, parse_delta, \
     serialize_delta
-
-ONTOLOGY = """\
-    version: 1
-    concepts:
-      Treasure: { instance_of: Concept }
-      Tool: { instance_of: Concept }
-    nodes:
-      Object:
-        values: [Golden Key, Plain Pebble]
-        concept: Treasure
-    """
+from tests.test_branch import build_canon
 
 
 @pytest.fixture
-def built(make_repo):
-    base_dir, path = make_repo({}, ONTOLOGY)
-    ontology, findings = load_ontology(path, base_dir)
-    assert ontology is not None, findings
+def built(tmp_path):
+    """The storybook canon grown by two concepts (Treasure, Tool) and a
+    roster label Object bound to Treasure — the schema authored the way
+    every post-flip schema arrives: Archetype rows, tower edges,
+    DECLARED_IN. Derived once so the fixture is a stable fixpoint."""
+    graph = build_canon()
+    for concept in ("Treasure", "Tool"):
+        graph.ensure_node(ARCHETYPE_LABEL, concept)
+        graph.edges.append(make_edge(
+            "DECLARED_IN", ARCHETYPE_LABEL, concept,
+            ARCHETYPE_LABEL, "Ontology"))
+        graph.edges.append(make_edge(
+            "INSTANCE_OF", ARCHETYPE_LABEL, concept,
+            ARCHETYPE_LABEL, "Concept"))
+    graph.ensure_node(ARCHETYPE_LABEL, "Object",
+                      spec_json=json.dumps({"concept": "Treasure"},
+                                           sort_keys=True))
+    graph.edges.append(make_edge(
+        "DECLARED_IN", ARCHETYPE_LABEL, "Object",
+        ARCHETYPE_LABEL, "Ontology"))
+    graph.edges.append(make_edge(
+        "INSTANCE_OF", ARCHETYPE_LABEL, "Object",
+        ARCHETYPE_LABEL, "Treasure"))
+    graph.ensure_node("Object", "Golden Key")
+    graph.ensure_node("Object", "Plain Pebble")
+    ontology = ontology_from_graph(graph, tmp_path)
+    base, findings = derive(ontology, graph)
     assert not [f for f in findings if f.severity == ERROR], findings
-    graph, extract_findings = extract(ontology)
-    assert not [f for f in extract_findings if f.severity == ERROR], \
-        extract_findings
-    return ontology, graph
+    return ontology, base
 
 
 def _copy(graph):

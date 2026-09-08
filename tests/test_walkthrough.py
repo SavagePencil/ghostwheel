@@ -148,20 +148,6 @@ def test_the_backup_guard_covers_child_paths_too():
                              "graph/export/runtime") == 1
 
 
-def test_from_sources_and_lens_refuse_to_combine(tmp_path, monkeypatch):
-    # review catch: --from-sources was silently eaten by the lens path.
-    # Run inside a minimal knowledge base — an installed engine resolves
-    # the opened base before dispatching, so main() needs one to stand in.
-    from graph.__main__ import main
-    (tmp_path / "graph").mkdir()
-    (tmp_path / "graph" / "ontology.yaml").write_text(
-        "version: \"1\"\n", encoding="utf-8")
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GHOSTWHEEL_BASE", raising=False)
-    assert main(["export", "--from-sources", "--mask", "judgment",
-                 "--out", "somewhere"]) == 2
-
-
 def test_explain_never_promises_a_grant_a_co_class_deny_defeats():
     # review catch: an element in two knowledge classes, one denied —
     # the would-open line for the other class must carry the caveat

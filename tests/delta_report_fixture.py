@@ -10,22 +10,19 @@ reproduces the prose byte-for-byte (structure changed, meaning did not).
 Storybook domain throughout: keys, pebbles, bells, and scribes.
 """
 
+import json
+
 from graph.delta import (Delta, ceremony_classify, diff, lint, lint_stitch,
                          render_report)
-from graph.extract import GraphData, extract, make_edge
-from graph.ontology import ERROR, load_ontology
+from graph.extract import GraphData, derive, make_edge
+from graph.kernel_migrate import fresh_kernel
+from graph.ontology import ARCHETYPE_LABEL, ERROR, ontology_from_graph
 
-ONTOLOGY = """\
-version: 1
-concepts:
-  Treasure: { instance_of: Concept }
-  Tool: { instance_of: Concept }
-  Relic: { instance_of: Concept }
-nodes:
-  Object:
-    values: [Golden Key, Plain Pebble, Old Rope]
-    concept: Treasure
-"""
+# The base schema, as canon holds it: three declared concepts and one
+# concept-bound label with its three citizens.
+CONCEPTS = ("Treasure", "Tool", "Relic")
+OBJECT_SPEC = {"values": ["Golden Key", "Plain Pebble", "Old Rope"],
+               "concept": "Treasure"}
 
 ADVISORIES = [
     "the registry names 'rituals/summoning.md' but no citizen on this "
@@ -44,16 +41,29 @@ def _copy(graph):
 
 
 def build_base(tmp_path):
-    """Extract the storybook graph and append the ground edges the
-    scenario mutates."""
-    ontology_path = tmp_path / "graph" / "ontology.yaml"
-    ontology_path.parent.mkdir(parents=True, exist_ok=True)
-    ontology_path.write_text(ONTOLOGY, encoding="utf-8")
-    ontology, findings = load_ontology(ontology_path, tmp_path)
-    assert ontology is not None, findings
-    base, extract_findings = extract(ontology)
-    assert not [f for f in extract_findings if f.severity == ERROR], \
-        extract_findings
+    """Build the storybook base the graph-native way — the kernel seed,
+    the project's schema rows constructed directly, a derivation pass —
+    then append the ground edges the scenario mutates."""
+    seed, seed_findings = fresh_kernel(tmp_path)
+    assert seed is not None, seed_findings
+    for concept in CONCEPTS:
+        seed.ensure_node(ARCHETYPE_LABEL, concept)
+        seed.edges.append(make_edge("DECLARED_IN", ARCHETYPE_LABEL, concept,
+                                    ARCHETYPE_LABEL, "Ontology"))
+        seed.edges.append(make_edge("INSTANCE_OF", ARCHETYPE_LABEL, concept,
+                                    ARCHETYPE_LABEL, "Concept"))
+    seed.ensure_node(ARCHETYPE_LABEL, "Object",
+                     spec_json=json.dumps(OBJECT_SPEC, sort_keys=True))
+    seed.edges.append(make_edge("DECLARED_IN", ARCHETYPE_LABEL, "Object",
+                                ARCHETYPE_LABEL, "Ontology"))
+    seed.edges.append(make_edge("INSTANCE_OF", ARCHETYPE_LABEL, "Object",
+                                ARCHETYPE_LABEL, "Treasure"))
+    for name in OBJECT_SPEC["values"]:
+        seed.ensure_node("Object", name)
+    ontology = ontology_from_graph(seed, tmp_path)
+    base, derive_findings = derive(ontology, seed)
+    assert not [f for f in derive_findings if f.severity == ERROR], \
+        derive_findings
     base.edges.append(make_edge(
         "KEPT_WITH", "Object", "Golden Key", "Object", "Plain Pebble",
         {"trigger": "dawn"}))

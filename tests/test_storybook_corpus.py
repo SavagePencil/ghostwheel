@@ -1,45 +1,41 @@
 """The storybook corpus: the engine proving, on every commit, that it
-loads, extracts, comprehends, and round-trips a corpus with zero
-built-in vocabulary of its own — the corpus teaches the engine every
-word it uses, and the engine reads the rest from declarations."""
+carries, re-derives, comprehends, and round-trips a corpus with zero
+built-in vocabulary of its own — the corpus's canon teaches the engine
+every word it uses, and the engine reads the rest from the committed
+backup's own declarations."""
 
 import textwrap
 from pathlib import Path
 
 from graph.comprehension import read_artifact
-from graph.extract import extract
-from graph.ontology import ERROR, load_ontology
+from graph.extract import derive
+from graph.ontology import ERROR, ontology_from_graph
 from graph.roundtrip import render_report, run
+from tests.test_branch import build_canon
 
 STORYBOOK = Path(__file__).resolve().parent / "fixtures" / "storybook"
 
 
-def load_storybook():
-    ontology, findings = load_ontology(STORYBOOK / "ontology.yaml", STORYBOOK)
-    assert ontology is not None, findings
-    graph, extract_findings = extract(ontology)
-    return graph, findings + extract_findings
-
-
-def test_storybook_loads_with_zero_errors():
-    graph, findings = load_storybook()
+def test_storybook_canon_rederives_with_zero_errors():
+    canon = build_canon()
+    _, findings = derive(ontology_from_graph(canon, STORYBOOK), canon)
     assert not [f for f in findings if f.severity == ERROR], [
         f.detail for f in findings if f.severity == ERROR]
     # citizens, implicit places, fingerprints, and the scheme all arrive
-    assert graph.nodes[("Character", "Pip")]["temperament"] == "curious"
-    assert ("Place", "The Hollow Oak") in graph.nodes
-    assert graph.nodes[("[Artifact]", "docs/tale.md")]["fingerprint"]
-    assert graph.nodes[("Archetype", "Page")].get("recursive") is True
+    assert canon.nodes[("Character", "Pip")]["temperament"] == "curious"
+    assert ("Place", "The Hollow Oak") in canon.nodes
+    assert canon.nodes[("[Artifact]", "docs/tale.md")]["fingerprint"]
+    assert canon.nodes[("Archetype", "Page")].get("recursive") is True
     assert any(e.type == "LIVES_IN" and e.to_name == "Lantern Bay"
-               for e in graph.edges)
+               for e in canon.edges)
 
 
 def test_storybook_answers_what_built_it():
     # the corpus self-describes: same kernel seed, its own ontology
     # fingerprint
-    graph, _ = load_storybook()
-    meta = graph.nodes[("Archetype", "Metaontology")]
-    proj = graph.nodes[("Archetype", "Ontology")]
+    canon = build_canon()
+    meta = canon.nodes[("Archetype", "Metaontology")]
+    proj = canon.nodes[("Archetype", "Ontology")]
     assert "." in str(meta["version"]) and len(meta["fingerprint"]) == 64
     assert len(proj["fingerprint"]) == 64
     assert proj["fingerprint"] != meta["fingerprint"]

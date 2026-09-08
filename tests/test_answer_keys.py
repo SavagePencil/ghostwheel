@@ -1,10 +1,20 @@
 """Ontology-declared answer keys: the generic derivation check that
 replaced the hand-coded pytest functions. Fixture-driven over
 self-contained imaginary corpora — a new procedure earns its fidelity
-net by adding a declaration, nobody hand-writes a test."""
+net by adding a declaration, nobody hand-writes a test.
 
-from graph.answer_keys import check
-from graph.ontology import Category, load_ontology
+The keys live on canon: each is an Answer Key citizen carrying its kind
+and table as props, the rest of its declaration as JSON, and one CHECKS
+edge to the Procedure it holds still. Program bodies are graph-resident;
+the approved tables stay on disk and are read from the knowledge base's
+own directory."""
+
+import json
+
+from graph.answer_keys import CHECKS_EDGE, KEY_JSON_PROP, canon_check
+from graph.extract import GraphData, make_edge
+from graph.ontology import (ARCHETYPE_LABEL, KERNEL_ANSWER_KEY_LABEL,
+                            KERNEL_PROCEDURE_LABEL, ontology_from_graph)
 
 PROGRAM = """\
 procedure: Wilt
@@ -27,115 +37,150 @@ steps:
         - stop: done wilting
 """
 
-FILES = {
-    "data/vigors.csv": "Vigor\nFresh\nLimp\nDozed\n",
+TABLES = {
     "data/wilt-transitions.csv": (
         "From Vigor,To Vigor\nFresh,Limp\nLimp,Dozed\n"),
     "data/wilt-thresholds.csv": (
         "Vigor,Rot Needed\nFresh,10\nLimp,5\nDozed,N/A\n"),
-    "data/procedures/wilt.yaml": PROGRAM,
 }
 
-ONTOLOGY = """\
-    version: 1
-    concepts:
-      Tale Concept: {{ instance_of: Concept }}
-    nodes:
-      Vigor:
-        source: data/vigors.csv
-        key: Vigor
-        concept: [Tale Concept, Exclusive, Stateful]
-      "[Procedure]":
-        source: [data/procedures/wilt.yaml]
-        reader: procedure_yaml
-        concept: "[Procedure]"
-    answer_keys:
-{keys}
-    """
+SUBJECTS = {"Vigor": ["Fresh", "Limp", "Dozed"]}
 
-GOOD_KEYS = """\
-      - procedure: Wilt
-        derives: transitions
-        table: data/wilt-transitions.csv
-        from_column: From Vigor
-        to_column: To Vigor
-      - procedure: Wilt
-        derives: thresholds
-        table: data/wilt-thresholds.csv
-        key_column: Vigor
-        value_column: Rot Needed
-        condition_pattern: "Rot > {value}"
-"""
+PROGRAMS = {"Wilt": PROGRAM}
+
+# the fixture's two declarations, as canon citizens: {name: (procedure,
+# props)} — the kind and table ride as plain props, the rest as JSON
+GOOD_KEYS = {
+    "Wilt walks its ladder": ("Wilt", {
+        "derives": "transitions", "table": "data/wilt-transitions.csv",
+        KEY_JSON_PROP: json.dumps({"from_column": "From Vigor",
+                                   "to_column": "To Vigor"})}),
+    "Wilt holds its thresholds": ("Wilt", {
+        "derives": "thresholds", "table": "data/wilt-thresholds.csv",
+        KEY_JSON_PROP: json.dumps({"key_column": "Vigor",
+                                   "value_column": "Rot Needed",
+                                   "condition_pattern": "Rot > {value}"})}),
+}
 
 
-def findings_for(make_repo, files=None, keys=GOOD_KEYS):
-    base, path = make_repo(files or FILES, ONTOLOGY.format(keys=keys))
-    ontology, load_findings = load_ontology(path, base)
-    assert ontology is not None, load_findings
-    return [f for f in check(ontology)
-            if f.category == Category.ANSWER_KEY]
+def write_tables(base_dir, tables):
+    for relpath, content in tables.items():
+        path = base_dir / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
 
 
-def test_faithful_program_verifies_clean(make_repo):
-    assert findings_for(make_repo) == []
+def build_graph(subjects=SUBJECTS, programs=PROGRAMS, keys=None):
+    """The corpus as canon holds it: subject labels declared with the
+    Exclusive+Stateful facets, program bodies riding their Procedure
+    citizens, and (optionally) Answer Key citizens with CHECKS edges."""
+    from graph.kernel_migrate import installed_kernel_identity
+    graph = GraphData()
+    graph.ensure_node(ARCHETYPE_LABEL, "Ontology")
+    version, fingerprint = installed_kernel_identity()
+    graph.ensure_node(ARCHETYPE_LABEL, "Metaontology",
+                      version=version, fingerprint=fingerprint)
+    for label, values in subjects.items():
+        graph.ensure_node(ARCHETYPE_LABEL, label, spec_json=json.dumps(
+            {"concept": ["Tale Concept", "Exclusive", "Stateful"]},
+            sort_keys=True))
+        graph.edges.append(make_edge("DECLARED_IN", ARCHETYPE_LABEL, label,
+                                     ARCHETYPE_LABEL, "Ontology"))
+        for value in values:
+            graph.ensure_node(label, value)
+    graph.ensure_node(ARCHETYPE_LABEL, KERNEL_PROCEDURE_LABEL)
+    for name, body in programs.items():
+        graph.ensure_node(KERNEL_PROCEDURE_LABEL, name, body=body)
+    add_keys(graph, keys or {})
+    return graph
 
 
-def test_table_row_the_program_lost_is_named(make_repo):
-    files = dict(FILES)
-    files["data/wilt-transitions.csv"] += "Dozed,Fresh\n"  # nobody derives this
-    [finding] = findings_for(make_repo, files)
+def add_keys(graph, keys):
+    for name, (procedure, props) in keys.items():
+        graph.ensure_node(KERNEL_ANSWER_KEY_LABEL, name, **props)
+        graph.edges.append(make_edge(
+            CHECKS_EDGE, KERNEL_ANSWER_KEY_LABEL, name,
+            KERNEL_PROCEDURE_LABEL, procedure))
+    return graph
+
+
+def findings_for(tmp_path, tables=None, keys=GOOD_KEYS, subjects=SUBJECTS,
+                 programs=PROGRAMS):
+    write_tables(tmp_path, tables or TABLES)
+    graph = build_graph(subjects, programs, keys)
+    rows = canon_check(graph, ontology_from_graph(graph, tmp_path), tmp_path)
+    return [f for row in rows for f in row["problems"]]
+
+
+def test_faithful_program_verifies_clean(tmp_path):
+    assert findings_for(tmp_path) == []
+
+
+def test_table_row_the_program_lost_is_named(tmp_path):
+    tables = dict(TABLES)
+    tables["data/wilt-transitions.csv"] += "Dozed,Fresh\n"  # nobody derives this
+    [finding] = findings_for(tmp_path, tables)
     assert "no longer derives the approved transition Dozed → Fresh" \
         in finding.detail
 
 
-def test_transition_nobody_approved_is_named(make_repo):
-    files = dict(FILES)
-    files["data/wilt-transitions.csv"] = "From Vigor,To Vigor\nFresh,Limp\n"
-    [finding] = findings_for(make_repo, files)
+def test_transition_nobody_approved_is_named(tmp_path):
+    tables = dict(TABLES)
+    tables["data/wilt-transitions.csv"] = "From Vigor,To Vigor\nFresh,Limp\n"
+    [finding] = findings_for(tmp_path, tables)
     assert "derives Limp → Dozed" in finding.detail
     assert "no such row" in finding.detail
 
 
-def test_threshold_drift_is_named(make_repo):
-    files = dict(FILES)
-    files["data/wilt-thresholds.csv"] = (
+def test_threshold_drift_is_named(tmp_path):
+    tables = dict(TABLES)
+    tables["data/wilt-thresholds.csv"] = (
         "Vigor,Rot Needed\nFresh,12\nLimp,5\nDozed,N/A\n")
-    [finding] = findings_for(make_repo, files)
+    [finding] = findings_for(tmp_path, tables)
     assert "case 'Fresh'" in finding.detail
     assert '"Rot > 12"' in finding.detail
 
 
-def test_empty_marker_threshold_is_no_threshold(make_repo):
+def test_empty_marker_threshold_is_no_threshold(tmp_path):
     # Dozed,N/A raises nothing: the bottom rung has nowhere to go
-    assert findings_for(make_repo) == []
+    assert findings_for(tmp_path) == []
 
 
-def test_skip_values_declares_no_threshold_markers(make_repo):
+def test_skip_values_declares_no_threshold_markers(tmp_path):
     # A key may declare cell values that mean "no threshold exists"
     # beyond the global empty markers (the ♾️ cells). Without the
     # declaration the ♾️ row demands an absurd branch; with it, silence.
-    files = dict(FILES)
-    files["data/wilt-thresholds.csv"] = (
+    tables = dict(TABLES)
+    tables["data/wilt-thresholds.csv"] = (
         "Vigor,Rot Needed\nFresh,10\nLimp,5\nDozed,+♾️\n")
-    [finding] = findings_for(make_repo, files)
+    [finding] = findings_for(tmp_path, tables)
     assert "no branch case for 'Dozed'" in finding.detail
-    keys = GOOD_KEYS.replace(
-        'condition_pattern: "Rot > {value}"',
-        'condition_pattern: "Rot > {value}"\n'
-        '        skip_values: ["+♾️"]', 1)
-    assert findings_for(make_repo, files, keys=keys) == []
+    keys = dict(GOOD_KEYS)
+    keys["Wilt holds its thresholds"] = ("Wilt", {
+        "derives": "thresholds", "table": "data/wilt-thresholds.csv",
+        KEY_JSON_PROP: json.dumps({"key_column": "Vigor",
+                                   "value_column": "Rot Needed",
+                                   "condition_pattern": "Rot > {value}",
+                                   "skip_values": ["+♾️"]})})
+    assert findings_for(tmp_path, tables, keys=keys) == []
 
 
-def test_unknown_procedure_is_an_error(make_repo):
-    keys = GOOD_KEYS.replace("procedure: Wilt", "procedure: Bloom", 1)
-    [finding] = findings_for(make_repo, keys=keys)
+def test_unknown_procedure_is_an_error(tmp_path):
+    keys = dict(GOOD_KEYS)
+    keys["Wilt walks its ladder"] = (
+        "Bloom", keys["Wilt walks its ladder"][1])
+    [finding] = findings_for(tmp_path, keys=keys)
     assert finding.severity == "error"
     assert "no transcribed procedure named 'Bloom'" in finding.detail
 
 
-def test_declaration_typo_is_an_error(make_repo):
-    keys = GOOD_KEYS.replace("from_column:", "from_colun:", 1)
-    problems = findings_for(make_repo, keys=keys)
+def test_declaration_typo_is_an_error(tmp_path):
+    keys = dict(GOOD_KEYS)
+    keys["Wilt walks its ladder"] = ("Wilt", {
+        "derives": "transitions", "table": "data/wilt-transitions.csv",
+        KEY_JSON_PROP: json.dumps({"from_colun": "From Vigor",
+                                   "to_column": "To Vigor"})})
+    problems = findings_for(tmp_path, keys=keys)
     assert any("unknown answer-key field" in f.detail for f in problems)
 
 
@@ -156,36 +201,22 @@ steps:
 """
 
 
-def test_second_stateful_concept_derives_without_subjects(make_repo):
+def test_second_stateful_concept_derives_without_subjects(tmp_path):
     # A SECOND Exclusive+Stateful concept (Mood) is discovered from the
     # facets exactly as Vigor is — its ladder derives with no subjects
     # declared on either key. Both ladders verify clean, proving candidate
     # subjects come from the declarations, not a per-key list.
-    files = dict(FILES)
-    files["data/moods.csv"] = "Mood\nGrey\nBright\n"
-    files["data/mood-transitions.csv"] = "From Mood,To Mood\nGrey,Bright\n"
-    files["data/procedures/bloom.yaml"] = BLOOM
-    keys = GOOD_KEYS + (
-        "      - procedure: Bloom\n"
-        "        derives: transitions\n"
-        "        table: data/mood-transitions.csv\n"
-        "        from_column: From Mood\n"
-        "        to_column: To Mood\n")
-    ontology_text = ONTOLOGY.replace(
-        '      "[Procedure]":',
-        "      Mood:\n"
-        "        source: data/moods.csv\n"
-        "        key: Mood\n"
-        "        concept: [Tale Concept, Exclusive, Stateful]\n"
-        '      "[Procedure]":').replace(
-        "source: [data/procedures/wilt.yaml]",
-        "source: [data/procedures/wilt.yaml, "
-        "data/procedures/bloom.yaml]").format(keys=keys)
-    base, path = make_repo(files, ontology_text)
-    ontology, load_findings = load_ontology(path, base)
-    assert ontology is not None, load_findings
-    drift = [f for f in check(ontology)
-             if f.category == Category.ANSWER_KEY]
+    tables = dict(TABLES)
+    tables["data/mood-transitions.csv"] = "From Mood,To Mood\nGrey,Bright\n"
+    keys = dict(GOOD_KEYS)
+    keys["Bloom walks its ladder"] = ("Bloom", {
+        "derives": "transitions", "table": "data/mood-transitions.csv",
+        KEY_JSON_PROP: json.dumps({"from_column": "From Mood",
+                                   "to_column": "To Mood"})})
+    drift = findings_for(
+        tmp_path, tables, keys=keys,
+        subjects={**SUBJECTS, "Mood": ["Grey", "Bright"]},
+        programs={**PROGRAMS, "Bloom": BLOOM})
     assert drift == [], [f.detail for f in drift]
 
 
@@ -205,27 +236,17 @@ steps:
 """
 
 
-def test_subject_branch_that_derives_nothing_is_loud(make_repo):
+def test_subject_branch_that_derives_nothing_is_loud(tmp_path):
     # Freeze branches on Vigor (a tracked Exclusive+Stateful subject) but
     # names no become — it derives zero transitions. The old walker would
     # attest nothing in silence; now it is a named finding.
-    files = dict(FILES)
-    files["data/procedures/freeze.yaml"] = FREEZE
-    keys = GOOD_KEYS + (
-        "      - procedure: Freeze\n"
-        "        derives: transitions\n"
-        "        table: data/wilt-transitions.csv\n"
-        "        from_column: From Vigor\n"
-        "        to_column: To Vigor\n")
-    ontology_text = ONTOLOGY.replace(
-        "source: [data/procedures/wilt.yaml]",
-        "source: [data/procedures/wilt.yaml, "
-        "data/procedures/freeze.yaml]").format(keys=keys)
-    base, path = make_repo(files, ontology_text)
-    ontology, load_findings = load_ontology(path, base)
-    assert ontology is not None, load_findings
-    drift = [f for f in check(ontology)
-             if f.category == Category.ANSWER_KEY]
+    keys = dict(GOOD_KEYS)
+    keys["Freeze walks its ladder"] = ("Freeze", {
+        "derives": "transitions", "table": "data/wilt-transitions.csv",
+        KEY_JSON_PROP: json.dumps({"from_column": "From Vigor",
+                                   "to_column": "To Vigor"})})
+    drift = findings_for(tmp_path, keys=keys,
+                         programs={**PROGRAMS, "Freeze": FREEZE})
     assert any("branches on a tracked subject but derives no transitions"
                in f.detail and "Freeze" in f.detail for f in drift), \
         [f.detail for f in drift]
@@ -245,7 +266,7 @@ steps:
   - stop: scored
 """
 
-RECOMPUTE_FILES = {
+RECOMPUTE_TABLES = {
     "data/sweet_recipes.csv": (
         "Recipe,Score Dice,Traits\n"
         'Tart,2-7 (1d6+1),Benefits from Flair\n'),
@@ -267,158 +288,153 @@ RECOMPUTE_FILES = {
         "4,2,1,12\n"
         'Humble Gruel,Gruel,savory,1,Flair 3=-2,,'
         '"Ribbon Dim=-.75x; Ribbon Grim=-.75x",1,-2,-1,0\n'),
-    "data/procedures/score.yaml": SCORE_PROGRAM,
 }
 
-RECOMPUTE_ONTOLOGY = """\
-    version: 1
-    concepts:
-      Tale Concept: {{ instance_of: Concept }}
-    nodes:
-      "[Procedure]":
-        source: [data/procedures/score.yaml]
-        reader: procedure_yaml
-        concept: "[Procedure]"
-    answer_keys:
-{keys}
-    """
+RECOMPUTE_DECLARATION = {
+    "result": {
+        "formula": "(Base Score + Bonus) * (1 + Acclaim)",
+        "expected_column": "Expected Total Score",
+        "floor": 0,
+    },
+    "components": {
+        "Base Score": {
+            "given_column": "Judge Roll",
+            "expected_column": "Expected Base Score",
+            "lookup": {
+                "select_by": "Entry Kind",
+                "key_from": "Recipe",
+                "variants": {
+                    "sweet": {"table": "data/sweet_recipes.csv",
+                              "key_column": "Recipe",
+                              "value_column": "Score Dice",
+                              "parse": "dice_flat"},
+                    "savory": {"table": "data/savory_recipes.csv",
+                               "key_column": "Recipe",
+                               "value_column": "Score Dice",
+                               "parse": "dice_flat"},
+                },
+            },
+        },
+        "Bonus": {
+            "pairs_column": "Bonus Contributions",
+            "suppressed_column": "Suppressed Contributions",
+            "expected_column": "Expected Bonus",
+            "pair_lookups": {
+                "Flair": {
+                    "table": "data/flair_table.csv",
+                    "key_column": "Flair",
+                    "value_column": "Score Boost",
+                    "gate": {
+                        "property": "Benefits from Flair",
+                        "lookup": {
+                            "select_by": "Entry Kind",
+                            "key_from": "Recipe",
+                            "variants": {
+                                "sweet": {"table": "data/sweet_recipes.csv",
+                                          "key_column": "Recipe",
+                                          "value_column": "Traits"},
+                                "savory": {"table": "data/savory_recipes.csv",
+                                           "key_column": "Recipe",
+                                           "value_column": "Traits"},
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        "Acclaim": {
+            "pairs_column": "Acclaim Contributions",
+            "expected_column": "Expected Acclaim",
+            "floor": -1,
+            "pair_lookups": {
+                "Ribbon": {
+                    "table": "data/ribbons.csv",
+                    "key_column": "Ribbon",
+                    "value_column": "Boost",
+                    "parse": "multiplier",
+                    "template_fallback": {
+                        "table": "data/ribbon_templates.csv",
+                        "key_column": "Ribbon Instance",
+                        "value_column": "Template"},
+                },
+            },
+        },
+    },
+}
 
-RECOMPUTE_KEYS = """\
-      - procedure: Score the Entry
-        derives: recompute
-        table: data/scored_examples.csv
-        result:
-          formula: "(Base Score + Bonus) * (1 + Acclaim)"
-          expected_column: Expected Total Score
-          floor: 0
-        components:
-          Base Score:
-            given_column: Judge Roll
-            expected_column: Expected Base Score
-            lookup:
-              select_by: Entry Kind
-              key_from: Recipe
-              variants:
-                sweet:
-                  table: data/sweet_recipes.csv
-                  key_column: Recipe
-                  value_column: Score Dice
-                  parse: dice_flat
-                savory:
-                  table: data/savory_recipes.csv
-                  key_column: Recipe
-                  value_column: Score Dice
-                  parse: dice_flat
-          Bonus:
-            pairs_column: Bonus Contributions
-            suppressed_column: Suppressed Contributions
-            expected_column: Expected Bonus
-            pair_lookups:
-              Flair:
-                table: data/flair_table.csv
-                key_column: Flair
-                value_column: Score Boost
-                gate:
-                  property: Benefits from Flair
-                  lookup:
-                    select_by: Entry Kind
-                    key_from: Recipe
-                    variants:
-                      sweet:
-                        table: data/sweet_recipes.csv
-                        key_column: Recipe
-                        value_column: Traits
-                      savory:
-                        table: data/savory_recipes.csv
-                        key_column: Recipe
-                        value_column: Traits
-          Acclaim:
-            pairs_column: Acclaim Contributions
-            expected_column: Expected Acclaim
-            floor: -1
-            pair_lookups:
-              Ribbon:
-                table: data/ribbons.csv
-                key_column: Ribbon
-                value_column: Boost
-                parse: multiplier
-                template_fallback:
-                  table: data/ribbon_templates.csv
-                  key_column: Ribbon Instance
-                  value_column: Template
-"""
-
-
-def recompute_findings(make_repo, files=None, keys=RECOMPUTE_KEYS):
-    base, path = make_repo(files or RECOMPUTE_FILES,
-                           RECOMPUTE_ONTOLOGY.format(keys=keys))
-    ontology, load_findings = load_ontology(path, base)
-    assert ontology is not None, load_findings
-    return [f for f in check(ontology)
-            if f.category == Category.ANSWER_KEY]
+RECOMPUTE_KEYS = {
+    "The scored examples recompute": ("Score the Entry", {
+        "derives": "recompute", "table": "data/scored_examples.csv",
+        KEY_JSON_PROP: json.dumps(RECOMPUTE_DECLARATION)}),
+}
 
 
-def test_recompute_faithful_examples_verify_clean(make_repo):
+def recompute_findings(tmp_path, tables=None, keys=RECOMPUTE_KEYS,
+                       program=SCORE_PROGRAM):
+    return findings_for(tmp_path, tables or RECOMPUTE_TABLES, keys=keys,
+                        subjects={}, programs={"Score the Entry": program})
+
+
+def test_recompute_faithful_examples_verify_clean(tmp_path):
     # covers: variant lookup + dice flat, gated pair, template fallback,
     # component floor (-1.5 → -1), result floor (-1 × 0 → 0)
-    assert recompute_findings(make_repo) == []
+    assert recompute_findings(tmp_path) == []
 
 
-def test_recompute_drifted_table_value_is_named(make_repo):
-    files = dict(RECOMPUTE_FILES)
-    files["data/flair_table.csv"] = "Flair,Score Boost\n3,-2\n16,+3\n"
-    problems = recompute_findings(make_repo, files)
+def test_recompute_drifted_table_value_is_named(tmp_path):
+    tables = dict(RECOMPUTE_TABLES)
+    tables["data/flair_table.csv"] = "Flair,Score Boost\n3,-2\n16,+3\n"
+    problems = recompute_findings(tmp_path, tables)
     assert any("claims Flair 16 contributes +2" in f.detail and
                "now says 3" in f.detail for f in problems)
     # the drifted contribution also breaks the sums downstream, by name
     assert any("recomputed Bonus = 3" in f.detail for f in problems)
 
 
-def test_recompute_wrong_asserted_total_is_named(make_repo):
-    files = dict(RECOMPUTE_FILES)
-    files["data/scored_examples.csv"] = files[
+def test_recompute_wrong_asserted_total_is_named(tmp_path):
+    tables = dict(RECOMPUTE_TABLES)
+    tables["data/scored_examples.csv"] = tables[
         "data/scored_examples.csv"].replace("4,2,1,12", "4,2,1,13")
-    [finding] = recompute_findings(make_repo, files)
+    [finding] = recompute_findings(tmp_path, tables)
     assert "recomputes to 12" in finding.detail
     assert "asserts 13" in finding.detail
 
 
-def test_recompute_lost_gate_is_named(make_repo):
-    files = dict(RECOMPUTE_FILES)
-    files["data/sweet_recipes.csv"] = (
+def test_recompute_lost_gate_is_named(tmp_path):
+    tables = dict(RECOMPUTE_TABLES)
+    tables["data/sweet_recipes.csv"] = (
         "Recipe,Score Dice,Traits\nTart,2-7 (1d6+1),\n")
-    problems = recompute_findings(make_repo, files)
+    problems = recompute_findings(tmp_path, tables)
     assert any("no longer bears Benefits from Flair" in f.detail
                for f in problems)
 
 
-def test_recompute_broken_suppression_is_named(make_repo):
-    files = dict(RECOMPUTE_FILES)
-    files["data/scored_examples.csv"] = files[
+def test_recompute_broken_suppression_is_named(tmp_path):
+    tables = dict(RECOMPUTE_TABLES)
+    tables["data/scored_examples.csv"] = tables[
         "data/scored_examples.csv"].replace(
         "First Tasting,Tart,sweet,3,Flair 16=+2,,",
         "First Tasting,Tart,sweet,3,,Flair 16,").replace(
         "4,2,1,12", "4,0,1,8")
-    problems = recompute_findings(make_repo, files)
+    problems = recompute_findings(tmp_path, tables)
     assert any("is NOT applied" in f.detail and
                "now bears Benefits from Flair" in f.detail
                for f in problems)
 
 
-def test_recompute_formula_drift_is_named(make_repo):
-    files = dict(RECOMPUTE_FILES)
-    files["data/procedures/score.yaml"] = SCORE_PROGRAM.replace(
+def test_recompute_formula_drift_is_named(tmp_path):
+    program = SCORE_PROGRAM.replace(
         "(Base Score + Bonus) × (1 + Acclaim)",
         "(Base Score + Bonus) × Acclaim")
-    problems = recompute_findings(make_repo, files)
+    problems = recompute_findings(tmp_path, program=program)
     assert any("no longer appears in 'Score the Entry'" in f.detail
                for f in problems)
 
 
-def test_recompute_malformed_declaration_is_an_error(make_repo):
-    keys = "      - procedure: Score the Entry\n" \
-           "        derives: recompute\n" \
-           "        table: data/scored_examples.csv\n"
-    [finding] = recompute_findings(make_repo, keys=keys)
+def test_recompute_malformed_declaration_is_an_error(tmp_path):
+    keys = {"The scored examples recompute": ("Score the Entry", {
+        "derives": "recompute", "table": "data/scored_examples.csv",
+        KEY_JSON_PROP: "{}"})}
+    [finding] = recompute_findings(tmp_path, keys=keys)
     assert finding.severity == "error"
     assert "needs components" in finding.detail

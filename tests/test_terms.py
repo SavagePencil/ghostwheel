@@ -1,43 +1,37 @@
-"""The glossary index reads CANON, not the from-sources build.
+"""The glossary index reads CANON, not a from-sources build.
 
-The from-sources scaffolding cannot see citizens born by graph rounds,
-so an index built from it reports every graph-born citizen's name as
-unresolved forever — the sweep's backlog inflates with every round.
-The property under test: every citizen in the committed backup resolves
-through the canon term index by its own name (Steps and Outcomes are
-structure, not vocabulary, and are deliberately excluded).
+An index built anywhere else could not see citizens born by graph
+rounds, so it would report every graph-born citizen's name as
+unresolved forever — the sweep's backlog would inflate with every
+round. The property under test: every citizen in the committed backup
+resolves through the canon term index by its own name (Steps and
+Outcomes are structure, not vocabulary, and are deliberately excluded).
 
 The fixture canon is a self-contained storybook of Knacks and Terrains
-built from sources into an on-disk backup, then decorated with the
+constructed the way canon holds it — kernel seed, schema rows, citizens
+— derived and written to an on-disk backup, then decorated with the
 Judgment citizens (ruled-reject Decisions) a real round would land — so
 these properties are exercised without reading any committed canon.
 """
 
-from pathlib import Path
+import json
 
 import pytest
 
 from graph import export as export_mod
 from graph.__main__ import canon_term_index, cmd_terms
-from graph.extract import OUTCOME_LABEL, STEP_LABEL, extract
-from graph.ontology import ERROR, load_ontology
+from graph.extract import OUTCOME_LABEL, STEP_LABEL, derive, make_edge
+from graph.kernel_migrate import fresh_kernel
+from graph.ontology import ARCHETYPE_LABEL, ERROR, ontology_from_graph
 from graph.restore import read_export
 
 # A list-valued alias names BOTH its Knacks — a deliberately ambiguous
 # surface that resolves in the glossary but must never resolve a data cell.
-KNACKS = """\
-Knack,Class
-Swap (active),Active
-Swap (reactive),Reactive
-Kindle,Active
-"""
+KNACKS = {"Swap (active)": "Active", "Swap (reactive)": "Reactive",
+          "Kindle": "Active"}
 
 # A 1:1 alias (Bog -> the canonical Terrain name) still resolves cells.
-TERRAIN = """\
-Terrain,Defense
-Bog (per Depth),2
-Ridge,1
-"""
+TERRAINS = {"Bog (per Depth)": 2, "Ridge": 1}
 
 # Prose in a storybook-rules register: Grubfolk is a ruled reject (it must
 # be suppressed where it appears); Kindle/Knack/Swap/Bog all resolve.
@@ -48,36 +42,22 @@ The Grubfolk tend the marsh at dusk. A traveler learns the Kindle Knack.
 The Swap lets a creature trade places. The Bog slows every traveler.
 """
 
-ONTOLOGY = """\
-version: 1
-concepts:
-  Gizmo Concept: { instance_of: Concept }
-nodes:
-  Knack:
-    source: data/knacks.csv
-    key: Knack
-    concept: Gizmo Concept
-    catalog:
-      knack_class: { type: text, doc: "active or reactive" }
-    properties:
-      knack_class: { column: Class }
-    aliases:
-      Swap: [Swap (active), Swap (reactive)]
-  Terrain:
-    source: data/terrain.csv
-    key: Terrain
-    concept: Gizmo Concept
-    catalog:
-      defense_mod: { type: int, doc: "shift to defense" }
-    properties:
-      defense_mod: { column: Defense }
-    aliases:
-      Bog: Bog (per Depth)
-  Chronicle:
-    values: [docs/tale.md]
-    fingerprint: true
-    concept: Provenance
-"""
+KNACK_SPEC = {
+    "concept": "Gizmo Concept",
+    "catalog": {"knack_class": {"type": "text",
+                                "doc": "active or reactive"}},
+    "aliases": {"Swap": ["Swap (active)", "Swap (reactive)"]},
+}
+TERRAIN_SPEC = {
+    "concept": "Gizmo Concept",
+    "catalog": {"defense_mod": {"type": "int", "doc": "shift to defense"}},
+    "aliases": {"Bog": "Bog (per Depth)"},
+}
+CHRONICLE_SPEC = {
+    "values": ["docs/tale.md"],
+    "fingerprint": True,
+    "concept": "Provenance",
+}
 
 # Ruled rejects, landed as Judgment citizens (Decision rows carrying the
 # machine key rejected_term): Grubfolk appears in the docs (suppressed on
@@ -87,28 +67,43 @@ RULED_REJECTS = ("Grubfolk", "Wibble", "Thistlewick")
 SEEN_REJECT = "Grubfolk"
 
 
-def _build_terms_canon(root):
-    (root / "data").mkdir(parents=True, exist_ok=True)
-    (root / "docs").mkdir(parents=True, exist_ok=True)
-    (root / "graph").mkdir(parents=True, exist_ok=True)
-    (root / "data" / "knacks.csv").write_text(KNACKS, encoding="utf-8")
-    (root / "data" / "terrain.csv").write_text(TERRAIN, encoding="utf-8")
-    (root / "docs" / "tale.md").write_text(TALE, encoding="utf-8")
-    (root / "graph" / "ontology.yaml").write_text(ONTOLOGY, encoding="utf-8")
+def _declare(graph, label, spec):
+    graph.ensure_node(ARCHETYPE_LABEL, label,
+                      spec_json=json.dumps(spec, sort_keys=True))
+    graph.edges.append(make_edge("DECLARED_IN", ARCHETYPE_LABEL, label,
+                                 ARCHETYPE_LABEL, "Ontology"))
 
-    ontology, findings = load_ontology(root / "graph" / "ontology.yaml", root)
-    assert ontology is not None, findings
-    assert not [f for f in findings if f.severity == ERROR], findings
-    graph, extract_findings = extract(ontology)
-    assert not [f for f in extract_findings if f.severity == ERROR], \
-        extract_findings
+
+def _build_terms_canon(root):
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "docs" / "tale.md").write_text(TALE, encoding="utf-8")
+
+    seed, findings = fresh_kernel(root)
+    assert seed is not None, findings
+    seed.ensure_node(ARCHETYPE_LABEL, "Gizmo Concept")
+    seed.edges.append(make_edge("DECLARED_IN", ARCHETYPE_LABEL,
+                                "Gizmo Concept", ARCHETYPE_LABEL, "Ontology"))
+    seed.edges.append(make_edge("INSTANCE_OF", ARCHETYPE_LABEL,
+                                "Gizmo Concept", ARCHETYPE_LABEL, "Concept"))
+    _declare(seed, "Knack", KNACK_SPEC)
+    _declare(seed, "Terrain", TERRAIN_SPEC)
+    _declare(seed, "Chronicle", CHRONICLE_SPEC)
+    for name, knack_class in KNACKS.items():
+        seed.ensure_node("Knack", name, knack_class=knack_class)
+    for name, defense_mod in TERRAINS.items():
+        seed.ensure_node("Terrain", name, defense_mod=defense_mod)
+    seed.ensure_node("Chronicle", "docs/tale.md", fingerprint=True)
     # The Decision's NAME never embeds the ruled term — a reject rides as
     # the machine key on a generically-named ruling, so the term stays out
     # of the glossary's known vocabulary and is genuinely unresolved (then
     # suppressed) when it surfaces in prose.
     for index, term in enumerate(RULED_REJECTS, start=1):
-        graph.nodes[("[Decision]", f"Glossary sitting: ruling {index}")] = \
+        seed.nodes[("[Decision]", f"Glossary sitting: ruling {index}")] = \
             {"rejected_term": term}
+
+    graph, derive_findings = derive(ontology_from_graph(seed, root), seed)
+    assert not [f for f in derive_findings if f.severity == ERROR], \
+        derive_findings
     export_mod.write_export(graph, root / "graph" / "export")
     return root
 

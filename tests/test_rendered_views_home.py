@@ -2,11 +2,11 @@
 
 A label's render-only mappings (rendered_view / rendered_views) ride its
 Archetype row BESIDE the embedded spec, as one JSON list — never inside
-spec_json, which the loader and deriver read — and reconstruct as the
-spec's `rendered_views` list. Editing that prop is a schema-ceremony
-class of its own (add, change, remove), linted for shape at the gate.
-The table renderer and the round-trip judge's column typing read canon,
-so a corpus that retires its bootstrap file loses nothing.
+spec_json, which the deriver reads — and reconstruct as the spec's
+`rendered_views` list. Editing that prop is a schema-ceremony class of
+its own (add, change, remove), linted for shape at the gate. The table
+renderer and the round-trip judge's column typing read canon, so the
+mappings survive with no bootstrap file anywhere.
 
 Storybook domain: gadgets, parts, and tiers.
 """
@@ -14,85 +14,79 @@ Storybook domain: gadgets, parts, and tiers.
 import json
 import textwrap
 
-import tests.conftest as conftest
 from graph import export as export_mod
 from graph.__main__ import cmd_render_tables, cmd_roundtrip
 from graph.delta import ceremony_records, diff, lint, render_report
-from graph.extract import GraphData, derive, extract, make_edge
+from graph.extract import GraphData, derive, make_edge
+from graph.kernel_migrate import installed_kernel_identity
 from graph.ontology import (ARCHETYPE_LABEL, ERROR, RENDERED_VIEWS_PROP,
-                            load_ontology, ontology_from_graph,
-                            rendered_views_of, rendered_views_problems)
+                            ontology_from_graph, rendered_views_of,
+                            rendered_views_problems)
 from graph.report import REF_KEYS
 from graph.restore import read_export
 from graph.roundtrip import column_aliases, column_types
-from tests.test_render_tables import DOC, GIZMOS, ONTOLOGY
-
-_make_repo = getattr(conftest.make_repo, "__wrapped__", conftest.make_repo)
+from tests.test_branch import STORYBOOK, build_canon
+from tests.test_render_tables import (DOC, GIZMOS, build, declare_label,
+                                      write_files)
 
 # Part declares one view (the single spelling); Tier declares two (the
 # list spelling, one with a name template); Gizmo, a source label,
 # declares none.
-VIEWED = ONTOLOGY.replace(
-    "  Part:\n    values: [Bolt, Spring, Cog]\n    concept: Gadget Concept\n",
-    "  Part:\n    values: [Bolt, Spring, Cog]\n    concept: Gadget Concept\n"
-    "    aliases: { Sprng: Spring }\n"
-    "    rendered_view:\n      source: data/gizmos.csv\n"
-    "      key: Gizmo\n"
-    "  Tier:\n    values: [Low, High]\n    concept: Gadget Concept\n"
-    "    rendered_views:\n"
-    "      - { source: data/gizmos.csv, key: Gizmo }\n"
-    "      - { source: data/gizmos.csv, key: Gizmo, "
-    "name_template: \"Tier {key}\" }\n")
+PART_VIEW = {"source": "data/gizmos.csv", "key": "Gizmo"}
+TIER_VIEWS = [
+    {"source": "data/gizmos.csv", "key": "Gizmo"},
+    {"source": "data/gizmos.csv", "key": "Gizmo",
+     "name_template": "Tier {key}"},
+]
 
 
 def _build(tmp_path):
-    base_dir, path = _make_repo(tmp_path)(
-        {"docs/gadgets.md": DOC, "data/gizmos.csv": GIZMOS}, VIEWED)
-    ontology, findings = load_ontology(path, base_dir)
-    assert ontology is not None, findings
-    assert not [f for f in findings if f.severity == ERROR], findings
-    graph, extract_findings = extract(ontology)
-    assert not [f for f in extract_findings if f.severity == ERROR]
-    return base_dir, ontology, graph
+    base_dir, _, graph = build(tmp_path)
+    version, fingerprint = installed_kernel_identity()
+    graph.ensure_node(ARCHETYPE_LABEL, "Metaontology",
+                      version=version, fingerprint=fingerprint)
+    part = graph.nodes[(ARCHETYPE_LABEL, "Part")]
+    spec = json.loads(part["spec_json"])
+    spec["aliases"] = {"Sprng": "Spring"}
+    part["spec_json"] = json.dumps(spec, sort_keys=True)
+    part[RENDERED_VIEWS_PROP] = json.dumps([PART_VIEW])
+    declare_label(graph, "Tier", {"values": ["Low", "High"],
+                                  "concept": "Gadget Concept"},
+                  **{RENDERED_VIEWS_PROP: json.dumps(TIER_VIEWS)})
+    for tier in ("Low", "High"):
+        graph.ensure_node("Tier", tier)
+    return base_dir, ontology_from_graph(graph, base_dir), graph
 
 
 # -- the embedding and its reconstruction ----------------------------------
 
 
-def test_from_sources_build_embeds_the_views_beside_the_spec(tmp_path):
-    _, ontology, graph = _build(tmp_path)
-    part = graph.nodes[(ARCHETYPE_LABEL, "Part")]
-    assert json.loads(part[RENDERED_VIEWS_PROP]) == \
-        rendered_views_of(ontology.nodes["Part"])
-    assert "rendered_view" not in part["spec_json"]
-    assert '"aliases"' in part["spec_json"]  # the spec itself still rides
-    tier = graph.nodes[(ARCHETYPE_LABEL, "Tier")]
-    views = json.loads(tier[RENDERED_VIEWS_PROP])
-    assert len(views) == 2 and views[1]["name_template"] == "Tier {key}"
+def test_reconstruction_hands_the_views_back_as_the_spec_list(tmp_path):
+    _, rec, graph = _build(tmp_path)
+    assert rendered_views_of(rec.nodes["Part"]) == [PART_VIEW]
+    assert rendered_views_of(rec.nodes["Tier"]) == TIER_VIEWS
+    assert rendered_views_of(rec.nodes["Gizmo"]) == []
+    assert "rendered_view" not in rec.nodes["Part"]
+    assert "rendered_views" not in rec.nodes["Gizmo"]
+    # the views live beside the spec, never inside it
+    assert "rendered_view" not in \
+        graph.nodes[(ARCHETYPE_LABEL, "Part")]["spec_json"]
     assert RENDERED_VIEWS_PROP not in graph.nodes[(ARCHETYPE_LABEL, "Gizmo")]
 
 
-def test_reconstruction_hands_the_views_back_as_the_spec_list(tmp_path):
-    base_dir, ontology, graph = _build(tmp_path)
-    rec = ontology_from_graph(graph, base_dir)
-    for label in ("Part", "Tier", "Gizmo"):
-        assert rendered_views_of(rec.nodes[label]) == \
-            rendered_views_of(ontology.nodes[label]), label
-    assert "rendered_view" not in rec.nodes["Part"]
-    assert "rendered_views" not in rec.nodes["Gizmo"]
-
-
 def test_export_and_rederivation_keep_the_views(tmp_path):
-    base_dir, _, graph = _build(tmp_path)
-    export_dir = base_dir / "graph" / "export"
+    graph = build_canon()
+    graph.nodes[(ARCHETYPE_LABEL, "Place")][RENDERED_VIEWS_PROP] = \
+        json.dumps([{"source": "data/characters.csv", "key": "Character"}])
+    export_dir = tmp_path / "graph" / "export"
     export_mod.write_export(graph, export_dir)
     read_back = read_export(export_dir)
-    assert read_back.nodes[(ARCHETYPE_LABEL, "Tier")][RENDERED_VIEWS_PROP] \
-        == graph.nodes[(ARCHETYPE_LABEL, "Tier")][RENDERED_VIEWS_PROP]
+    assert read_back.nodes[(ARCHETYPE_LABEL, "Place")][RENDERED_VIEWS_PROP] \
+        == graph.nodes[(ARCHETYPE_LABEL, "Place")][RENDERED_VIEWS_PROP]
     # re-derivation over the reconstruction reproduces the backup byte
     # for byte — the prop is schema ground, preserved and re-embedded
     # identically, never rebuilt
-    rederived, findings = derive(ontology_from_graph(read_back, base_dir),
+    rederived, findings = derive(ontology_from_graph(read_back, STORYBOOK),
                                  read_back)
     assert not [f for f in findings if f.severity == ERROR], findings
     assert export_mod.serialize(rederived) == export_mod.serialize(read_back)
@@ -290,7 +284,6 @@ def test_render_tables_renders_from_canon_with_no_bootstrap_file(tmp_path,
     expected = render_tables.render_chapter(
         base_dir, "docs/gadgets.md", graph, ontology).draft()
     export_mod.write_export(graph, base_dir / "graph" / "export")
-    (base_dir / "graph" / "ontology.yaml").unlink()
     assert cmd_render_tables(base_dir, "docs/gadgets.md", None) == 0
     out = capsys.readouterr().out
     assert "rendered  data/gizmos.csv" in out
@@ -299,21 +292,28 @@ def test_render_tables_renders_from_canon_with_no_bootstrap_file(tmp_path,
 
 
 def test_column_typing_and_aliases_reconstruct_from_canon(tmp_path):
-    base_dir, ontology, graph = _build(tmp_path)
-    rec = ontology_from_graph(graph, base_dir)
-    assert column_types(rec) == column_types(ontology)
-    assert column_aliases(rec) == column_aliases(ontology)
-    # the view-typed column is present, proving the views were consulted
-    assert ("data/gizmos.csv", "Gizmo") in column_aliases(rec)
+    _, rec, _ = _build(tmp_path)
+    assert column_types(rec) == {
+        ("data/gizmos.csv", "Power"): "int",
+        ("data/gizmos.csv", "Parts"): "set",
+        ("data/gizmos.csv", "On Attack"): "set",
+        ("data/gizmos.csv", "On Defense"): "set"}
+    # the view-typed column is present, proving the views were consulted;
+    # the label's aliases fold onto the shared key column
+    assert column_aliases(rec) == {
+        ("data/gizmos.csv", "Gizmo"): {"Sprng": "Spring"},
+        ("data/gizmos.csv", "Parts"): {"Sprng": "Spring"},
+        ("data/gizmos.csv", "On Attack"): {"Sprng": "Spring"},
+        ("data/gizmos.csv", "On Defense"): {"Sprng": "Spring"}}
 
 
 def test_roundtrip_says_aloud_when_no_backup_declares_the_columns(tmp_path,
                                                                   capsys):
-    base_dir, _ = _make_repo(tmp_path)(
-        {"docs/gadgets.md": DOC, "data/gizmos.csv": GIZMOS}, "version: 1")
-    draft = base_dir / "draft.md"
+    write_files(tmp_path, {"docs/gadgets.md": DOC,
+                           "data/gizmos.csv": GIZMOS})
+    draft = tmp_path / "draft.md"
     draft.write_text(textwrap.dedent(DOC), encoding="utf-8")
-    cmd_roundtrip(base_dir, "docs/gadgets.md", str(draft))
+    cmd_roundtrip(tmp_path, "docs/gadgets.md", str(draft))
     err = capsys.readouterr().err
     assert "No committed backup to read the table declarations from" in err
     assert "every table column compares byte-exact" in err

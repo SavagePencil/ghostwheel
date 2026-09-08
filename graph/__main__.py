@@ -8,7 +8,6 @@ from pathlib import Path
 
 from . import export as export_mod
 from . import refs as refs_mod
-from . import validate as validate_mod
 
 
 def find_base_dir():
@@ -16,7 +15,8 @@ def find_base_dir():
 
     Precedence: the GHOSTWHEEL_BASE environment variable; else walk up
     from the current directory to the first ancestor that looks like a
-    knowledge base (it carries graph/export/ or graph/ontology.yaml);
+    knowledge base (it carries graph/export/ — the committed backup IS
+    the mark of a knowledge base; the from-sources era is closed);
     else, for a source checkout where the package sits inside the KB
     repo itself, the package's grandparent when IT looks like one.
     Anything else refuses by name — the engine is installed apart from
@@ -30,8 +30,8 @@ def find_base_dir():
         raise SystemExit(
             f"Attempted to open the knowledge base named by "
             f"GHOSTWHEEL_BASE ({base}). Failed due to: no graph/export/ "
-            "or graph/ontology.yaml there — that directory is not a "
-            "knowledge base root.")
+            "there — that directory is not a knowledge base root. A new "
+            "knowledge base is born with python -m graph init.")
     for candidate in [Path.cwd().resolve(),
                       *Path.cwd().resolve().parents]:
         if _looks_like_kb(candidate):
@@ -41,37 +41,24 @@ def find_base_dir():
         return checkout
     raise SystemExit(
         f"Attempted to find a knowledge base from {Path.cwd()}. Failed "
-        "due to: no ancestor carries graph/export/ or "
-        "graph/ontology.yaml. Run from inside a knowledge base, or set "
-        "GHOSTWHEEL_BASE to its root.")
+        "due to: no ancestor carries graph/export/. Run from inside a "
+        "knowledge base, set GHOSTWHEEL_BASE to its root, or give birth "
+        "to one with python -m graph init.")
 
 
 def _looks_like_kb(path):
-    return (path / "graph" / "export").is_dir() \
-        or (path / "graph" / "ontology.yaml").is_file()
+    return (path / "graph" / "export").is_dir()
 
 
 def cmd_validate(base_dir, write_files=True):
-    _, graph, findings = validate_mod.run(base_dir)
-    report_path = base_dir / "graph" / "reports" / "validation.md"
-    if write_files:
-        # the markdown and, beside it, the record it renders from
-        validate_mod.write_report(findings, graph, report_path,
-                                  base_dir=base_dir)
-    print(f"Validation: {validate_mod.summarize(findings)}")
-    if graph is not None:
-        print(f"Graph: {len(graph.nodes)} nodes, {len(graph.edges)} edges")
-    if write_files:
-        print(f"Report: {report_path.relative_to(base_dir)}")
-    if validate_mod.has_errors(findings):
-        print("ERRORS present — fix the ontology/source files above.",
-              file=sys.stderr)
-        if graph is None:
-            print("Extraction was skipped: a broken ontology cannot be "
-                  "extracted. Fix the errors, then re-run to surface "
-                  "extraction and answer-key findings.", file=sys.stderr)
-        return 1, graph
-    return 0, graph
+    """Retired verb: it refuses by name, it does not vanish."""
+    del base_dir, write_files
+    print("Attempted to validate source files against a bootstrap "
+          "schema. Failed due to: the from-sources era is closed — the "
+          "schema lives on the graph and changes through gated rounds. "
+          "The health verbs are python -m graph check, corpus, and "
+          "rederive (dry).", file=sys.stderr)
+    return 1, None
 
 
 def canon_base(base_dir, branch=None):
@@ -155,30 +142,23 @@ def cmd_export_lensed(base_dir, mask, out):
     return 0
 
 
-def cmd_export(base_dir, from_sources=False):
-    if from_sources:
-        # bootstrap scaffolding: serialize a from-sources build
-        status, graph = cmd_validate(base_dir)
-        if status != 0 or graph is None:
-            return status
-    else:
-        # post-flip default: the backup serializes THE DATABASE
-        from . import load as load_mod
-        from . import restore as restore_mod
-        config = load_mod.read_config(base_dir)
-        try:
-            graph = restore_mod.dump_db(config)
-        except Exception as exc:
-            print(f"Attempted to export canon from the database "
-                  f"('{config['NEO4J_DATABASE']}'). Failed due to: {exc}. "
-                  "Is the DBMS running? For a from-sources bootstrap "
-                  "export, use --from-sources.", file=sys.stderr)
-            return 1
+def cmd_export(base_dir):
+    # the backup serializes THE DATABASE — its only source since the flip
+    from . import load as load_mod
+    from . import restore as restore_mod
+    config = load_mod.read_config(base_dir)
+    try:
+        graph = restore_mod.dump_db(config)
+    except Exception as exc:
+        print(f"Attempted to export canon from the database "
+              f"('{config['NEO4J_DATABASE']}'). Failed due to: {exc}. "
+              "Is the DBMS running?", file=sys.stderr)
+        return 1
     export_dir = base_dir / "graph" / "export"
     export_mod.write_export(graph, export_dir)
     print(f"Export: {export_dir.relative_to(base_dir)}/"
           f"{{{export_mod.NODES_FILE},{export_mod.EDGES_FILE}}}"
-          + ("" if from_sources else " (from the database)"))
+          " (from the database)")
     return 0
 
 
@@ -663,8 +643,9 @@ def cmd_rederive(base_dir, apply=False):
         base = canon_base(base_dir)
     except FileNotFoundError as exc:
         print("Attempted to load the schema from the graph's committed "
-              f"backup (graph/export). Failed due to: {exc}. For a "
-              "from-sources bootstrap, use the load/validate path.",
+              f"backup (graph/export). Failed due to: {exc}. The "
+              "committed backup is the knowledge base — restore it from "
+              "git, or give birth to a new one with python -m graph init.",
               file=sys.stderr)
         return 1
     from .kernel_migrate import kernel_skew
@@ -1161,49 +1142,14 @@ def _working_copy_check(base_dir, config, database, branch):
 
 
 def cmd_load(base_dir, database=None):
-    from . import load as load_mod  # deferred: needs the neo4j driver
-
-    status, graph = cmd_validate(base_dir)
-    if status != 0 or graph is None:
-        return status
-    config = load_mod.read_config(base_dir)
-    if database:
-        config["NEO4J_DATABASE"] = database
-    from . import proposal as proposal_mod
-    from . import workspace as workspace_mod
-    kb = refs_mod.kb_name(graph, base_dir)
-    held, followed = workspace_mod.held_or_followed(
-        config, kb, proposal_mod.line_identities(base_dir))
-    if held:
-        print(held, file=sys.stderr)
-        return 1
-    if followed:
-        print(followed)
-    print(f"Loading into {config['NEO4J_URI']} "
-          f"(database '{config['NEO4J_DATABASE']}') ...")
-    try:
-        summary = load_mod.load(graph, config)
-    except Exception as exc:  # driver errors: auth, unreachable, etc.
-        print(f"Load failed: {exc}", file=sys.stderr)
-        print("Is the Neo4j Desktop DBMS running, and does .env match its "
-              "credentials? (see .env.example)", file=sys.stderr)
-        return 1
-    print(f"Loaded {summary['loaded_nodes']} nodes, "
-          f"{summary['loaded_edges']} edges")
-    print("Nodes by label: " + ", ".join(
-        f"{label}: {count}"
-        for label, count in summary["nodes_by_label"].items()))
-    print("Edges by type: " + ", ".join(
-        f"{rel}: {count}"
-        for rel, count in summary["edges_by_type"].items()))
-    from . import proposal as proposal_mod
-    from . import workspace as workspace_mod
-    workspace_mod.stamp(config, "working-copy" if database else "canon",
-                        proposal_mod.base_identity(graph),
-                        git_ref(base_dir), kb=kb)
-    if database:
-        pin_round(base_dir, graph, database)
-    return 0
+    """Retired verb: it refuses by name, it does not vanish."""
+    del base_dir, database
+    print("Attempted to build a database from source files. Failed due "
+          "to: the from-sources era is closed — a knowledge base is "
+          "born graph-native (python -m graph init) or grows through "
+          "gated rounds, and python -m graph restore rebuilds any "
+          "database from the committed backup.", file=sys.stderr)
+    return 1
 
 
 def parse_check(text, fallback_name=""):
@@ -1762,8 +1708,9 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     except FileNotFoundError as exc:
         text = ("Attempted to load the schema from the committed "
                 f"backup ({proposal_mod.export_dir(base_dir, branch).relative_to(base_dir)}). "
-                f"Failed due to: {exc}. For a from-sources bootstrap, use "
-                "the load/validate path.")
+                f"Failed due to: {exc}. The committed backup is the "
+                "knowledge base — restore it from git, or give birth to "
+                "a new one with python -m graph init.")
         print(text, file=sys.stderr)
         return bail("backup-unreadable", text)
     from .kernel_migrate import kernel_skew
@@ -2929,8 +2876,9 @@ def cmd_generate(base_dir, procedure_name):
         graph = read_export(base_dir / "graph" / "export")
     except (FileNotFoundError, ValueError, OSError) as exc:
         print("Attempted to load the schema from the graph's committed "
-              f"backup (graph/export). Failed due to: {exc}. For a "
-              "from-sources bootstrap, use the load/validate path.",
+              f"backup (graph/export). Failed due to: {exc}. The "
+              "committed backup is the knowledge base — restore it from "
+              "git, or give birth to a new one with python -m graph init.",
               file=sys.stderr)
         return 1
     ontology = ontology_mod.ontology_from_graph(graph, base_dir)
@@ -2969,8 +2917,9 @@ def canon_term_index(base_dir):
     except FileNotFoundError as exc:
         return None, (
             "Attempted to load the schema from the graph's committed "
-            f"backup (graph/export). Failed due to: {exc}. For a "
-            "from-sources bootstrap, use the load/validate path.")
+            f"backup (graph/export). Failed due to: {exc}. The "
+            "committed backup is the knowledge base — restore it from "
+            "git, or give birth to a new one with python -m graph init.")
     # The term index's concepts/surface_forms/prose_files come from the
     # graph now (the schema-delta ceremony): reconstruct the schema from the committed backup.
     ontology = ontology_from_graph(graph, base_dir)
@@ -3560,16 +3509,17 @@ def main(argv=None):
         description="Derive, validate, and load the project's derived graph.")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("validate",
-                   help="parse sources against the ontology; write "
-                        "graph/reports/validation.md (no DB needed)")
+                   help="retired — the from-sources era is closed; the "
+                        "schema lives on the graph (see check, corpus, "
+                        "rederive)")
     export_parser = sub.add_parser(
         "export",
         help="serialize the live database to graph/export/ — the backup "
              "is written FROM canon (post-flip default)")
     export_parser.add_argument(
         "--from-sources", action="store_true",
-        help="bootstrap scaffolding: serialize a from-sources build "
-             "instead of the database (no DB needed)")
+        help="retired — the backup is written FROM the database; the "
+             "from-sources era is closed")
     export_parser.add_argument(
         "--mask", action="append", default=[],
         help="lens-scoped materialization (the visibility lens design): mask this class "
@@ -3582,14 +3532,11 @@ def main(argv=None):
              "graph/export)")
     load_parser = sub.add_parser(
         "load",
-        help="BOOTSTRAP scaffolding: validate, then wipe and reload Neo4j "
-             "from the sources. Post-flip, canon round-trips through "
-             "restore/canonize instead (connection from .env)")
+        help="retired — the from-sources era is closed; restore rebuilds "
+             "any database from the committed backup")
     load_parser.add_argument(
         "--database", default=None,
-        help="override the target database (e.g. 'scratch' — rebuilding "
-             "sources into scratch IS copy-base-to-scratch in the derived "
-             "era; created if missing)")
+        help="(retired with the verb)")
     restore_parser = sub.add_parser(
         "restore",
         help="wipe a database and rebuild it from graph/export/ alone, "
@@ -3894,15 +3841,13 @@ def main(argv=None):
         status, _ = cmd_validate(base_dir)
         return status
     if args.command == "export":
+        if args.from_sources:
+            print("Attempted to serialize a from-sources build. Failed "
+                  "due to: the from-sources era is closed — the backup "
+                  "is written FROM the database (python -m graph "
+                  "export).", file=sys.stderr)
+            return 1
         if args.mask or args.out:
-            if args.from_sources:
-                print("Attempted a lens-scoped export from sources. "
-                      "Failed due to: --from-sources and --mask/--out "
-                      "do not combine — a lens-scoped export always "
-                      "reads the committed backup, so the lensed view "
-                      "derives from applied canon, never from an "
-                      "unapplied build.", file=sys.stderr)
-                return 2
             if not (args.mask and args.out):
                 print("Attempted a lens-scoped export. Failed due to: "
                       "--mask and --out travel together — name the "
@@ -3910,7 +3855,7 @@ def main(argv=None):
                       file=sys.stderr)
                 return 2
             return cmd_export_lensed(base_dir, args.mask, args.out)
-        return cmd_export(base_dir, from_sources=args.from_sources)
+        return cmd_export(base_dir)
     if args.command == "restore":
         return cmd_restore(base_dir, database=args.database,
                            from_dir=args.from_dir, branch=args.branch,

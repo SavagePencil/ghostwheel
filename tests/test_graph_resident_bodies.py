@@ -11,33 +11,101 @@ adoption round is not accused by the registration it retires. The
 body-sync gate stays a file-world verb. Afterward a body is a ground
 prop: edit it, re-derivation re-lifts.
 
-Storybook domain: the wilting tale from the answer-key fixtures.
+Storybook domain: the wilting tale, authored graph-natively over the
+storybook canon (the answer-key fixture's program and tables).
 """
 
 import json
 
-import tests.conftest as conftest
 from graph import export as export_mod
-from graph.answer_keys import canon_check
+from graph.answer_keys import CHECKS_EDGE, KEY_JSON_PROP, canon_check
 from graph.delta import body_sync_verdicts, ceremony_records, diff, lint
-from graph.extract import (GraphData, derive, extract, gate_roster_findings,
-                           procedure_roster_findings)
-from graph.ontology import (ARCHETYPE_LABEL, ERROR, load_ontology,
+from graph.extract import (GraphData, derive, gate_roster_findings,
+                           make_edge, procedure_roster_findings)
+from graph.ontology import (ARCHETYPE_LABEL, ERROR, KERNEL_ANSWER_KEY_LABEL,
                             ontology_from_graph)
 from graph.report import REF_KEYS
-from tests.test_answer_keys import FILES, GOOD_KEYS, ONTOLOGY
-from tests.test_answer_keys_home import KEYS, _with_keys
+from tests.test_branch import build_canon
 
-_make_repo = getattr(conftest.make_repo, "__wrapped__", conftest.make_repo)
+PROGRAM = """\
+procedure: Wilt
+possible_outcomes:
+  Wilted:
+    ends: done wilting
+    guarantee: cannot-fail
+steps:
+  - branch on: the target's Vigor
+    cases:
+      Fresh:
+        - when: Rot > 10
+          then:
+            - become: Limp
+        - stop: done wilting
+      Limp:
+        - when: Rot > 5
+          then:
+            - become: Dozed
+        - stop: done wilting
+"""
+
+FILES = {
+    "data/wilt-transitions.csv": (
+        "From Vigor,To Vigor\nFresh,Limp\nLimp,Dozed\n"),
+    "data/wilt-thresholds.csv": (
+        "Vigor,Rot Needed\nFresh,10\nLimp,5\nDozed,N/A\n"),
+    "data/procedures/wilt.yaml": PROGRAM,
+}
+
+# the answer-key fixture's two declarations, as canon citizens
+KEYS = {
+    "Wilt walks its ladder": {
+        "derives": "transitions", "table": "data/wilt-transitions.csv",
+        KEY_JSON_PROP: json.dumps({"from_column": "From Vigor",
+                                   "to_column": "To Vigor"})},
+    "Wilt holds its thresholds": {
+        "derives": "thresholds", "table": "data/wilt-thresholds.csv",
+        KEY_JSON_PROP: json.dumps({"key_column": "Vigor",
+                                   "value_column": "Rot Needed",
+                                   "condition_pattern": "Rot > {value}"})},
+}
+
+
+def _with_keys(graph, keys=KEYS, procedure="Wilt"):
+    for name, props in keys.items():
+        graph.ensure_node(KERNEL_ANSWER_KEY_LABEL, name, **props)
+        graph.edges.append(make_edge(CHECKS_EDGE, KERNEL_ANSWER_KEY_LABEL,
+                                     name, "[Procedure]", procedure))
+    return graph
 
 
 def _corpus(tmp_path):
-    base_dir, path = _make_repo(tmp_path)(FILES, ONTOLOGY.format(keys=GOOD_KEYS))
-    ontology, findings = load_ontology(path, base_dir)
-    assert ontology is not None, findings
-    graph, extract_findings = extract(ontology)
-    assert not [f for f in extract_findings if f.severity == ERROR]
-    return base_dir, graph
+    """The wilting tale as the file era left it on canon: a registered
+    program file whose citizen carries the body and cites the file."""
+    for relpath, content in FILES.items():
+        path = tmp_path / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    graph = build_canon()
+    graph.ensure_node(ARCHETYPE_LABEL, "Vigor", spec_json=json.dumps(
+        {"concept": ["Story Concept", "Exclusive", "Stateful"]},
+        sort_keys=True))
+    graph.edges.append(make_edge(
+        "DECLARED_IN", ARCHETYPE_LABEL, "Vigor", ARCHETYPE_LABEL, "Ontology"))
+    for parent in ("Story Concept", "Exclusive", "Stateful"):
+        graph.edges.append(make_edge(
+            "INSTANCE_OF", ARCHETYPE_LABEL, "Vigor", ARCHETYPE_LABEL, parent))
+    for name in ("Fresh", "Limp", "Dozed"):
+        graph.ensure_node("Vigor", name)
+    row = graph.nodes[(ARCHETYPE_LABEL, "[Procedure]")]
+    row["spec_json"] = json.dumps(
+        {"concept": "[Procedure]", "reader": "procedure_yaml",
+         "source": ["data/procedures/wilt.yaml"]}, sort_keys=True)
+    graph.ensure_node("[Procedure]", "Wilt", body=PROGRAM,
+                      source_path="data/procedures/wilt.yaml",
+                      completeness="transcribed")
+    filed, findings = derive(ontology_from_graph(graph, tmp_path), graph)
+    assert not [f for f in findings if f.severity == ERROR], findings
+    return tmp_path, filed
 
 
 def _clone(graph):
@@ -89,7 +157,7 @@ def test_a_program_body_lifts_without_a_registered_file(tmp_path):
 
 def test_answer_keys_still_hold_over_resident_bodies(tmp_path):
     base_dir, filed = _corpus(tmp_path)
-    resident = _with_keys(_adopt(_clone(filed)), KEYS)
+    resident = _with_keys(_adopt(_clone(filed)))
     (base_dir / "data" / "procedures" / "wilt.yaml").unlink()
     rows = canon_check(resident, ontology_from_graph(resident, base_dir),
                        base_dir)

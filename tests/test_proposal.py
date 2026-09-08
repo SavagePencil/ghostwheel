@@ -1,14 +1,12 @@
 """The proposal lifecycle: canonical delta documents, content-hash
 identity, divergence naming, and the Approved-to-Applied freeze. Pure
-logic plus the mini-repo — no database needed."""
+logic over in-memory graph values — no database needed."""
 
 from graph.delta import diff
-from graph.extract import GraphData, extract, make_edge
-from graph.ontology import load_ontology
+from graph.extract import GraphData, make_edge
 from graph.proposal import (archive_round, base_identity, content_hash,
                             current_dir, divergence, parse_delta,
                             serialize_delta, write_json)
-from tests.test_extract import FILES, ONTOLOGY
 
 
 def clone(graph):
@@ -19,11 +17,19 @@ def clone(graph):
     return copy
 
 
-def build_base(make_repo):
-    base_dir, path = make_repo(FILES, ONTOLOGY)
-    ontology, _ = load_ontology(path, base_dir)
-    base, _ = extract(ontology)
-    return base_dir, path, ontology, base
+def build_base():
+    """The base of a round, authored directly as graph values — the
+    ground a committed backup would hold."""
+    base = GraphData()
+    base.ensure_node("Knack", "Blink", knack_class="Active")
+    base.ensure_node("Knack", "Frost", knack_class="Reactive")
+    base.ensure_node("Knack", "Bolt", knack_class="Active")
+    base.ensure_node("Spark", "Faint")
+    base.ensure_node("Terrain", "Windswept", defense_mod=1)
+    base.ensure_node("Terrain", "Frost", defense_mod=-2)
+    base.edges.append(make_edge("SWAPS_WITH", "Knack", "Frost",
+                                "Knack", "Bolt", {"trigger": "gust"}))
+    return base
 
 
 def agent_scratch(base):
@@ -45,17 +51,17 @@ def agent_scratch(base):
     return scratch
 
 
-def rich_delta(make_repo):
-    base_dir, path, ontology, base = build_base(make_repo)
+def rich_delta():
+    base = build_base()
     scratch = agent_scratch(base)
     del scratch.nodes[("Knack", "Blink")]          # a removal w/ before-image
-    scratch.edges = [e for e in scratch.edges       # an edge property edit
+    scratch.edges = [e for e in scratch.edges       # an edge removal
                      if e.type != "SWAPS_WITH" or e.from_name != "Frost"]
-    return base_dir, path, ontology, base, scratch
+    return base, scratch
 
 
-def test_delta_document_round_trips(make_repo):
-    _, _, _, base, scratch = rich_delta(make_repo)
+def test_delta_document_round_trips():
+    base, scratch = rich_delta()
     delta = diff(base, scratch)
     text = serialize_delta(delta)
     back = parse_delta(text)
@@ -66,8 +72,8 @@ def test_delta_document_round_trips(make_repo):
     assert back.edges_changed == delta.edges_changed
 
 
-def test_proposal_id_is_stable_and_content_bound(make_repo):
-    _, _, _, base, scratch = rich_delta(make_repo)
+def test_proposal_id_is_stable_and_content_bound():
+    base, scratch = rich_delta()
     once = content_hash(serialize_delta(diff(base, scratch)))
     twice = content_hash(serialize_delta(diff(base, scratch)))
     assert once == twice
@@ -75,8 +81,8 @@ def test_proposal_id_is_stable_and_content_bound(make_repo):
     assert content_hash(serialize_delta(diff(base, scratch))) != once
 
 
-def test_divergence_names_both_directions(make_repo):
-    _, _, _, base, scratch = rich_delta(make_repo)
+def test_divergence_names_both_directions():
+    base, scratch = rich_delta()
     pinned = diff(base, scratch)
     assert divergence(pinned, diff(base, scratch)) == []  # frozen
     # tamper AFTER approval: one new fact, one reviewed fact withdrawn
@@ -90,12 +96,12 @@ def test_divergence_names_both_directions(make_repo):
     assert "Glimmer" in text and "no longer in scratch" in text
 
 
-def test_apply_replays_the_pinned_document(make_repo):
+def test_apply_replays_the_pinned_document():
     # the pinned artifact drives apply — parse(serialize(delta)) applied
     # to the base must reach exactly the scratch the delta was diffed
     # from, ground for ground, and drain to an empty residual
     from graph.proposal import apply_delta, ground_identity
-    _, _, _, base, scratch = rich_delta(make_repo)
+    base, scratch = rich_delta()
     pinned_text = serialize_delta(diff(base, scratch))
     replayed = clone(base)
     assert apply_delta(replayed, parse_delta(pinned_text)) == []
@@ -105,15 +111,12 @@ def test_apply_replays_the_pinned_document(make_repo):
     assert residual.edges_added == [] and residual.edges_removed == []
 
 
-def test_base_identity_tracks_source_changes(make_repo):
-    base_dir, path, ontology, base = build_base(make_repo)
+def test_base_identity_tracks_the_ground_moving():
+    base = build_base()
     pinned = base_identity(base)
     assert base_identity(base) == pinned
-    knacks = base_dir / "data" / "knacks.csv"
-    knacks.write_text(knacks.read_text(encoding="utf-8").replace(
-        "Frost,Reactive", "Frost,Hybrid"), encoding="utf-8")
-    ontology2, _ = load_ontology(path, base_dir)
-    moved, _ = extract(ontology2)
+    moved = clone(base)
+    moved.nodes[("Knack", "Frost")]["knack_class"] = "Hybrid"
     assert base_identity(moved) != pinned  # the base moved under the round
 
 
@@ -134,9 +137,9 @@ from graph.proposal import (append_applied_log, apply_delta, ground_identity,
                             invert_delta, verify_applied_log)
 
 
-def test_walk_back_returns_to_base(make_repo):
+def test_walk_back_returns_to_base():
     # apply, then apply the inverse — identical
-    _, _, _, base, scratch = rich_delta(make_repo)
+    base, scratch = rich_delta()
     delta = diff(base, scratch)
     walked = clone(base)
     assert apply_delta(walked, delta) == []
@@ -146,9 +149,9 @@ def test_walk_back_returns_to_base(make_repo):
     assert ground_identity(walked) == ground_identity(base)
 
 
-def test_inverse_covers_every_class(make_repo):
+def test_inverse_covers_every_class():
     # a delta exercising all six classes inverts and walks back
-    base_dir, _, _, base = build_base(make_repo)
+    base = build_base()
     scratch = clone(base)
     scratch.ensure_node("Knack", "Ember", knack_class="Active")  # added
     del scratch.nodes[("Knack", "Blink")]                        # removed
@@ -168,8 +171,8 @@ def test_inverse_covers_every_class(make_repo):
     assert ground_identity(walked) == ground_identity(base)
 
 
-def test_apply_refuses_moved_base_and_applies_nothing(make_repo):
-    _, _, _, base, scratch = rich_delta(make_repo)
+def test_apply_refuses_moved_base_and_applies_nothing():
+    base, scratch = rich_delta()
     delta = diff(base, scratch)
     moved = clone(base)
     moved.nodes[("Knack", "Blink")]["knack_class"] = "Hybrid"  # under the log
@@ -194,7 +197,7 @@ def test_applied_log_chains_and_detects_rewrites(tmp_path):
     assert any("entry 2" in p and "rewritten above" in p for p in problems)
 
 
-def test_version_stamp_does_not_touch_ground_identity(make_repo):
+def test_version_stamp_does_not_touch_ground_identity():
     # the schema boundary: the restamp at apply mutates the (Archetype,
     # 'Ontology') anchor — a SCHEMA (UNAUTHORABLE) citizen — so
     # ground_identity, which EXCLUDES the schema stratum, is unchanged by
@@ -215,7 +218,7 @@ def test_version_stamp_does_not_touch_ground_identity(make_repo):
     assert ground_identity(g) == before
 
 
-def test_edge_documents_survive_props(make_repo):
+def test_edge_documents_survive_props():
     delta_edges = [make_edge("SWAPS_WITH", "Knack", "A", "Knack", "B",
                              {"trigger": "feint"})]
     from graph.delta import Delta
