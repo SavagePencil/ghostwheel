@@ -1,0 +1,70 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [
+  [
+   "[Design Record]",
+   "The worlds layer — many knowledge bases, one engine",
+   {
+    "handle": "worlds-layer"
+   }
+  ],
+  [
+   "[Section]",
+   "Dependencies: reaching another knowledge base",
+   {
+    "body": "## Dependencies: reaching another knowledge base\n\nA world knows which knowledge bases it uses by declaring them. A\n**[Knowledge Base Dependency]** is a citizen of the declaring KB — the\nalmanac, named in the declarer's own terms, pinned to an edition (the\ndependency's committed-backup identity and its event-log sequence)\nwith an intent, read or write. A **[Citizen Bookmark]** reaches one\ncitizen of that dependency — by the label and name the dependency's\nown canon uses, and the edition it was resolved against — and states\nwhich dependency it resolves in (exactly one RESOLVES_IN). The\ndeclaring KB's own citizens then point at the bookmark through their\nown relation vocabulary: the bookmark is the declared crossing, and\nnothing in one KB silently points into another.\n\nWHERE a dependency actually lives is settings, not canon: the\ndeclaring KB's environment names a path per dependency\n(`GHOSTWHEEL_DEPENDENCY_<NAME>=<path>`), so the same canon serves two\nmachines whose checkouts live in different places. Resolution reads\nthe dependency's own committed backup at that path — code carries\nvalues; nothing queries another knowledge base's live database.\n\n`python -m graph dependencies` is the ruler: every declared dependency\nand bookmark judged against what its checkout actually holds — held,\nbehind (the checkout differs from the pin), or unreachable — one row\nper verdict in the report beside the prose, exit nonzero on any\ntrouble so a later tool can alert. A clean pass says so, row by row: a\nnon-event is still read aloud.\n\n```mermaid\nflowchart LR\n    subgraph MACHINE[\"one shared DBMS - the stamps are its registry\"]\n        RC[\"rules canon<br/>stamp: kb rules\"]\n        RS[\"rules-scratch<br/>stamp: working copy\"]\n        BC[\"almanac canon<br/>stamp: kb almanac\"]\n    end\n    subgraph RULES[\"the rules KB\"]\n        DEP[\"[Knowledge Base Dependency]<br/>the almanac - edition - intent\"]\n        BM[\"[Citizen Bookmark]<br/>a creature, by label + name\"]\n        ENV[\"settings:<br/>GHOSTWHEEL_DEPENDENCY_ALMANAC = path\"]\n    end\n    BM -- RESOLVES_IN --> DEP\n    DEP -- \"resolved at the path, from<br/>the committed backup\" --> BC\n    ENV -.- DEP\n```",
+    "rank": 2,
+    "record": "The worlds layer — many knowledge bases, one engine"
+   }
+  ],
+  [
+   "[Section]",
+   "Merge: lines reconciled",
+   {
+    "body": "## Merge: lines reconciled\n\nMerge is the fifth job beside ingest, query, generate, and migrate:\none line takes up another's rounds while both keep living. It runs\nbetween canon and a Pocket Universe, either direction — the universe\nrefreshing from canon's newer rounds, or canon landing its work — and it\nnever bypasses the gate: the merge PREPARES the target's ordinary\nround, and the round lands the way every round lands.\n\nThe reconciliation is three-way from the fork, at citizen grain. The\nsource's rounds since the fork are read from its archived proposals —\ncode carries values. A citizen or connection touched by only one side\nis DISJOINT and replays mechanically through the same applier every\nround rides; one changed on both lines is CONTESTED — left at the\ntarget's version and listed base / yours / theirs for the owner to\nrule by ordinary authoring in the copy. A contested citizen left\nuntouched lands the target's version, knowingly: the gate names every\none. When the round lands, the target's log gains a merged-from\nannotation naming the rounds taken up, so a second merge skips them —\na round crosses the fork once, in either direction, forever.\n\nThe full working procedure is the merging-lines conduct record\n(`python -m graph docs merging-lines`).\n\n```mermaid\nflowchart TB\n    F[\"canon at the fork\"] --> C1[\"canon: round N\"]\n    F --> P0[\"Pocket Universe cut:<br/>a clone of canon, declared\"]\n    C1 --> C2[\"canon: round N+1\"]\n    P0 --> P1[\"the Pocket Universe:<br/>its own gated rounds\"]\n    P1 --> M[\"merge - three-way from the fork,<br/>at citizen grain\"]\n    C2 --> M\n    M --> G[\"the target's ordinary gated round:<br/>disjoint replays mechanically;<br/>contested listed base / yours / theirs\"]\n    G --> C3[\"target's log: merged-from annotations -<br/>a second merge skips what crossed\"]\n```",
+    "rank": 4,
+    "record": "The worlds layer — many knowledge bases, one engine"
+   }
+  ],
+  [
+   "[Section]",
+   "Names on a shared machine",
+   {
+    "body": "## Names on a shared machine\n\nA knowledge base has a name: the one its canon declares on its own\nanchor, or, until it declares one, the name of the directory it lives\nin. Declaring (or changing) the name is a gated round like any other —\nthe one non-doc property edit the ceremony admits, itemized at the\ngate as KB NAMED. Identity may change hands at a gate; it never\nquietly vanishes.\n\nDatabases on a shared DBMS all carry the engine's in-band identity\nstamp, and the stamps together are the machine's registry of names:\nevery load reads the target's stamp first, and a database another\nknowledge base holds refuses by name before a byte is written. A\nknowledge base is born with its own names (`init` writes settings\nnaming the canon database after the KB and the working copy\n`<kb>-scratch`), so two KBs sharing a machine cannot collide by\ndefault and cannot collide by accident.\n\nOne rule keeps the registry honest across renames: the stamp follows\nits own line's adopted name, judged by identity, never by trust. A\ndatabase whose stamp names the FORMER holder is accepted when its\nrecorded base identity is one this line has ever held — the round that\nadopts a knowledge base's name must land on databases stamped before\nthe name moved — and the acceptance is read aloud (\"followed the\nknowledge base to its adopted name\"), never silent. Another knowledge\nbase's database still refuses by name, unchanged.",
+    "rank": 1,
+    "record": "The worlds layer — many knowledge bases, one engine"
+   }
+  ],
+  [
+   "[Section]",
+   "Pocket Universes: a private line of one knowledge base",
+   {
+    "body": "## Pocket Universes: a private line of one knowledge base\n\nA branch is an independent line of truth within one KB. A **Pocket\nUniverse** is a branch cut as a clone of canon and declared so: `branch` cuts it\nand the engine writes the declaration itself — who cut it, who is\ninvited, the canon identity and sequence it forked from — carried\nin-band in two places (a [Pocket Universe] row on the line, and the\nuniverse database's own stamp). The declaration is a fact about the\nline, set aside from its content identity, so a Pocket Universe's rounds\ndiff clean against canon's. `branches` lists every line and what it is,\nand readability is the creator's until they invite someone —\npermissions gate who may SEE a Pocket Universe; the isolation\nitself is the line ([lenses.md](lenses.md)).\n\nInside a Pocket Universe, everything is ordinary: its own working copy, its own\ngated rounds, its own chained log. Canon is physically out of reach —\nan apply scoped to a Pocket Universe refuses the live canon\ndatabase by name. What\nsuccession adopts is the line stripped of its declaration: canon is never\na Pocket Universe. Discard a Pocket Universe and nothing anywhere happened; keep\nworking it while canon keeps moving, and merge is how the two meet.",
+    "rank": 3,
+    "record": "The worlds layer — many knowledge bases, one engine"
+   }
+  ],
+  [
+   "[Section]",
+   "The ladder, and what waits above it",
+   {
+    "body": "## The ladder, and what waits above it\n\nThe shipped composition reads bottom-up: a **branch** is one line\nwithin one KB, the atom; a **Pocket Universe** is a branch with a\ndeclaration and a merge path; a **world** is a KB that declares other KBs\nas its dependencies and reaches their citizens through bookmarks.\n\nTwo rungs are designed and not shipped, named here so their absence\nnever reads as an oversight: the **cross-KB Pocket\nUniverse** — one invitation-ready bundle of them, one per member KB\nthe work mutates, read-pins for the rest, landing at one collated gate with\nverify-all-before-apply-any extended across every member KB — and\n**world navigation**, the world as a context a reader steps into that\nroutes questions to the right member KB. Both wait on evidence from\nworlds in real use; each arrives, when it arrives, through its own\ngated design dialogue.",
+    "rank": 5,
+    "record": "The worlds layer — many knowledge bases, one engine"
+   }
+  ],
+  [
+   "[Section]",
+   "The worlds layer — many knowledge bases, one engine",
+   {
+    "body": "# The worlds layer — many knowledge bases, one engine\n\nOne engine serves many knowledge bases. A game's rules can be one KB; a\ncreature almanac someone else publishes can be another that the first\nmerely uses; a world is the context that gathers them and knows how\nthey relate. This record tells the layer whole as it shipped: how\nknowledge bases share one machine without colliding, how one KB\nreaches into another on purpose, how a single KB carries private lines\nof itself, and how lines reconcile. The composition above this — a\nPocket Universe spanning a whole world, the world as a navigable context — is\ndesigned and named at the end, not shipped.\n\nEverything here obeys the standing rules of the round machinery\n([agentic-etl.md](agentic-etl.md)): every crossing is declared, every\nverdict is a record, and silence never reads as held — a ruler that\nfinds nothing wrong says so.",
+    "rank": 0,
+    "record": "The worlds layer — many knowledge bases, one engine"
+   }
+  ]
+ ],
+ "nodes_changed": [],
+ "nodes_removed": []
+}

@@ -175,6 +175,7 @@
 {"from": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "The engine as corpus"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Procedure]", "name": "Agentic intake"}, "properties": {}, "to": {"label": "Archetype", "name": "[Procedure]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Procedure]", "name": "Dynamic-ontology intake"}, "properties": {}, "to": {"label": "Archetype", "name": "[Procedure]"}, "type": "INSTANCE_OF"}
@@ -202,12 +203,16 @@
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Dependencies: reaching another knowledge base"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Glossary, for the lay reader"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Glossary, the working vocabulary"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Invariants (the non-negotiables)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Merge: lines reconciled"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Names on a shared machine"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Pocket Universes: a private line of one knowledge base"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Reading the diagram"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Slice 1 (built) and what waits"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
@@ -218,6 +223,7 @@
 {"from": {"label": "[Section]", "name": "The isolation decision"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The keeper walkthrough (the design's acceptance story) [owner]"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The kernel stays honest"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The ladder, and what waits above it"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The micro-kernel: five organs, fixed forever"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The narrative: you hand the agent a doc with a table"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
@@ -226,6 +232,7 @@
 {"from": {"label": "[Section]", "name": "The reading room (comprehension graph)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The render contract and the flip"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The words this document uses"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The worlds layer — many knowledge bases, one engine"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Trust"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Voice"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
@@ -319,12 +326,16 @@
 {"from": {"label": "[Section]", "name": "Boundary rules"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Coda"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Conduct"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Dependencies: reaching another knowledge base"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Glossary, for the lay reader"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Glossary, the working vocabulary"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Invariants (the non-negotiables)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Merge: lines reconciled"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Names on a shared machine"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Pocket Universes: a private line of one knowledge base"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Reading the diagram"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Slice 1 (built) and what waits"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The Agentic Approach — v3: Virtues, Tenets, Method"}, "type": "PART_OF"}
@@ -335,6 +346,7 @@
 {"from": {"label": "[Section]", "name": "The isolation decision"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The keeper walkthrough (the design's acceptance story) [owner]"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The kernel stays honest"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The ladder, and what waits above it"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The micro-kernel: five organs, fixed forever"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The narrative: you hand the agent a doc with a table"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The north-star workflow — two lanes, two touches"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The north-star workflow — two lanes, two touches"}, "type": "PART_OF"}
@@ -343,6 +355,7 @@
 {"from": {"label": "[Section]", "name": "The reading room (comprehension graph)"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The render contract and the flip"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The words this document uses"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The worlds layer — many knowledge bases, one engine"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Trust"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Two Ontology Layers"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Voice"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
