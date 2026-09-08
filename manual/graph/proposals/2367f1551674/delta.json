@@ -1,0 +1,70 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [
+  [
+   "[Design Record]",
+   "The artifact model — identity, location, meaning",
+   {
+    "handle": "artifact-model"
+   }
+  ],
+  [
+   "[Section]",
+   "Depiction, interpretation, and what opens it",
+   {
+    "body": "## Depiction, interpretation, and what opens it\n\n**DEPICTS** names the artifact's objective contents — one edge per\nthing shown, medium-neutral: a song depicts a horn as surely as a\npicture does. Depiction claims confirm at the gate; a depicted thing\ncanon does not know is a gate question with two recorded answers —\ncreate the citizen here, or ignore it with an [Approved Omission] so a\nre-scan never re-asks.\n\nWhat the artifact STANDS FOR is an **[Interpretation]**: one per\nintent, ABOUT exactly one artifact, INTERPRETED_AS its subject,\nDRAWS_ON only things the artifact depicts. The objective layer and\nthe meaning layer stay separate on purpose — two worlds may read the\nsame picture differently without contesting what it shows.\n\nA **[Resolver]** binds a scheme and a location kind to what knows how\nto open it — OPENS_WITH exactly one [Procedure] or [Citizen Bookmark],\nso \"how do I open this kind of thing?\" is canon, not folklore. And an\nartifact that replaces another says so: the newer SUPERSEDES the\nolder, and the older carries when it was superseded — the marker is\nthe model's; what a world does about what still cites the older one is\nthat world's reading.\n\n```mermaid\nflowchart LR\n    A[\"[Artifact]<br/>identity: its name<br/>grade: content held\"]\n    N[\"a newer [Artifact]\"]\n    L1[\"[File Location]<br/>scheme - address - primary<br/>verified fingerprint - sequence - size\"]\n    L2[\"another location kind<br/>rests unverified by design\"]\n    T[\"a thing it shows\"]\n    S[\"what it stands for\"]\n    I[\"[Interpretation]<br/>one per intent\"]\n    R[\"[Resolver]<br/>scheme + location kind\"]\n    P[\"[Procedure] or [Citizen Bookmark]\"]\n    A -- LOCATED_AT --> L1\n    A -- LOCATED_AT --> L2\n    A -- DEPICTS --> T\n    I -- ABOUT --> A\n    I -- INTERPRETED_AS --> S\n    I -- DRAWS_ON --> T\n    R -- OPENS_WITH --> P\n    N -- SUPERSEDES --> A\n```",
+    "rank": 4,
+    "record": "The artifact model — identity, location, meaning"
+   }
+  ],
+  [
+   "[Section]",
+   "Identity is the name; location is a row",
+   {
+    "body": "## Identity is the name; location is a row\n\nAn **[Artifact]** is the thing itself, as canon knows it: its identity\nis its NAME — a stable handle in the world's own words — never a path.\nWHERE it is lives on **[Artifact Location]** rows behind LOCATED_AT,\neach carrying a scheme, an address, and whether it is the primary\ncopy; an artifact has exactly one primary. Copies move, get renamed,\nappear in second places; the artifact stays one citizen and its\nlocations are rows that come and go.\n\n**[File Location]** is the kernel's own location kind — the one the\nengine natively resolves, reads, and verifies. A world may declare\nfurther location kinds under [Artifact Location] through the ordinary\ntaxonomy ceremony; a location of a kind the engine cannot read rests\nunverified by design, stated plainly rather than guessed at.",
+    "rank": 1,
+    "record": "The artifact model — identity, location, meaning"
+   }
+  ],
+  [
+   "[Section]",
+   "Parked, by name",
+   {
+    "body": "## Parked, by name\n\nNamed here so absence never reads as oversight: **Transcribed** as an\nartifact grade (content carried at region grain, with receipts);\na kernel location kind for the web (an https scheme with its own\nverification story) and, with it, the resolver's OPENING VERB — today\na [Resolver] names what opens a location kind, and nothing yet turns\nthat key; and the conversion of the engine's own records' citations\ninto located artifacts, awaiting the web location kind. Each arrives,\nif it arrives, through its own gated design dialogue — parking is\nsequencing on evidence, never a quiet no.",
+    "rank": 5,
+    "record": "The artifact model — identity, location, meaning"
+   }
+  ],
+  [
+   "[Section]",
+   "The artifact model — identity, location, meaning",
+   {
+    "body": "# The artifact model — identity, location, meaning\n\nThe things a person hands a world — a picture, a song, a rulebook, a\nspreadsheet — become citizens, and this record tells that model whole\nas it shipped: what an artifact IS (identity), where it can be found\n(locations, with verification the machine's own fact), how much of its\ncontent canon actually holds (the grade), what it objectively shows\n(depiction), what it stands for to this world (interpretation), and\nwhat knows how to open it (resolvers). The design was settled in owner\ndialogue and landed with the kernel ceremony that promoted [Artifact]\nand its family; the parked remainders are named at the end.",
+    "rank": 0,
+    "record": "The artifact model — identity, location, meaning"
+   }
+  ],
+  [
+   "[Section]",
+   "The grade is the content held",
+   {
+    "body": "## The grade is the content held\n\nHow much of the artifact's content canon holds is the artifact's\ngrade — the kernel's Completeness ladder applied as CONTENT HELD, on\nthe same KNOWN_AT edge every graded citizen carries. **Cited**: canon\nholds the name and where to find it, nothing more. **Attested**: canon\nalso holds a description and its confirmed DEPICTS facts — enough to\nreason about the artifact without opening it. **Transcribed** — the\ncontent itself carried at region grain, with receipts — is designed\nand parked; no shipped machinery claims it.\n\nThe grade is about CONTENT, deliberately: whether the bytes at a\nlocation are really there and really unchanged is a different kind of\nfact, and it never folds into the grade.",
+    "rank": 2,
+    "record": "The artifact model — identity, location, meaning"
+   }
+  ],
+  [
+   "[Section]",
+   "Verification is the location row's own fact",
+   {
+    "body": "## Verification is the location row's own fact\n\nWhat the engine actually read is stamped where the reading happened:\non the location row. At apply, every file location of every artifact\nthe round touched is read and stamped — `verified_fingerprint`,\n`verified_at_sequence`, `size` — and a file location that cannot be\nread refuses the round, collated, before anything is written. The\nreceipts sweep reads the same rows later, so \"is the file still what\ncanon verified?\" is a query, never a memory.\n\nA non-text artifact (an image, a PDF, audio) enters at its **floor\nreceipt**: `python -m graph receipt <file>` prints the fingerprint,\nsize, and the medium the bytes declare, and the comprehension room\nrefuses to read it for structure plainly, receipt in hand — what the\nengine cannot comprehend it still identifies, and silence never reads\nas held.\n\nArtifact-hood follows the taxonomy: a citizen whose kind descends from\n[Artifact] is an artifact to every rule here — the gate, the stamp,\nand the sweep all fold the kinds. Citations resolve among artifact\nkinds first, and a citation the machinery can no longer resolve is an\nERROR by name, never a silently dropped connection.",
+    "rank": 3,
+    "record": "The artifact model — identity, location, meaning"
+   }
+  ]
+ ],
+ "nodes_changed": [],
+ "nodes_removed": []
+}
