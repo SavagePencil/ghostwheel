@@ -29,7 +29,8 @@ from tests.test_judge import ORIGINAL
 from tests.test_roundtrip import GOOD_DRAFT, SMUGGLED_DOC, corpus, judge_draft
 
 GOLDEN = Path(__file__).resolve().parent / "golden"
-_make_repo = getattr(conftest.make_repo, "__wrapped__", conftest.make_repo)
+_write_files = getattr(conftest.write_files, "__wrapped__",
+                       conftest.write_files)
 
 
 def golden(name):
@@ -138,7 +139,7 @@ def test_judge_report_is_byte_stable_and_rows_carry_refs():
 def _judged(draft, doc=None):
     tmp = Path(tempfile.mkdtemp())
     kwargs = {"doc": doc} if doc else {}
-    return judge_draft(_make_repo(tmp), draft, **kwargs)
+    return judge_draft(_write_files(tmp), draft, **kwargs)
 
 
 def test_roundtrip_markdown_is_byte_stable_against_the_captured_goldens():
@@ -168,7 +169,7 @@ def test_roundtrip_record_carries_tiers_findings_and_surface():
 
 def test_roundtrip_cli_files_the_record(tmp_path, monkeypatch, capsys):
     import graph.__main__ as main_mod
-    base_dir, cited, specs = corpus(_make_repo(tmp_path))
+    base_dir, cited, specs = corpus(_write_files(tmp_path))
     draft = base_dir / "draft.md"
     draft.write_text(GOOD_DRAFT, encoding="utf-8")
     # the reading room is a database; the CLI tolerates its absence

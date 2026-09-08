@@ -66,17 +66,17 @@ ties. Stop here — the contest ends.
 """
 
 
-def corpus(make_repo, doc=DOC):
-    base_dir, _ = make_repo({"docs/bestiary.md": doc,
-                             "data/tempers.csv": TEMPERS}, "version: 1")
+def corpus(write_files, doc=DOC):
+    base_dir = write_files({"docs/bestiary.md": doc,
+                            "data/tempers.csv": TEMPERS})
     spec, errors = parse_procedure(CONTEST)
     assert errors == []
     return base_dir, {"docs/bestiary.md": {"Settle a Contest"}}, \
         {"docs/bestiary.md": [("Settle a Contest", spec)]}
 
 
-def judge_draft(make_repo, draft_text, doc=DOC):
-    base_dir, cited, specs = corpus(make_repo, doc)
+def judge_draft(write_files, draft_text, doc=DOC):
+    base_dir, cited, specs = corpus(write_files, doc)
     draft = base_dir / "draft.md"
     draft.write_text(textwrap.dedent(draft_text), encoding="utf-8")
     return run(base_dir, "docs/bestiary.md", draft,
@@ -84,14 +84,14 @@ def judge_draft(make_repo, draft_text, doc=DOC):
                cited_specs=specs["docs/bestiary.md"])
 
 
-def test_reorganized_faithful_draft_passes(make_repo):
-    result = judge_draft(make_repo, GOOD_DRAFT)
+def test_reorganized_faithful_draft_passes(write_files):
+    result = judge_draft(write_files, GOOD_DRAFT)
     assert result.passed, render_report(result)
 
 
-def test_dropped_table_row_is_cell_loss(make_repo):
+def test_dropped_table_row_is_cell_loss(write_files):
     draft = GOOD_DRAFT.replace("| +3 | Wary |\n", "")
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     [table] = [t for t in result.tiers if t.tier == "table"]
     assert not table.passed
     assert "Wary" in str(table.findings[0])
@@ -100,32 +100,32 @@ def test_dropped_table_row_is_cell_loss(make_repo):
                    for t in result.tiers for f in t.findings)
 
 
-def test_split_row_values_do_not_count(make_repo):
+def test_split_row_values_do_not_count(write_files):
     # -2 and Bold present but in DIFFERENT rows: row integrity fails
     draft = GOOD_DRAFT.replace(
         "| -2 | Bold |",
         "| -2 | Calm |\n| 0 | Bold |")
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     [table] = [t for t in result.tiers if t.tier == "table"]
     assert not table.passed and "Bold" in str(table.findings[0])
 
 
-def test_moved_value_is_distortion(make_repo):
+def test_moved_value_is_distortion(write_files):
     draft = GOOD_DRAFT.replace("may take a turn", "may take two turns")
     assert draft != GOOD_DRAFT  # the mutation must actually land
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     [prose] = [t for t in result.tiers if t.tier == "rule-prose"]
     assert any("distorted" in str(f) and "two turns" in str(f)
                for f in prose.findings)
 
 
-def test_invented_table_row_is_red(make_repo):
+def test_invented_table_row_is_red(write_files):
     # the reverse clause: a row no source table accounts for
     draft = GOOD_DRAFT.replace(
         "| +3 | Wary |",
         "| +3 | Wary |\n| +9 | Zen |")
     assert draft != GOOD_DRAFT
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     [table] = [t for t in result.tiers if t.tier == "table"]
     assert any("invented table row" in str(f) and "Zen" in str(f)
                for f in table.findings)
@@ -134,27 +134,27 @@ def test_invented_table_row_is_red(make_repo):
                    for f in table.findings)
 
 
-def test_extra_rule_is_invented(make_repo):
+def test_extra_rule_is_invented(write_files):
     draft = GOOD_DRAFT + "\nA beast that flees loses its next turn.\n"
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     [invented] = [t for t in result.tiers if t.tier == "invented"]
     assert any("flees loses its next turn" in str(f)
                for f in invented.findings)
 
 
-def test_dropped_procedure_step_reds_the_procedure_tier(make_repo):
+def test_dropped_procedure_step_reds_the_procedure_tier(write_files):
     draft = GOOD_DRAFT.replace(
         "Compute the higher temper modifier wins\nties. ", "")
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     [proc] = [t for t in result.tiers if t.tier == "procedure"]
     assert not proc.passed
     assert "Settle a Contest" in str(proc.findings[0])
 
 
-def test_approved_omission_clears_the_red(make_repo):
+def test_approved_omission_clears_the_red(write_files):
     draft = GOOD_DRAFT.replace(
         "The chapter is complete when all beasts have moved. ", "")
-    base_dir, cited, specs = corpus(make_repo)
+    base_dir, cited, specs = corpus(write_files)
     (base_dir / "data" / "approved-omissions.csv").write_text(
         "Omission,Scope,Decided By,Decided On,Issue,PR,Notes\n"
         "The chapter is complete when all beasts have moved.,"
@@ -170,11 +170,11 @@ def test_approved_omission_clears_the_red(make_repo):
     assert prose.approved >= 1
 
 
-def test_report_names_every_red(make_repo):
+def test_report_names_every_red(write_files):
     draft = (GOOD_DRAFT
              .replace("| +3 | Wary |\n", "")
              .replace("may take a turn", "may take two turns"))
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     report = render_report(result)
     assert "FAIL" in report
     assert "Wary" in report and "two turns" in report
@@ -189,19 +189,19 @@ SMUGGLED_DOC = DOC.replace(
     "Bold beasts may never win a contest.")
 
 
-def test_rule_in_cited_section_prose_is_seen(make_repo):
+def test_rule_in_cited_section_prose_is_seen(write_files):
     # the cited-section blind spot: a rule living beside a transcribed
     # procedure must not vanish under a green scorecard
-    result = judge_draft(make_repo, GOOD_DRAFT, doc=SMUGGLED_DOC)
+    result = judge_draft(write_files, GOOD_DRAFT, doc=SMUGGLED_DOC)
     assert not result.passed
     prose = next(t for t in result.tiers if t.tier == "rule-prose")
     assert any("bold beasts may never win" in str(f) and
                "§ Settle a Contest" in str(f) for f in prose.findings)
 
 
-def test_backup_omission_row_clears_cited_prose(make_repo):
+def test_backup_omission_row_clears_cited_prose(write_files):
     import json
-    base_dir, cited, specs = corpus(make_repo, SMUGGLED_DOC)
+    base_dir, cited, specs = corpus(write_files, SMUGGLED_DOC)
     export_dir = base_dir / "graph" / "export"
     export_dir.mkdir(parents=True)
     (export_dir / "nodes.jsonl").write_text(json.dumps(
@@ -219,8 +219,8 @@ def test_backup_omission_row_clears_cited_prose(make_repo):
     assert prose.approved == 1
 
 
-def test_report_names_its_judged_surface(make_repo):
-    result = judge_draft(make_repo, GOOD_DRAFT)
+def test_report_names_its_judged_surface(write_files):
+    result = judge_draft(write_files, GOOD_DRAFT)
     report = render_report(result)
     assert "Judged surface:" in report
     assert "unjudged: none." in report
@@ -229,8 +229,8 @@ def test_report_names_its_judged_surface(make_repo):
 # -- findings are rows -------------------------------------------------
 
 
-def test_findings_are_rows_with_sections(make_repo):
-    result = judge_draft(make_repo, GOOD_DRAFT, doc=SMUGGLED_DOC)
+def test_findings_are_rows_with_sections(write_files):
+    result = judge_draft(write_files, GOOD_DRAFT, doc=SMUGGLED_DOC)
     rows = result.findings_rows()
     assert rows, "expected at least the smuggled-rule finding"
     smuggled = next(r for r in rows
@@ -243,17 +243,17 @@ def test_findings_are_rows_with_sections(make_repo):
     assert smuggled["id"]
 
 
-def test_finding_identity_is_stable_across_rejudges(make_repo):
-    first = judge_draft(make_repo, GOOD_DRAFT, doc=SMUGGLED_DOC)
-    second = judge_draft(make_repo, GOOD_DRAFT, doc=SMUGGLED_DOC)
+def test_finding_identity_is_stable_across_rejudges(write_files):
+    first = judge_draft(write_files, GOOD_DRAFT, doc=SMUGGLED_DOC)
+    second = judge_draft(write_files, GOOD_DRAFT, doc=SMUGGLED_DOC)
     assert [r["id"] for r in first.findings_rows()] == \
         [r["id"] for r in second.findings_rows()]
 
 
-def test_findings_archive_round_trips(make_repo, tmp_path):
+def test_findings_archive_round_trips(write_files, tmp_path):
     from graph.comprehension import (read_findings_archive,
                                      write_findings_archive)
-    result = judge_draft(make_repo, GOOD_DRAFT, doc=SMUGGLED_DOC)
+    result = judge_draft(write_files, GOOD_DRAFT, doc=SMUGGLED_DOC)
     rows = result.findings_rows()
     write_findings_archive(tmp_path / "arch", rows)
     assert read_findings_archive(tmp_path / "arch") == \
@@ -266,8 +266,8 @@ def test_findings_archive_round_trips(make_repo, tmp_path):
 CARRIED = "the chapter is complete when all beasts have moved"
 
 
-def run_with_carriage(make_repo, draft_text):
-    base_dir, cited, specs = corpus(make_repo)
+def run_with_carriage(write_files, draft_text):
+    base_dir, cited, specs = corpus(write_files)
     draft = base_dir / "draft.md"
     draft.write_text(textwrap.dedent(draft_text), encoding="utf-8")
     return run(base_dir, "docs/bestiary.md", draft,
@@ -276,8 +276,8 @@ def run_with_carriage(make_repo, draft_text):
                carried_texts=[CARRIED])
 
 
-def test_registered_passage_classes_as_carried(make_repo):
-    result = run_with_carriage(make_repo, GOOD_DRAFT)
+def test_registered_passage_classes_as_carried(write_files):
+    result = run_with_carriage(write_files, GOOD_DRAFT)
     assert result.passed
     carried = next(t for t in result.tiers
                    if t.tier == "verbatim-carried")
@@ -285,23 +285,23 @@ def test_registered_passage_classes_as_carried(make_repo):
     assert "verbatim-carried" in result.surface
 
 
-def test_paraphrased_carried_passage_reds_byte_carriage(make_repo):
+def test_paraphrased_carried_passage_reds_byte_carriage(write_files):
     # a paraphrase that would PASS as matched prose must fail carriage:
     # the ruling says word-for-word, and the judge now holds it to that
     draft = GOOD_DRAFT.replace(
         "The chapter is complete when all beasts have moved.",
         "The chapter is over when every beast has moved.")
     assert "chapter is over" in draft
-    result = run_with_carriage(make_repo, draft)
+    result = run_with_carriage(write_files, draft)
     carried = next(t for t in result.tiers
                    if t.tier == "verbatim-carried")
     assert any(f.kind == "missing-carried" for f in carried.findings)
 
 
-def test_registry_reads_verbatim_rows_from_backup(make_repo):
+def test_registry_reads_verbatim_rows_from_backup(write_files):
     import json
     from graph.roundtrip import carried_passages_for
-    base_dir, _ = make_repo({"docs/x.md": "# X"}, "version: 1")
+    base_dir = write_files({"docs/x.md": "# X"})
     export_dir = base_dir / "graph" / "export"
     export_dir.mkdir(parents=True)
     rows = [
@@ -318,13 +318,13 @@ def test_registry_reads_verbatim_rows_from_backup(make_repo):
         ["carry me exactly"]
 
 
-def test_registry_prefers_original_bytes_over_normalized_key(make_repo):
+def test_registry_prefers_original_bytes_over_normalized_key(write_files):
     # casing is information: when a row carries the original bytes in its
     # text property, regeneration reads those; the lowercased name stays
     # a matching key only
     import json
     from graph.roundtrip import carried_passages_for
-    base_dir, _ = make_repo({"docs/x.md": "# X"}, "version: 1")
+    base_dir = write_files({"docs/x.md": "# X"})
     export_dir = base_dir / "graph" / "export"
     export_dir.mkdir(parents=True)
     rows = [
@@ -343,24 +343,24 @@ def test_registry_prefers_original_bytes_over_normalized_key(make_repo):
 # -- the additive clause -----------------------------------------------
 
 
-def test_smuggled_cell_in_matched_row_is_red(make_repo):
+def test_smuggled_cell_in_matched_row_is_red(write_files):
     # the catch: a value from nowhere riding a key-matched row
     draft = GOOD_DRAFT.replace("| -2 | Bold |",
                                "| -2 | Bold | rusty |")
     assert "rusty" in draft
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     [table] = [t for t in result.tiers if t.tier == "table"]
     assert any(f.kind == "additive-cells" and "rusty" in str(f)
                for f in table.findings)
 
 
-def test_corpus_accounted_extra_cell_stays_free(make_repo):
+def test_corpus_accounted_extra_cell_stays_free(write_files):
     # restructuring latitude survives: merging a canon-held fact into a
     # table is fine — the corpus accounts for the cell
     draft = GOOD_DRAFT.replace(
         "| +3 | Wary |",
         "| +3 | Wary | each beast may take a turn |")
-    result = judge_draft(make_repo, draft)
+    result = judge_draft(write_files, draft)
     [table] = [t for t in result.tiers if t.tier == "table"]
     assert not any(f.kind == "additive-cells" for f in table.findings)
 
@@ -382,13 +382,13 @@ def _typed_sections(relpath="data/typed.csv"):
                         "text": "{{csv:%s}}" % relpath}]}]
 
 
-def _typed_repo(make_repo, csv=TYPED):
-    base_dir, _ = make_repo({"data/typed.csv": csv}, "version: 1")
+def _typed_repo(write_files, csv=TYPED):
+    base_dir = write_files({"data/typed.csv": csv})
     return base_dir
 
 
-def test_typed_columns_compare_by_value_not_bytes(make_repo):
-    base_dir = _typed_repo(make_repo)
+def test_typed_columns_compare_by_value_not_bytes(write_files):
+    base_dir = _typed_repo(write_files)
     # a draft that renders the SAME values in different surface forms:
     # 2 for +2, true for Y, the set in the other order
     draft = "| a | b | c | d |\n|---|---|---|---|\n| row | 2 | true | beta, alpha |\n"
@@ -398,44 +398,44 @@ def test_typed_columns_compare_by_value_not_bytes(make_repo):
     assert result.checked == 1
 
 
-def test_without_typing_the_same_draft_reds_byte_exact(make_repo):
+def test_without_typing_the_same_draft_reds_byte_exact(write_files):
     # the typing is what relaxes equality: byte-exact, +2 != 2
-    base_dir = _typed_repo(make_repo)
+    base_dir = _typed_repo(write_files)
     draft = "| a | b | c | d |\n|---|---|---|---|\n| row | 2 | true | beta, alpha |\n"
     result = judge_tables(_typed_sections(), base_dir, draft)  # no col_types
     assert not result.passed
 
 
-def test_changed_number_still_reds_under_typing(make_repo):
-    base_dir = _typed_repo(make_repo)
+def test_changed_number_still_reds_under_typing(write_files):
+    base_dir = _typed_repo(write_files)
     draft = "| a | b | c | d |\n|---|---|---|---|\n| row | 3 | true | alpha, beta |\n"
     result = judge_tables(_typed_sections(), base_dir, draft,
                           col_types=TYPED_KINDS)
     assert any(f.kind == "cell-loss" for f in result.findings)
 
 
-def test_dropped_set_element_still_reds_under_typing(make_repo):
-    base_dir = _typed_repo(make_repo)
+def test_dropped_set_element_still_reds_under_typing(write_files):
+    base_dir = _typed_repo(write_files)
     draft = "| a | b | c | d |\n|---|---|---|---|\n| row | 2 | Y | alpha |\n"
     result = judge_tables(_typed_sections(), base_dir, draft,
                           col_types=TYPED_KINDS)
     assert any(f.kind == "cell-loss" for f in result.findings)
 
 
-def test_altered_prose_still_reds_under_typing(make_repo):
+def test_altered_prose_still_reds_under_typing(write_files):
     # a text column (K) stays byte-exact even when others are typed
-    base_dir = _typed_repo(make_repo)
+    base_dir = _typed_repo(write_files)
     draft = "| a | b | c | d |\n|---|---|---|---|\n| ROW | 2 | Y | alpha, beta |\n"
     result = judge_tables(_typed_sections(), base_dir, draft,
                           col_types=TYPED_KINDS)
     assert any(f.kind == "cell-loss" for f in result.findings)
 
 
-def test_approved_difference_clears_both_sides(make_repo):
+def test_approved_difference_clears_both_sides(write_files):
     # the owner ruled a corrected rendering: the original's wording is
     # excused from omission/distortion AND the rendering from invention
     import json
-    base_dir, cited, specs = corpus(make_repo, SMUGGLED_DOC)
+    base_dir, cited, specs = corpus(write_files, SMUGGLED_DOC)
     export_dir = base_dir / "graph" / "export"
     export_dir.mkdir(parents=True)
     (export_dir / "nodes.jsonl").write_text(json.dumps(
