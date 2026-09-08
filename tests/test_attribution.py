@@ -271,16 +271,16 @@ def test_possessive_folds_at_the_structured_rung():
     assert verdict.verdict == ATTRIBUTED and verdict.rung == PROPERTIES
 
 
-def test_whole_book_unit_produces_one_scorecard(make_repo):
+def test_whole_book_unit_produces_one_scorecard(write_files):
     # two docs judged as ONE artifact: canon rows from every scope
     # apply, and the attribution census runs against the export
     from graph.roundtrip import ALL_SCOPES, run
-    base_dir, _ = make_repo({
+    base_dir = write_files({
         "docs/one.md": "# One\n\nBog imposes -2 to defense.\n",
         "docs/two.md": "# Two\n\nRain soaks everyone completely.\n",
         "build/book.md": "# One\n\nBog imposes -2 to defense.\n\n"
                          "# Two\n\nRain soaks everyone completely.\n",
-    }, "version: 1\nnodes: {}\n")
+    })
     export_dir = base_dir / "graph" / "export"
     export_dir.mkdir(parents=True)
     (export_dir / "nodes.jsonl").write_text(

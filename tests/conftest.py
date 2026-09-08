@@ -11,19 +11,16 @@ if str(REPO_ROOT) not in sys.path:
 
 
 @pytest.fixture
-def make_repo(tmp_path):
-    """Build a miniature repo: write files from {relative path: content} and
-    return (base_dir, ontology_path)."""
-    def _make(files, ontology_yaml):
+def write_files(tmp_path):
+    """Write files from {relative path: content} under a fresh base and
+    return it — the from-sources era is closed, so a test corpus is
+    just its files; no bootstrap schema file exists anywhere."""
+    def _make(files):
         for relpath, content in files.items():
             path = tmp_path / relpath
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(textwrap.dedent(content), encoding="utf-8")
-        ontology_path = tmp_path / "graph" / "ontology.yaml"
-        ontology_path.parent.mkdir(parents=True, exist_ok=True)
-        ontology_path.write_text(textwrap.dedent(ontology_yaml),
-                                 encoding="utf-8")
-        return tmp_path, ontology_path
+        return tmp_path
     return _make
 
 
