@@ -21,7 +21,12 @@ the stamps together are the DBMS's registry of names: every load first
 reads the target's stamp, and a database another knowledge base holds
 refuses by name before a byte is written — the only way two knowledge
 bases sharing a DBMS could otherwise collide (a branch's database is
-its bare branch name) is closed at the door. Nothing is ever renamed.
+its bare branch name) is closed at the door. Nothing is ever renamed —
+but a knowledge base may adopt a new NAME through a gated round, and
+the stamps of its own line follow: a database whose stamp names the
+former holder is accepted when its base hash is an identity this line
+has ever held (judged by identity, never by trust), and the acceptance
+is read aloud before the next load re-stamps it under the adopted name.
 """
 
 from datetime import datetime, timezone
@@ -107,16 +112,23 @@ def strip(graph):
     return graph
 
 
-def held_by_problem(found, kb, database):
+def held_by_problem(found, kb, database, same_line=()):
     """Judge a database's stamp against the knowledge base about to
     load into it. Returns a designer-facing refusal, or None when the
     database is unstamped (pre-stamp, or made by hand), stamped without
     a knowledge base (an older engine's stamp), or this knowledge
-    base's own."""
+    base's own. `same_line` is the loading line's recorded base
+    identities (proposal.line_identities): a stamp naming a DIFFERENT
+    holder whose base hash is one of them is this same line under its
+    former name — the round that adopts a knowledge base's name must
+    land on databases stamped before the name moved — and proceeds
+    (the caller reads adoption_note aloud)."""
     if found is None:
         return None
     holder = found.get(KB_PROP)
     if not holder or holder == kb:
+        return None
+    if found.get("base_hash") in same_line:
         return None
     role = found.get("role") or "database"
     return (
@@ -130,16 +142,36 @@ def held_by_problem(found, kb, database):
     )
 
 
-def held_by_other(config, kb):
-    """The configured database's refusal when another knowledge base
-    holds it, else None. A database that does not exist yet, or cannot
-    be read, is nobody's — creation and the load report their own
-    faults, so nothing is judged here."""
+def held_or_followed(config, kb, same_line=()):
+    """(refusal, note) for the configured database: the refusal when
+    another knowledge base holds it, and — when a same-line acceptance
+    let a former-named database through instead — the sentence to read
+    aloud. At most one is not None. A database that does not exist yet,
+    or cannot be read, is nobody's — creation and the load report their
+    own faults, so nothing is judged here."""
     try:
         found = read_stamp(config)
     except Exception:
+        return None, None
+    problem = held_by_problem(found, kb, config["NEO4J_DATABASE"],
+                              same_line)
+    if problem:
+        return problem, None
+    return None, adoption_note(found, kb)
+
+
+def adoption_note(found, kb):
+    """The sentence a load reads aloud when it proceeds over a stamp
+    naming the line's FORMER holder (a same-line acceptance under
+    held_by_problem), else None — the acceptance is never silent."""
+    if found is None:
         return None
-    return held_by_problem(found, kb, config["NEO4J_DATABASE"])
+    holder = found.get(KB_PROP)
+    if not holder or holder == kb:
+        return None
+    database = found.get("database") or "the target"
+    return (f"Note: database '{database}' followed the knowledge base to "
+            f"its adopted name — '{holder}' is now '{kb}'.")
 
 
 def identity_problem(found, pinned_base_hash, database):
