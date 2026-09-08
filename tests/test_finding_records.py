@@ -1,14 +1,13 @@
 """The Finding fleet and the parity report join the record shape.
 
-Findings (validation / extraction / derivation) carry a verdict code —
-their category, unless a site earned a finer one — and a standalone
-remedy, and render as rows; the validation report renders FROM those
-rows with a JSON sibling, and the two string-collapse boundaries (the
-delta gate's roster findings, the succession gate's re-derivation
-findings) pass the findings through typed. The parity judge's
-scorecard and the round-trip scorecard likewise render from their own
-rows, byte-stable against goldens captured from the renderers before
-the change, with a JSON record beside the prose.
+Findings (derivation / roster / sweep) carry a verdict code — their
+category, unless a site earned a finer one — and a standalone remedy,
+and render as rows; the two string-collapse boundaries (the delta
+gate's roster findings, the succession gate's re-derivation findings)
+pass the findings through typed. The parity judge's scorecard and the
+round-trip scorecard likewise render from their own rows, byte-stable
+against goldens captured from the renderers before the change, with a
+JSON record beside the prose.
 """
 
 import json
@@ -16,12 +15,11 @@ import tempfile
 from pathlib import Path
 
 import tests.conftest as conftest
-from graph import validate as validate_mod
 from graph.extract import GraphData, procedure_roster_findings
 from graph.judge import (DISTORTED, INVENTED, MATCHED, OMITTED_APPROVED,
                          OMITTED_UNAPPROVED, judge)
 from graph.judge import render_report as render_judge
-from graph.ontology import ERROR, INFO, WARNING, Category, Finding
+from graph.ontology import ERROR, WARNING, Category, Finding
 from graph.report import REF_KEYS, record_path
 from graph.roundtrip import (ROUNDTRIP_REPORT_FILE, RoundFinding,
                              roundtrip_report)
@@ -84,49 +82,6 @@ def test_the_roster_gap_is_the_roster_category_s_earned_code():
     assert finding.remedy == "Land the citizen through the delta path."
     assert finding.row()["ref"] == "missing-entry"
     assert finding.detail.endswith(finding.remedy)  # detail byte-stable
-
-
-# -- validation renders from its rows --------------------------------------
-
-
-def _validation_fixture():
-    findings = [
-        Finding(ERROR, Category.DANGLING_REF, "data/herbs.csv", "row 3",
-                "Nightbell names a Region 'Mistfen' that no row defines"),
-        Finding(WARNING, Category.UNPARSED_CELL, "data/herbs.csv",
-                "row 5 col hue", "kept verbatim: 'pale | ash'"),
-        Finding(INFO, Category.ONTOLOGY, "graph/ontology.yaml",
-                "concepts.Herb", "no lens declared"),
-        Finding(ERROR, "sky-colour", "notes.md", "-",
-                "an unknown category lands in its own section"),
-        Finding(WARNING, Category.DANGLING_REF, "data/blades.csv", "row 1",
-                "Falchion cites a Smith nobody forged"),
-    ]
-    graph = GraphData()
-    graph.ensure_node("Herb", "Nightbell", placeholder=True)
-    graph.ensure_node("Blade", "Falchion")
-    return findings, graph
-
-
-def test_validation_markdown_is_byte_stable_and_has_a_record(tmp_path):
-    findings, graph = _validation_fixture()
-    path = tmp_path / "graph" / "reports" / "validation.md"
-    doc = validate_mod.write_report(findings, graph, path, base_dir=tmp_path)
-    assert path.read_text(encoding="utf-8") == golden("validation-report.md")
-    record = json.loads(record_path(
-        tmp_path, validate_mod.VALIDATION_REPORT_FILE).read_text("utf-8"))
-    assert record == json.loads(json.dumps(doc))
-    assert record["kind"] == "validation-report"
-    assert record["counts"] == {"errors": 2, "warnings": 2, "info": 1}
-    assert record["graph"] == {"nodes": 2, "by_label": {"Blade": 1, "Herb": 1},
-                               "edges": 0, "placeholders": 1}
-    assert [r["ref"] for r in record["findings"]][:2] == [
-        "unknown-reference", "kept-as-written"]
-    # a clean run renders the clean line and an empty row list
-    empty = validate_mod.render_report(
-        validate_mod.validation_report([], None))
-    assert "No findings. The graph is clean." in empty
-    assert "**Graph:**" not in empty
 
 
 # -- the typed pass-throughs ------------------------------------------------

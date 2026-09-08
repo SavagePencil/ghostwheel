@@ -6,9 +6,7 @@ Judgment citizen (Answer Key) carrying its kind and table as props, the
 rest of its declaration as JSON, and one CHECKS edge to the Procedure it
 holds still; the check runs at the delta gate whenever a round touches a
 key or a checked program's body, and on demand as the DB-free
-`answer-keys` sweep, reading program bodies from canon. In a bootstrap
-schema file, the same declarations sit under `answer_keys:` and run
-inside from-sources validate against the program files. A new procedure
+`answer-keys` sweep, reading program bodies from canon. A new procedure
 gets its net by adding a key; nobody hand-writes a test.
 
 Three kinds:
@@ -133,18 +131,6 @@ def _case_bodies(proc_spec):
             for case, body in (step.get("cases") or {}).items():
                 bodies[str(case)] = json.dumps(body, ensure_ascii=False)
     return bodies
-
-
-def check(ontology):
-    """Every answer key the bootstrap schema declares, verified against
-    the program FILES it registers — the from-sources path (validate).
-    Findings collate — the approver never fixes one to discover the
-    next."""
-    if not ontology.answer_keys:
-        return []
-    return check_keys(ontology.answer_keys, _load_procedures(ontology),
-                      subject_surfaces(ontology), ontology.base_dir,
-                      str(ontology.path))
 
 
 def check_keys(keys, specs, surfaces, base_dir, fname, wheres=None):

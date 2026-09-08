@@ -1,0 +1,100 @@
+{"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Book"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Character"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Cited"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Completeness"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Concept"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Exclusive"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Facet"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Judgment"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Ordered"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Page"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Parameterized"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Place"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Provenance"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Stateful"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Story Concept"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Tale Structure"}, "properties": {}, "to": {"label": "Archetype", "name": "Ontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Theme"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Transcribed"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Answer Key]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Answer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Approved Omission]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Artifact Location]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Artifact]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Audience]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Citizen Bookmark]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Decision]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Discipline]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[File Location]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Interpretation]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Knowledge Base Dependency]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Opinion]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Pocket Universe]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Procedure]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Question]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Requirement]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Resolver]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[TODO]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Visibility Class]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "[Visibility Group]"}, "properties": {}, "to": {"label": "Archetype", "name": "Metaontology"}, "type": "DECLARED_IN"}
+{"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Cited"}, "type": "FOLLOWS"}
+{"from": {"label": "Archetype", "name": "Page"}, "properties": {}, "to": {"label": "Archetype", "name": "Book"}, "type": "FOLLOWS"}
+{"from": {"label": "Archetype", "name": "Transcribed"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "FOLLOWS"}
+{"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Completeness"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Book"}, "properties": {}, "to": {"label": "Archetype", "name": "Tale Structure"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Character"}, "properties": {}, "to": {"label": "Archetype", "name": "Story Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Cited"}, "properties": {}, "to": {"label": "Archetype", "name": "Completeness"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Completeness"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Completeness"}, "properties": {}, "to": {"label": "Archetype", "name": "Ordered"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Exclusive"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Metaontology"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Metaontology"}, "properties": {}, "to": {"label": "Archetype", "name": "[Schema Layer]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Ontology"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Ontology"}, "properties": {}, "to": {"label": "Archetype", "name": "[Schema Layer]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Ordered"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Page"}, "properties": {}, "to": {"label": "Archetype", "name": "Tale Structure"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Parameterized"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Place"}, "properties": {}, "to": {"label": "Archetype", "name": "Story Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Stateful"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Story Concept"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Tale Structure"}, "properties": {}, "to": {"label": "Archetype", "name": "Ordered"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Tale Structure"}, "properties": {}, "to": {"label": "Archetype", "name": "[Segment Scheme]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Theme"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "Transcribed"}, "properties": {}, "to": {"label": "Archetype", "name": "Completeness"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Answer Key]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Answer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Approved Omission]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Artifact Location]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Artifact]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Audience]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Citizen Bookmark]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Decision]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Discipline]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[File Location]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Interpretation]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Knowledge Base Dependency]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Opinion]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Pocket Universe]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Procedure]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Question]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Requirement]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Resolver]"}, "properties": {}, "to": {"label": "Archetype", "name": "Provenance"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Schema Layer]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Segment Scheme]"}, "properties": {}, "to": {"label": "Archetype", "name": "Facet"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[TODO]"}, "properties": {}, "to": {"label": "Archetype", "name": "Judgment"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Visibility Class]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Archetype", "name": "[Visibility Group]"}, "properties": {}, "to": {"label": "Archetype", "name": "Concept"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Character", "name": "Maren"}, "properties": {}, "to": {"label": "Archetype", "name": "Character"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Character", "name": "Pip"}, "properties": {}, "to": {"label": "Archetype", "name": "Character"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Place", "name": "Lantern Bay"}, "properties": {}, "to": {"label": "Archetype", "name": "Place"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Place", "name": "The Hollow Oak"}, "properties": {}, "to": {"label": "Archetype", "name": "Place"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Artifact]", "name": "docs/tale.md"}, "properties": {}, "to": {"label": "Archetype", "name": "[Artifact]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "Character", "name": "Maren"}, "properties": {}, "to": {"label": "Place", "name": "Lantern Bay"}, "type": "LIVES_IN"}
+{"from": {"label": "Character", "name": "Pip"}, "properties": {}, "to": {"label": "Place", "name": "The Hollow Oak"}, "type": "LIVES_IN"}
+{"from": {"label": "Archetype", "name": "Attested"}, "properties": {}, "to": {"label": "Archetype", "name": "Transcribed"}, "type": "PRECEDES"}
+{"from": {"label": "Archetype", "name": "Book"}, "properties": {}, "to": {"label": "Archetype", "name": "Page"}, "type": "PRECEDES"}
+{"from": {"label": "Archetype", "name": "Cited"}, "properties": {}, "to": {"label": "Archetype", "name": "Attested"}, "type": "PRECEDES"}
+{"from": {"label": "Archetype", "name": "[File Location]"}, "properties": {}, "to": {"label": "Archetype", "name": "[Artifact Location]"}, "type": "SUBTYPE_OF"}

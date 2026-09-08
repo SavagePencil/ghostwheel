@@ -1,18 +1,23 @@
 """Rules-as-programs: parse/lift/walk/render units, completeness matrix,
-signature projection, extractor integration, branches-on-subject, and
-outcome binding — all over a self-contained storybook corpus (no real
-docs, no approved-table answer keys; those belong to a project's own
-knowledge base and are checked elsewhere)."""
+signature projection, derivation integration, branches-on-subject, and
+outcome binding — all over a self-contained storybook corpus authored
+graph-natively (bodies as ground props over the storybook canon; no
+source files but the one artifact that span citations read by bytes)."""
 
 import hashlib
 import textwrap
 
-from graph.extract import extract
-from graph.ontology import ERROR, INFO, WARNING, load_ontology
+import json
+
+from graph.extract import derive, make_edge
+from graph.ontology import (ARCHETYPE_LABEL, ERROR, INFO,
+                            KERNEL_PROCEDURE_LABEL, WARNING,
+                            ontology_from_graph)
 from graph.parsers import markdown_sections
 from graph.procedures import (bind_outcomes, branches_on_subject, lift,
                               parse_procedure, render_markdown,
                               walk_transitions)
+from tests.test_branch import build_canon
 
 PROGRAM = """\
 procedure: Wilt
@@ -65,62 +70,17 @@ specified_in: rules § Overview
 description: mends beasts
 """
 
-FILES = {
-    "data/conditions.csv": """\
-        Condition
-        Fresh
-        Weary
-        Spent
-        """,
-    "data/reserves.csv": """\
-        Reserve
-        Sap
-        Bounty
-        """,
-    "docs/rules.md": """\
-        ## Overview
+# the one prose section's body, a ground prop on its citizen; the same
+# prose sits under the artifact's heading on disk for span citations
+RULES_BODY = (
+    "Wilts happen to every Sprite daily in the Bramble Woods.\n"
+    "A sprite in the Fresh Condition is no safer, and pays their Bounties"
+    " in Sap\n"
+    "\n"
+    "Sprites endure. The Thicket claims the unwary near the Dread Hollow.\n")
+RULES_MD = "## Overview\n\n" + RULES_BODY
 
-        Wilts happen to every Sprite daily in the Bramble Woods.
-        A sprite in the Fresh Condition is no safer, and pays their Bounties in Sap
-
-        Sprites endure. The Thicket claims the unwary near the Dread Hollow.
-        """,
-    "data/procedures/test.yaml": PROGRAM,
-    "data/procedures/tend.yaml": TEND,
-}
-
-ONTOLOGY = """\
-    version: 1
-    concepts:
-      Tale Concept: { instance_of: Concept }
-      Bramble Wood:
-        instance_of: Tale Concept
-        stub: true
-        surface_forms: [Thicket]
-        doc: "recognized, unmodeled"
-    nodes:
-      Condition:
-        source: data/conditions.csv
-        key: Condition
-        concept: [Tale Concept, Exclusive, Stateful]
-      Reserve:
-        source: data/reserves.csv
-        key: Reserve
-        concept: Tale Concept
-      "[Artifact]":
-        values: [docs/rules.md]
-      DocSection:
-        source: [docs/rules.md]
-        catalog:
-          heading: { type: text, doc: "heading" }
-          file:    { type: text, doc: "path" }
-        relationships:
-          - { type: PART_OF, to: "[Artifact]", parser: part_of }
-      "[Procedure]":
-        source: [data/procedures/test.yaml, data/procedures/tend.yaml]
-        reader: procedure_yaml
-        concept: "[Procedure]"
-    """
+PROCS = {"Wilt": PROGRAM, "Tend": TEND}
 
 
 # -- parse validation ---------------------------------------------------------
@@ -354,14 +314,75 @@ def test_bind_outcomes_trails():
     assert bound["Shrugged Off"]["notes"] == ["still lively"]
 
 
-# -- extractor integration ----------------------------------------------------
+# -- derivation integration (the corpus is graph-native) ----------------------
 
-def run(make_repo, files=None, ontology=None):
-    base, path = make_repo(files or FILES, ontology or ONTOLOGY)
-    ontology_obj, findings = load_ontology(path, base)
-    assert ontology_obj is not None
-    graph, extract_findings = extract(ontology_obj)
-    return graph, findings + extract_findings
+def _add_label(graph, label, spec, parents):
+    graph.ensure_node(ARCHETYPE_LABEL, label,
+                      spec_json=json.dumps(spec, sort_keys=True))
+    graph.edges.append(make_edge(
+        "DECLARED_IN", ARCHETYPE_LABEL, label, ARCHETYPE_LABEL, "Ontology"))
+    for parent in parents:
+        graph.edges.append(make_edge(
+            "INSTANCE_OF", ARCHETYPE_LABEL, label, ARCHETYPE_LABEL, parent))
+
+
+def build_corpus(tmp_path, procs=None, rules_body=RULES_BODY,
+                 stub_props=None):
+    """The storybook canon grown into the wilting corpus, graph-natively:
+    value citizens, a stub concept, one prose section carrying its body,
+    the artifact's real bytes on disk, and a released program label whose
+    citizens carry their bodies as ground."""
+    graph = build_canon()
+    _add_label(graph, "Condition",
+               {"concept": ["Story Concept", "Exclusive", "Stateful"]},
+               ["Story Concept", "Exclusive", "Stateful"])
+    for name in ("Fresh", "Weary", "Spent"):
+        graph.ensure_node("Condition", name)
+    _add_label(graph, "Reserve", {"concept": "Story Concept"},
+               ["Story Concept"])
+    for name in ("Sap", "Bounty"):
+        graph.ensure_node("Reserve", name)
+    # the stub concept: recognized, unmodeled — with its surface forms
+    props = {"doc": "recognized, unmodeled", "stub": True,
+             "surface_forms": ["Thicket"]}
+    props.update(stub_props or {})
+    graph.ensure_node(ARCHETYPE_LABEL, "Bramble Wood", **props)
+    graph.edges.append(make_edge(
+        "DECLARED_IN", ARCHETYPE_LABEL, "Bramble Wood",
+        ARCHETYPE_LABEL, "Ontology"))
+    graph.edges.append(make_edge(
+        "INSTANCE_OF", ARCHETYPE_LABEL, "Bramble Wood",
+        ARCHETYPE_LABEL, "Story Concept"))
+    # prose: the section citizen carries its body as a ground prop
+    _add_label(graph, "DocSection",
+               {"concept": "Story Concept", "reader": "markdown_sections",
+                "relationships": [{"type": "PART_OF", "to": "[Artifact]",
+                                   "parser": "part_of"}]},
+               ["Story Concept"])
+    graph.ensure_node("DocSection", "rules § Overview", heading="Overview",
+                      file="docs/rules.md", body=rules_body)
+    # the artifact citizen, and its real bytes (span citations verify
+    # against the immutable source directly)
+    graph.ensure_node("[Artifact]", "docs/rules.md")
+    path = tmp_path / "docs" / "rules.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("## Overview\n\n" + rules_body, encoding="utf-8")
+    # the released program label: reader only, bodies on the citizens
+    row = graph.nodes[(ARCHETYPE_LABEL, KERNEL_PROCEDURE_LABEL)]
+    row["spec_json"] = json.dumps(
+        {"concept": KERNEL_PROCEDURE_LABEL, "reader": "procedure_yaml"},
+        sort_keys=True)
+    for name, body in (procs or PROCS).items():
+        graph.ensure_node(KERNEL_PROCEDURE_LABEL, name, body=body)
+    return graph
+
+
+def run(tmp_path, procs=None, rules_body=RULES_BODY, stub_props=None,
+        setup=None):
+    graph = build_corpus(tmp_path, procs, rules_body, stub_props)
+    if setup:
+        setup(graph)
+    return derive(ontology_from_graph(graph, tmp_path), graph)
 
 
 def edges(graph, edge_type):
@@ -369,38 +390,23 @@ def edges(graph, edge_type):
             for e in graph.edges if e.type == edge_type}
 
 
-def test_procedure_node_props(make_repo):
-    graph, findings = run(make_repo)
+def test_steps_materialized_and_chained(tmp_path):
+    graph, findings = run(tmp_path)
     assert not [f for f in findings if f.severity == ERROR]
-    node = graph.nodes[("[Procedure]", "Wilt")]
-    assert node["precondition"] == "the frost arrived"
-    assert node["completeness"] == "transcribed"
-    assert "beast: who wilts" in node["inputs"]
-    assert ("ward: a warding bloom (optional; when absent: "
-            "no shelter applies)") in node["inputs"]
-    assert node["reads_closed"] and node["mutates_closed"]
-    tend = graph.nodes[("[Procedure]", "Tend")]
-    assert tend["completeness"] == "cited"
-    assert tend["description"] == "mends beasts"
-    assert not tend["reads_closed"]
-
-
-def test_steps_materialized_and_chained(make_repo):
-    graph, _ = run(make_repo)
     assert graph.nodes[("[Step]", "Wilt §1")]["kind"] == "branch"
     assert graph.nodes[("[Step]", "Wilt §1.Fresh.2")]["condition"] == "Sap > 0"
     assert ("[Procedure]", "Wilt", "[Step]", "Wilt §1") in edges(graph, "FIRST_STEP")
 
 
-def test_cases_plug_into_states(make_repo):
-    graph, _ = run(make_repo)
+def test_cases_plug_into_states(tmp_path):
+    graph, _ = run(tmp_path)
     assert edges(graph, "MATCHES") == {
         ("[Step]", "Wilt §1.Fresh", "Condition", "Fresh"),
         ("[Step]", "Wilt §1.Weary", "Condition", "Weary")}
 
 
-def test_specified_in_resolves(make_repo):
-    graph, _ = run(make_repo)
+def test_specified_in_resolves(tmp_path):
+    graph, _ = run(tmp_path)
     spec_edges = edges(graph, "SPECIFIED_IN")
     assert ("[Procedure]", "Wilt", "DocSection", "rules § Overview") in spec_edges
     assert ("[Procedure]", "Tend", "DocSection", "rules § Overview") in spec_edges
@@ -424,25 +430,15 @@ def artifact_cited(section="Overview", approved_hash=None, artifact="docs/rules.
     return "\n".join(lines) + "\n"
 
 
-def run_with_spanned(make_repo, yaml_text):
-    files = dict(FILES)
-    files["data/procedures/spanned.yaml"] = yaml_text
-    ontology = ONTOLOGY.replace(
-        "data/procedures/tend.yaml]",
-        "data/procedures/tend.yaml, data/procedures/spanned.yaml]")
-    return run(make_repo, files=files, ontology=ontology)
+def run_with_spanned(tmp_path, yaml_text):
+    return run(tmp_path, procs=dict(PROCS, Spanned=yaml_text))
 
 
-def test_artifact_span_citation_lands_on_the_artifact(make_repo):
-    import hashlib
-    import textwrap
-
-    from graph import parsers
-    text = textwrap.dedent(FILES["docs/rules.md"])
-    body = dict(parsers.markdown_sections(text))["Overview"]
+def test_artifact_span_citation_lands_on_the_artifact(tmp_path):
+    body = dict(markdown_sections(RULES_MD))["Overview"]
     good = hashlib.sha256(body.encode("utf-8")).hexdigest()
     graph, findings = run_with_spanned(
-        make_repo, artifact_cited(approved_hash=good))
+        tmp_path, artifact_cited(approved_hash=good))
     edge = [e for e in graph.edges if e.type == "SPECIFIED_IN"
             and e.from_name == "Spanned"]
     assert [(e.to_label, e.to_name, dict(e.props)["section"])
@@ -451,23 +447,23 @@ def test_artifact_span_citation_lands_on_the_artifact(make_repo):
     assert not [f for f in findings if "has since changed" in f.detail]
 
 
-def test_artifact_span_hash_drift_trips(make_repo):
+def test_artifact_span_hash_drift_trips(tmp_path):
     graph, findings = run_with_spanned(
-        make_repo, artifact_cited(approved_hash="a" * 64))
+        tmp_path, artifact_cited(approved_hash="a" * 64))
     assert any("has since changed" in f.detail
                and "section 'Overview' of docs/rules.md" in f.detail
                for f in findings)
 
 
-def test_artifact_span_missing_section_warns(make_repo):
+def test_artifact_span_missing_section_warns(tmp_path):
     graph, findings = run_with_spanned(
-        make_repo, artifact_cited(section="No Such Heading"))
+        tmp_path, artifact_cited(section="No Such Heading"))
     assert any("no such heading exists in docs/rules.md" in f.detail
                for f in findings)
 
 
-def test_step_references_scanned(make_repo):
-    graph, _ = run(make_repo)
+def test_step_references_scanned(tmp_path):
+    graph, _ = run(tmp_path)
     refs = edges(graph, "REFERENCES")
     assert ("[Step]", "Wilt §1.Fresh.2.1", "Reserve", "Sap") in refs
     assert ("[Step]", "Wilt §1.Fresh.2.else.1", "Condition", "Weary") in refs
@@ -478,8 +474,8 @@ def test_step_references_scanned(make_repo):
 
 # -- signature projection -----------------------------------------------------
 
-def test_outcome_nodes_projected(make_repo):
-    graph, _ = run(make_repo)
+def test_outcome_nodes_projected(tmp_path):
+    graph, _ = run(tmp_path)
     shrug = graph.nodes[("[Outcome]", "Wilt: Shrugged Off")]
     assert shrug["guarantee"] == "fails-with-side-effects"
     assert shrug["doc"] == "still lively"
@@ -491,16 +487,16 @@ def test_outcome_nodes_projected(make_repo):
         edges(graph, "ENDS_AT")
 
 
-def test_outcome_effects_derived(make_repo):
-    graph, _ = run(make_repo)
+def test_outcome_effects_derived(tmp_path):
+    graph, _ = run(tmp_path)
     assert ("[Outcome]", "Wilt: Lost For Good", "Condition", "Spent") in \
         edges(graph, "ASSIGNS_CONDITION")
     assert ("[Outcome]", "Wilt: Shrugged Off", "Reserve", "Sap") in \
         edges(graph, "MUTATES")
 
 
-def test_procedure_rollups_derived(make_repo):
-    graph, _ = run(make_repo)
+def test_procedure_rollups_derived(tmp_path):
+    graph, _ = run(tmp_path)
     assert ("[Procedure]", "Wilt", "Reserve", "Sap") in edges(graph, "READS")
     # a branch observes the concept it switches on, not one named value
     assert ("[Procedure]", "Wilt", "Archetype", "Condition") in edges(graph, "READS")
@@ -543,13 +539,8 @@ def test_compute_verb_is_action_not_mutation():
     assert "Compute running total as Sap" in render_markdown(spec)
 
 
-def test_compute_projects_reads_not_mutates(make_repo):
-    files = dict(FILES)
-    files["data/procedures/tally.yaml"] = TALLY
-    ontology = ONTOLOGY.replace(
-        "data/procedures/tend.yaml]",
-        "data/procedures/tend.yaml, data/procedures/tally.yaml]")
-    graph, findings = run(make_repo, files=files, ontology=ontology)
+def test_compute_projects_reads_not_mutates(tmp_path):
+    graph, findings = run(tmp_path, procs=dict(PROCS, Tally=TALLY))
     assert not [f for f in findings if f.severity == ERROR]
     reads = edges(graph, "READS")
     # a value citizen named in a compute step is read
@@ -567,19 +558,15 @@ def test_compute_projects_reads_not_mutates(make_repo):
     assert not [e for e in edges(graph, "MUTATES") if e[1] == "Tally"]
 
 
-def test_compute_reads_resolve_the_project_layer_only(make_repo):
+def test_compute_reads_resolve_the_project_layer_only(tmp_path):
     # a step that happens to say a kernel facet's name ("Completeness",
     # "Ordered") observes no kernel machinery: concept-level READS land
     # on project concepts only, never on the kernel stratum
-    files = dict(FILES)
-    files["data/procedures/tally.yaml"] = TALLY.replace(
+    tally = TALLY.replace(
         "  - compute: the Bounties owed against the total\n",
         "  - compute: the Bounties owed against the total, by Completeness "
         "and Ordered rank\n")
-    ontology = ONTOLOGY.replace(
-        "data/procedures/tend.yaml]",
-        "data/procedures/tend.yaml, data/procedures/tally.yaml]")
-    graph, findings = run(make_repo, files=files, ontology=ontology)
+    graph, findings = run(tmp_path, procs=dict(PROCS, Tally=tally))
     assert not [f for f in findings if f.severity == ERROR]
     reads = edges(graph, "READS")
     assert ("[Procedure]", "Tally", "Archetype", "Condition") in reads
@@ -589,8 +576,8 @@ def test_compute_reads_resolve_the_project_layer_only(make_repo):
     assert kernel_reads == []
 
 
-def test_known_at_completeness_archetypes(make_repo):
-    graph, _ = run(make_repo)
+def test_known_at_completeness_archetypes(tmp_path):
+    graph, _ = run(tmp_path)
     known = edges(graph, "KNOWN_AT")
     assert ("[Procedure]", "Wilt", "Archetype", "Transcribed") in known
     assert ("[Procedure]", "Tend", "Archetype", "Cited") in known
@@ -600,8 +587,8 @@ def test_known_at_completeness_archetypes(make_repo):
     assert graph.nodes[("Archetype", "Cited")]["doc"]
 
 
-def test_completeness_ladder_is_ordered(make_repo):
-    graph, _ = run(make_repo)
+def test_completeness_ladder_is_ordered(tmp_path):
+    graph, _ = run(tmp_path)
     assert graph.nodes[("Archetype", "Cited")]["rank"] == 0
     assert graph.nodes[("Archetype", "Attested")]["rank"] == 1
     assert graph.nodes[("Archetype", "Transcribed")]["rank"] == 2
@@ -613,8 +600,8 @@ def test_completeness_ladder_is_ordered(make_repo):
         edges(graph, "INSTANCE_OF")
 
 
-def test_outcomes_not_in_metamodel(make_repo):
-    graph, _ = run(make_repo)
+def test_outcomes_not_in_metamodel(tmp_path):
+    graph, _ = run(tmp_path)
     assert ("Archetype", "[Outcome]") not in graph.nodes
     assert not any(e.from_label == "[Outcome]" for e in graph.edges
                    if e.type == "INSTANCE_OF")
@@ -640,22 +627,11 @@ possible_outcomes:
 """
 
 
-def attested_repo_files():
-    files = dict(FILES)
-    files["data/procedures/shield.yaml"] = ATTESTED
-    ontology = ONTOLOGY.replace(
-        "data/procedures/tend.yaml]",
-        "data/procedures/tend.yaml, data/procedures/shield.yaml]")
-    return files, ontology
-
-
-def test_attested_asserted_signature(make_repo):
-    files, ontology = attested_repo_files()
-    graph, findings = run(make_repo, files, ontology)
+def test_attested_asserted_signature(tmp_path):
+    graph, findings = run(tmp_path, procs=dict(PROCS, Shield=ATTESTED))
     assert not [f for f in findings if f.severity == ERROR]
-    node = graph.nodes[("[Procedure]", "Shield")]
-    assert node["completeness"] == "attested"
-    assert node["reads_closed"] and not node["mutates_closed"]
+    assert ("[Procedure]", "Shield", "Archetype", "Attested") in \
+        edges(graph, "KNOWN_AT")
     assert ("[Procedure]", "Shield", "Reserve", "Sap") in edges(graph, "READS")
     assert ("[Procedure]", "Shield", "Reserve", "Sap") in edges(graph, "MUTATES")
     shielded = graph.nodes[("[Outcome]", "Shield: Shielded")]
@@ -681,24 +657,18 @@ possible_outcomes:
 """
 
 
-def test_attested_assigns_a_second_domain(make_repo):
+def test_attested_assigns_a_second_domain(tmp_path):
     # An attested outcome that assigns a Spirit — a domain other than the
     # first — derives ASSIGNS_SPIRIT from the resolved target's label, the
     # same transform the transcribed become-step uses. No one domain is
     # baked into the attested grammar.
-    files = dict(FILES)
-    files["data/spirits.csv"] = "Spirit\nMerry\nGloomy\n"
-    files["data/procedures/cheer.yaml"] = SPIRIT_ATTESTED
-    ontology = ONTOLOGY.replace(
-        "      Reserve:",
-        "      Spirit:\n"
-        "        source: data/spirits.csv\n"
-        "        key: Spirit\n"
-        "        concept: Tale Concept\n"
-        "      Reserve:").replace(
-        "data/procedures/tend.yaml]",
-        "data/procedures/tend.yaml, data/procedures/cheer.yaml]")
-    graph, findings = run(make_repo, files=files, ontology=ontology)
+    def add_spirits(graph):
+        _add_label(graph, "Spirit", {"concept": "Story Concept"},
+                   ["Story Concept"])
+        for name in ("Merry", "Gloomy"):
+            graph.ensure_node("Spirit", name)
+    graph, findings = run(tmp_path, procs=dict(PROCS, Cheer=SPIRIT_ATTESTED),
+                          setup=add_spirits)
     assert not [f for f in findings if f.severity == ERROR]
     assert ("[Outcome]", "Cheer: Gladdened", "Spirit", "Merry") in \
         edges(graph, "ASSIGNS_SPIRIT")
@@ -709,31 +679,29 @@ def test_attested_assigns_a_second_domain(make_repo):
 
 # -- hash tripwire ------------------------------------------------------------
 
-def hash_repo_files(approved_hash):
-    files = dict(FILES)
-    files["data/procedures/test.yaml"] = PROGRAM.replace(
+def hash_program(approved_hash):
+    return PROGRAM.replace(
         "specified_in: rules § Overview",
         "specified_in:\n"
         "  section: rules § Overview\n"
         f"  approved_hash: {approved_hash}")
-    return files
 
 
 def overview_hash():
-    text = textwrap.dedent(FILES["docs/rules.md"])
-    body = dict(markdown_sections(text))["Overview"]
-    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+    # the resolved source body is the section citizen's own ground prop
+    return hashlib.sha256(RULES_BODY.encode("utf-8")).hexdigest()
 
 
-def test_matching_hash_is_silent(make_repo):
-    graph, findings = run(make_repo, hash_repo_files(overview_hash()))
+def test_matching_hash_is_silent(tmp_path):
+    graph, findings = run(
+        tmp_path, procs=dict(PROCS, Wilt=hash_program(overview_hash())))
     assert not [f for f in findings if "has since changed" in f.detail]
     assert ("[Procedure]", "Wilt", "DocSection", "rules § Overview") in \
         edges(graph, "SPECIFIED_IN")
 
 
-def test_stale_hash_warns(make_repo):
-    _, findings = run(make_repo, hash_repo_files("f" * 64))
+def test_stale_hash_warns(tmp_path):
+    _, findings = run(tmp_path, procs=dict(PROCS, Wilt=hash_program("f" * 64)))
     assert any(f.severity == WARNING and "has since changed" in f.detail
                for f in findings)
 
@@ -749,53 +717,54 @@ def test_numeric_hash_rejected():
 
 # -- from_text receipts ---------------------------------------------------------
 
-def receipt_files(quote):
-    files = dict(FILES)
-    files["data/procedures/test.yaml"] = PROGRAM.replace(
+def receipt_program(quote):
+    return PROGRAM.replace(
         "    description: a warding bloom\n",
         "    description: a warding bloom\n"
         f"    from_text: {quote}\n")
-    return files
 
 
-def test_valid_receipt_is_silent(make_repo):
-    _, findings = run(make_repo, receipt_files("Wilts happen"))
+def test_valid_receipt_is_silent(tmp_path):
+    _, findings = run(tmp_path,
+                      procs=dict(PROCS, Wilt=receipt_program("Wilts happen")))
     assert not any("receipt not found" in f.detail for f in findings)
 
 
-def test_bogus_receipt_warns(make_repo):
-    _, findings = run(make_repo, receipt_files("Nothing of the sort"))
+def test_bogus_receipt_warns(tmp_path):
+    _, findings = run(
+        tmp_path,
+        procs=dict(PROCS, Wilt=receipt_program("Nothing of the sort")))
     assert any(f.severity == WARNING and "receipt not found" in f.detail
                for f in findings)
 
 
 # -- unresolved-term tripwire ---------------------------------------------------
 
-def test_unresolved_capitalized_term_flagged(make_repo):
+def test_unresolved_capitalized_term_flagged(tmp_path):
     # "Sprite" is mid-sentence in the source, and neither a graph citizen
     # nor mentioned by the program — the Truename failure class
-    _, findings = run(make_repo)
+    _, findings = run(tmp_path)
     assert any(f.category == "unresolved-term" and "Sprite" in f.detail
                for f in findings)
 
 
-def test_terms_touched_by_program_not_flagged(make_repo):
-    _, findings = run(make_repo)
+def test_terms_touched_by_program_not_flagged(tmp_path):
+    _, findings = run(tmp_path)
     flagged = " ".join(f.detail for f in findings
                        if f.category == "unresolved-term")
     assert "Wilts" not in flagged            # sentence start
     assert "Fresh Condition" not in flagged  # compound of whole graph citizens
 
 
-def test_multiword_term_flagged_as_a_run(make_repo):
+def test_multiword_term_flagged_as_a_run(tmp_path):
     # single-token scanning would lose "Dread Hollow" to word-level noise
-    _, findings = run(make_repo)
+    _, findings = run(tmp_path)
     assert any(f.category == "unresolved-term" and "Dread Hollow" in f.detail
                for f in findings)
 
 
-def test_stub_and_surface_forms_resolve_terms(make_repo):
-    graph, findings = run(make_repo)
+def test_stub_and_surface_forms_resolve_terms(tmp_path):
+    graph, findings = run(tmp_path)
     flagged = " ".join(f.detail for f in findings
                        if f.category == "unresolved-term")
     # "Bramble Woods" = auto-plural of the stub concept "Bramble Wood"
@@ -804,17 +773,16 @@ def test_stub_and_surface_forms_resolve_terms(make_repo):
     assert "Thicket" not in flagged
     # the stub is a real, queryable citizen with the worklist marker
     assert graph.nodes[("Archetype", "Bramble Wood")]["stub"] is True
-    assert ("Archetype", "Bramble Wood", "Archetype", "Tale Concept") in \
+    assert ("Archetype", "Bramble Wood", "Archetype", "Story Concept") in \
         edges(graph, "INSTANCE_OF")
 
 
-def test_locals_resolve_terms(make_repo):
+def test_locals_resolve_terms(tmp_path):
     # declare the flagged bigram as a program local -> no longer flagged
-    files = dict(FILES)
-    files["data/procedures/test.yaml"] = PROGRAM.replace(
+    wilt = PROGRAM.replace(
         "precondition: the frost arrived",
         "precondition: the frost arrived\nlocals: [Dread Hollow]")
-    _, findings = run(make_repo, files=files)
+    _, findings = run(tmp_path, procs=dict(PROCS, Wilt=wilt))
     # locals are PROCEDURE-scoped: Wilt declares the local, so ITS scan is
     # clean; Tend shares the source section without the local and still
     # flags the term (its source contains vocabulary it does not explain)
@@ -828,58 +796,30 @@ def test_locals_resolve_terms(make_repo):
     assert "Dread Hollow" in tend_flagged
 
 
-def test_pending_instances_resolve_terms(make_repo):
+def test_pending_instances_resolve_terms(tmp_path):
     # a stub's known future citizens resolve to the stub that will own them
-    files = dict(FILES)
-    files["docs/rules.md"] = files["docs/rules.md"].replace(
+    body = RULES_BODY.replace(
         "The Thicket claims the unwary near the Dread Hollow.",
         "The Thicket claims the unwary near the Dread Hollow. "
         "Beware the Wood Wight.")
-    ontology = ONTOLOGY.replace(
-        "        surface_forms: [Thicket]",
-        "        surface_forms: [Thicket]\n"
-        "        pending_instances: [Wood Wight]")
-    _, findings = run(make_repo, files=files, ontology=ontology)
+    _, findings = run(tmp_path, rules_body=body,
+                      stub_props={"pending_instances": ["Wood Wight"]})
     flagged = " ".join(f.detail for f in findings
                        if f.category == "unresolved-term")
     assert "Wood Wight" not in flagged
     assert "Dread Hollow" in flagged  # still unknown
 
 
-def test_pending_instances_require_stub():
-    from graph.ontology import load_ontology
-    import pathlib
-    import tempfile
-    import textwrap
-    yaml_text = textwrap.dedent("""\
-        version: 1
-        concepts:
-          Tale Concept: { instance_of: Concept }
-          Mapped Thing:
-            instance_of: Tale Concept
-            pending_instances: [Ghost]
-        nodes: {}
-        """)
-    with tempfile.TemporaryDirectory() as tmp:
-        path = pathlib.Path(tmp) / "ontology.yaml"
-        path.write_text(yaml_text, encoding="utf-8")
-        _, findings = load_ontology(path, tmp)
-    assert any("requires" in f.detail and "stub" in f.detail
-               for f in findings)
-
-
-def test_surface_form_collision_warns(make_repo):
+def test_surface_form_collision_warns(tmp_path):
     # a surface form claiming an existing citizen's name is ambiguous
-    ontology = ONTOLOGY.replace(
-        "        surface_forms: [Thicket]",
-        "        surface_forms: [Thicket, Sap]")
-    _, findings = run(make_repo, ontology=ontology)
+    _, findings = run(tmp_path,
+                      stub_props={"surface_forms": ["Thicket", "Sap"]})
     assert any(f.severity == WARNING and "surface form 'Sap'" in f.detail
                and "ambiguous" in f.detail for f in findings)
 
 
-def test_run_boundaries_and_irregular_plurals(make_repo):
-    _, findings = run(make_repo)
+def test_run_boundaries_and_irregular_plurals(tmp_path):
+    _, findings = run(tmp_path)
     flagged = " ".join(f.detail for f in findings
                        if f.category == "unresolved-term")
     assert "Sap Sprites" not in flagged  # a run never spans a line break
@@ -889,24 +829,17 @@ def test_run_boundaries_and_irregular_plurals(make_repo):
 
 # -- errors and reservations --------------------------------------------------
 
-def test_bad_program_reports_and_skips(make_repo):
-    bad = dict(FILES)
-    bad["data/procedures/test.yaml"] = "procedure: Broken\nsteps: [ {zap: x} ]\n"
-    base, path = make_repo(bad, ONTOLOGY)
-    ontology, _ = load_ontology(path, base)
-    graph, findings = extract(ontology)
+def test_bad_program_reports_and_skips(tmp_path):
+    bad = "procedure: Broken\nsteps: [ {zap: x} ]\n"
+    graph, findings = run(tmp_path, procs={"Broken": bad, "Tend": TEND})
     assert any(f.severity == ERROR and f.category == "procedure"
                for f in findings)
-    assert ("[Procedure]", "Broken") not in graph.nodes
-
-
-def test_step_and_outcome_are_reserved_labels(make_repo):
-    base, path = make_repo(FILES,
-                           ONTOLOGY + "\n      \"[Step]\": { values: [Impostor] }\n"
-                                      "      \"[Outcome]\": { values: [Sneaky] }\n")
-    _, findings = load_ontology(path, base)
-    reserved = [f.detail for f in findings if "engine-reserved" in f.detail]
-    assert len(reserved) == 2
+    # nothing lifts from the malformed body; the sound citizen still links
+    assert not [k for k in graph.nodes if k[0] == "[Step]"]
+    assert not [e for e in graph.edges if e.from_name == "Broken"
+                and e.type in ("KNOWN_AT", "SPECIFIED_IN")]
+    assert ("[Procedure]", "Tend", "Archetype", "Cited") in \
+        edges(graph, "KNOWN_AT")
 
 
 def test_walk_resolves_branch_subject_by_surface():
@@ -982,26 +915,38 @@ def test_render_top_level_sibling_otherwise():
 
 # -- procedure-citizen roster tripwire ----------------------------------------
 
-def roster_findings(make_repo, files=None, ontology=None):
+def roster_corpus(tmp_path):
+    """The corpus with its program label still FILE-REGISTERED (two
+    files), each citizen citing its file — the shape the roster censuses."""
+    graph = build_corpus(tmp_path)
+    row = graph.nodes[(ARCHETYPE_LABEL, KERNEL_PROCEDURE_LABEL)]
+    row["spec_json"] = json.dumps(
+        {"concept": KERNEL_PROCEDURE_LABEL, "reader": "procedure_yaml",
+         "source": ["data/procedures/test.yaml",
+                    "data/procedures/tend.yaml"]}, sort_keys=True)
+    graph.nodes[(KERNEL_PROCEDURE_LABEL, "Wilt")]["source_path"] = \
+        "data/procedures/test.yaml"
+    graph.nodes[(KERNEL_PROCEDURE_LABEL, "Tend")]["source_path"] = \
+        "data/procedures/tend.yaml"
+    return graph
+
+
+def test_roster_passes_when_every_file_has_its_citizen(tmp_path):
     from graph.extract import procedure_roster_findings
-    base, path = make_repo(files or FILES, ontology or ONTOLOGY)
-    ontology_obj, _ = load_ontology(path, base)
-    graph, _ = extract(ontology_obj)
-    return ontology_obj, graph, procedure_roster_findings
+    graph = roster_corpus(tmp_path)
+    assert procedure_roster_findings(
+        ontology_from_graph(graph, tmp_path), graph) == []
 
 
-def test_roster_passes_when_every_file_has_its_citizen(make_repo):
-    ontology_obj, graph, check = roster_findings(make_repo)
-    assert check(ontology_obj, graph) == []
-
-
-def test_roster_flags_a_registered_file_without_its_citizen(make_repo):
-    ontology_obj, graph, check = roster_findings(make_repo)
+def test_roster_flags_a_registered_file_without_its_citizen(tmp_path):
+    from graph.extract import procedure_roster_findings
+    graph = roster_corpus(tmp_path)
     # a re-derivation lifts steps from a body already on the graph and
     # never re-adds the procedure node — drop one to model the file that
     # shipped without its citizen
     del graph.nodes[("[Procedure]", "Tend")]
-    findings = check(ontology_obj, graph)
+    findings = procedure_roster_findings(
+        ontology_from_graph(graph, tmp_path), graph)
     assert len(findings) == 1
     finding = findings[0]
     assert finding.severity == ERROR
@@ -1012,15 +957,12 @@ def test_roster_flags_a_registered_file_without_its_citizen(make_repo):
         "the citizen through the delta path.")
 
 
-def test_derive_refuses_when_a_registered_file_has_no_citizen(make_repo):
+def test_derive_refuses_when_a_registered_file_has_no_citizen(tmp_path):
     # the roster ERROR rides derive(), which rederive and canonize --apply
     # both refuse on — the canon gate a missed re-derivation slipped past
-    from graph.extract import derive
-    base, path = make_repo(FILES, ONTOLOGY)
-    ontology_obj, _ = load_ontology(path, base)
-    graph, _ = extract(ontology_obj)
+    graph = roster_corpus(tmp_path)
     del graph.nodes[("[Procedure]", "Tend")]
-    _, findings = derive(ontology_obj, graph)
+    _, findings = derive(ontology_from_graph(graph, tmp_path), graph)
     assert any(f.severity == ERROR
                and "data/procedures/tend.yaml has no [Procedure] citizen"
                in f.detail for f in findings)
@@ -1092,7 +1034,7 @@ def test_precondition_renders_its_text_whichever_form(tmp_path):
 # -- approved_in: the archive pointer beside the tripwire ----------------
 
 
-def test_approved_in_parses_and_lands_on_the_citizen(make_repo):
+def test_approved_in_parses_clean():
     program = PROGRAM.replace(
         "specified_in: rules § Overview",
         "specified_in:\n"
@@ -1101,13 +1043,6 @@ def test_approved_in_parses_and_lands_on_the_citizen(make_repo):
         "  approved_in: https://example.test/repo/pull/7\n")
     spec, errors = parse_procedure(program)
     assert errors == [] and spec is not None
-    files = dict(FILES); files["data/procedures/test.yaml"] = program
-    base, path = make_repo(files, ONTOLOGY)
-    ontology, findings = load_ontology(path, base)
-    assert ontology is not None, findings
-    graph, _ = extract(ontology)
-    assert graph.nodes[("[Procedure]", "Wilt")]["approved_in"] \
-        == "https://example.test/repo/pull/7"
 
 
 def test_approved_in_must_be_a_link_shaped_string():

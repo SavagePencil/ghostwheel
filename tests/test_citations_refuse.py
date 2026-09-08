@@ -17,42 +17,96 @@ Storybook domain: the tale's own chapter file; the wilting programs.
 import hashlib
 import json
 
-import tests.conftest as conftest
 import graph.__main__ as main_mod
 from graph.artifacts import (LOCATED_AT, VERIFIED_FINGERPRINT,
                              artifact_labels, gate_verdicts, location_rows,
                              verification_stamp)
 from graph.delta import diff
-from graph.extract import derive, extract, make_edge
+from graph.extract import derive, make_edge
+from graph.kernel_migrate import fresh_kernel
 from graph.ontology import (ARCHETYPE_LABEL, ERROR, KERNEL_ARTIFACT_LABEL,
-                            KERNEL_FILE_LOCATION_LABEL, load_ontology,
-                            ontology_from_graph)
+                            KERNEL_FILE_LOCATION_LABEL,
+                            KERNEL_PROCEDURE_LABEL, ontology_from_graph)
 from graph.report import REF_KEYS, record_path
 from graph.restore import read_export
 from tests.test_branch import build_canon, clone, driven_kb, export_dir  # noqa: F401
-from tests.test_procedures import FILES, ONTOLOGY, artifact_cited
 from tests.test_succession import _mount_live_canon
 
-_make_repo = getattr(conftest.make_repo, "__wrapped__", conftest.make_repo)
 ART, FILE = KERNEL_ARTIFACT_LABEL, KERNEL_FILE_LOCATION_LABEL
 PNG = b"\x89PNG\r\n\x1a\n" + bytes(range(16))
 
+RULES_DOC = """\
+## Overview
+
+Wilts happen to every Sprite daily in the Bramble Woods.
+Sprites endure near the Dread Hollow.
+"""
+
+TEND = """\
+procedure: Tend
+completeness: cited
+specified_in: rules § Overview
+description: mends beasts
+"""
+
+SPANNED = """\
+procedure: Spanned
+specified_in:
+  artifact: docs/rules.md
+  section: Overview
+possible_outcomes:
+  Done:
+    ends: all done
+    guarantee: read-only
+steps:
+  - stop: all done
+"""
+
+
+def _declare(graph, label, spec):
+    graph.ensure_node(ARCHETYPE_LABEL, label,
+                      spec_json=json.dumps(spec, sort_keys=True))
+    graph.edges.append(make_edge("DECLARED_IN", ARCHETYPE_LABEL, label,
+                                 ARCHETYPE_LABEL, "Ontology"))
+
+
+def _seed(tmp_path):
+    """The citation corpus, as canon holds it: the chapter artifact, its
+    doc sections, and two programs riding their Procedure citizens —
+    one citing a section by name, one citing a file span."""
+    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "docs" / "rules.md").write_text(RULES_DOC, encoding="utf-8")
+    seed, findings = fresh_kernel(tmp_path)
+    assert seed is not None, findings
+    seed.ensure_node(ARCHETYPE_LABEL, "Tale Concept")
+    seed.edges.append(make_edge("DECLARED_IN", ARCHETYPE_LABEL,
+                                "Tale Concept", ARCHETYPE_LABEL, "Ontology"))
+    seed.edges.append(make_edge("INSTANCE_OF", ARCHETYPE_LABEL,
+                                "Tale Concept", ARCHETYPE_LABEL, "Concept"))
+    _declare(seed, "DocSection", {
+        "concept": "Tale Concept",
+        "catalog": {"heading": {"type": "text", "doc": "heading"},
+                    "file": {"type": "text", "doc": "path"}}})
+    _declare(seed, "Reserve", {"concept": "Tale Concept"})
+    seed.nodes[(ARCHETYPE_LABEL, KERNEL_ARTIFACT_LABEL)]["spec_json"] = \
+        json.dumps({"concept": KERNEL_ARTIFACT_LABEL, "fingerprint": True,
+                    "values": ["docs/rules.md"]}, sort_keys=True)
+    seed.nodes[(ARCHETYPE_LABEL, KERNEL_PROCEDURE_LABEL)]["spec_json"] = \
+        json.dumps({"concept": KERNEL_PROCEDURE_LABEL,
+                    "reader": "procedure_yaml"}, sort_keys=True)
+    seed.ensure_node(ART, "docs/rules.md")
+    seed.ensure_node("DocSection", "rules § Overview",
+                     heading="Overview", file="docs/rules.md")
+    seed.ensure_node(KERNEL_PROCEDURE_LABEL, "Tend", body=TEND)
+    seed.ensure_node(KERNEL_PROCEDURE_LABEL, "Spanned", body=SPANNED)
+    return seed
+
 
 def _corpus(tmp_path):
-    files = dict(FILES)
-    files["data/procedures/spanned.yaml"] = artifact_cited()
-    ontology_text = ONTOLOGY.replace(
-        "data/procedures/tend.yaml]",
-        "data/procedures/tend.yaml, data/procedures/spanned.yaml]").replace(
-        "      DocSection:\n        source: [docs/rules.md]\n",
-        "      DocSection:\n        source: [docs/rules.md]\n"
-        "        concept: Tale Concept\n")  # every canon label has a row
-    base_dir, path = _make_repo(tmp_path)(files, ontology_text)
-    ontology, findings = load_ontology(path, base_dir)
-    assert ontology is not None, findings
-    graph, extract_findings = extract(ontology)
-    assert not [f for f in extract_findings if f.severity == ERROR]
-    return base_dir, graph
+    seed = _seed(tmp_path)
+    graph, findings = derive(ontology_from_graph(seed, tmp_path), seed)
+    assert _errors(findings) == [], [f.detail for f in _errors(findings)]
+    return tmp_path, graph
 
 
 def _spanned_citation(graph):

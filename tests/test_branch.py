@@ -26,10 +26,10 @@ import pytest
 import graph.__main__ as main_mod
 from graph import export as export_mod
 from graph.delta import diff, lint
-from graph.extract import (GraphData, derive, extract, make_edge,
+from graph.extract import (GraphData, derive, make_edge,
                            schema_only, strip_derived)
 from graph.ontology import (ARCHETYPE_LABEL, ERROR, MACHINE_LABELS,
-                            SCHEMA_LABELS, is_derived_edge, load_ontology,
+                            SCHEMA_LABELS, is_derived_edge,
                             ontology_from_graph)
 from graph.proposal import (APPROVAL_FILE, BASE_FILE, append_applied_log,
                             apply_delta, applied_log_path, authoring_read_problem,
@@ -52,13 +52,18 @@ def clone(graph):
 
 
 def build_canon():
-    ontology, findings = load_ontology(STORYBOOK / "ontology.yaml", STORYBOOK)
-    assert ontology is not None, findings
-    assert not [f for f in findings if f.severity == ERROR], findings
-    graph, extract_findings = extract(ontology)
-    assert not [f for f in extract_findings if f.severity == ERROR], \
-        extract_findings
-    return graph
+    # The storybook canon is a committed graph-native export — the
+    # from-sources era is closed, and the fixture was born the way
+    # every knowledge base now is.
+    from graph.restore import read_export
+    return read_export(STORYBOOK / "graph" / "export")
+
+
+def storybook_ontology():
+    """The storybook's Ontology, read from its canon the way every
+    post-flip command reads schema — never from a file."""
+    from graph.ontology import ontology_from_graph
+    return ontology_from_graph(build_canon(), STORYBOOK)
 
 
 # -- schema_only is exactly the schema stratum -----------------------------
