@@ -241,11 +241,15 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
     target = config["NEO4J_DATABASE"]
     # the registry of names is the stamps: a database another knowledge
     # base holds refuses before a byte is written
+    from . import proposal as proposal_mod
     from . import workspace as workspace_mod
     kb = refs_mod.kb_name(graph, base_dir)
-    held = workspace_mod.held_by_other(config, kb)
+    held, followed = workspace_mod.held_or_followed(
+        config, kb, proposal_mod.line_identities(base_dir))
     if held:
         return guard(held)
+    if followed:
+        print(followed)
     print(f"Restoring {config['NEO4J_URI']} "
           f"(database '{config['NEO4J_DATABASE']}') from the "
           f"{'export' if from_dir else 'backup'} at "
@@ -387,13 +391,17 @@ def _restore_branch(base_dir, branch, base, database, by=None,
     # knowledge base already holds on this DBMS refuses before any write
     from . import workspace as workspace_mod
     kb = refs_mod.kb_name(canon, base_dir)
-    held = workspace_mod.held_by_other(
-        dict(config, NEO4J_DATABASE=target), kb)
+    held, followed = workspace_mod.held_or_followed(
+        dict(config, NEO4J_DATABASE=target), kb,
+        proposal_mod.line_identities(base_dir)
+        | proposal_mod.line_identities(base_dir, branch))
     if held:
         print(held, file=sys.stderr)
         _file_restore(base_dir, code="restore-guard", status="refused",
                       branch=branch, problems=[held])
         return 1
+    if followed:
+        print(followed)
     canon_log = proposal_mod.read_applied_log(base_dir)
     canon_sequence = canon_log[-1][0] if canon_log else 0
     pocket = None
@@ -739,10 +747,13 @@ def cmd_rederive(base_dir, apply=False):
     config = load_mod.read_config(base_dir)
     from . import workspace as workspace_mod
     kb = refs_mod.kb_name(new_graph, base_dir)
-    held = workspace_mod.held_by_other(config, kb)
+    held, followed = workspace_mod.held_or_followed(
+        config, kb, proposal_mod.line_identities(base_dir))
     if held:
         print(f"rederive refused — {held}", file=sys.stderr)
         return 1
+    if followed:
+        print(followed)
     try:
         summary = load_mod.load(new_graph, config)
         dumped = restore_mod.dump_db(config)
@@ -966,10 +977,13 @@ def cmd_kernel_migrate(base_dir, apply=False, metaontology_path=None):
     config = load_mod.read_config(base_dir)
     from . import workspace as workspace_mod
     kb = refs_mod.kb_name(new_graph, base_dir)
-    held = workspace_mod.held_by_other(config, kb)
+    held, followed = workspace_mod.held_or_followed(
+        config, kb, proposal_mod.line_identities(base_dir))
     if held:
         print(f"kernel-migrate refused — {held}", file=sys.stderr)
         return 1
+    if followed:
+        print(followed)
     try:
         summary = load_mod.load(new_graph, config)
         dumped = restore_mod.dump_db(config)
@@ -1155,12 +1169,16 @@ def cmd_load(base_dir, database=None):
     config = load_mod.read_config(base_dir)
     if database:
         config["NEO4J_DATABASE"] = database
+    from . import proposal as proposal_mod
     from . import workspace as workspace_mod
     kb = refs_mod.kb_name(graph, base_dir)
-    held = workspace_mod.held_by_other(config, kb)
+    held, followed = workspace_mod.held_or_followed(
+        config, kb, proposal_mod.line_identities(base_dir))
     if held:
         print(held, file=sys.stderr)
         return 1
+    if followed:
+        print(followed)
     print(f"Loading into {config['NEO4J_URI']} "
           f"(database '{config['NEO4J_DATABASE']}') ...")
     try:
@@ -2016,10 +2034,13 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     # --- write: load the target, re-export the backup FROM the database
     from . import workspace as workspace_mod
     kb = refs_mod.kb_name(new_graph, base_dir)
-    held = workspace_mod.held_by_other(target_config, kb)
+    held, followed = workspace_mod.held_or_followed(
+        target_config, kb, proposal_mod.line_identities(base_dir, branch))
     if held:
         print("--apply refused — " + held, file=sys.stderr)
         return bail("database-held-elsewhere", held)
+    if followed:
+        print(followed)
     try:
         summary = load_mod.load(new_graph, target_config)
         dumped = restore_mod.dump_db(target_config)
@@ -2397,10 +2418,13 @@ def cmd_succession(base_dir, branch, apply, by=None, archive_as=None):
         "first.")
     from . import workspace as workspace_mod
     kb = refs_mod.kb_name(new_graph, base_dir)
-    held = workspace_mod.held_by_other(target_config, kb)
+    held, followed = workspace_mod.held_or_followed(
+        target_config, kb, proposal_mod.line_identities(base_dir))
     if held:
         print(f"succession refused — {held}", file=sys.stderr)
         return 1
+    if followed:
+        print(followed)
     try:
         summary = load_mod.load(new_graph, target_config)
         dumped = restore_mod.dump_db(target_config)

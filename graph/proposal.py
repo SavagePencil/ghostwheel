@@ -589,6 +589,28 @@ def read_applied_log(base_dir, branch=None):
     return entries
 
 
+def line_identities(base_dir, branch=None):
+    """Every base identity this line has ever held: the chained log's
+    befores and afters, plus the committed backup's own. The same-line
+    key for the workspace holder check — a database whose stamp carries
+    one of these identities was cut from THIS line, whatever name the
+    stamp recorded at the time. (Two lines whose backups are
+    byte-identical — genesis twins that never diverged — share an
+    identity; nothing can be lost to that overlap, the contents being
+    the same bytes, and the first applied round parts them.)"""
+    from .restore import read_export
+    held = set()
+    for _seq, _delta, before, after, _prev, _chain in \
+            read_applied_log(base_dir, branch):
+        held.add(before)
+        held.add(after)
+    try:
+        held.add(base_identity(read_export(export_dir(base_dir, branch))))
+    except (FileNotFoundError, ValueError, OSError):
+        pass
+    return held
+
+
 def next_log_sequence(base_dir, branch=None):
     """The sequence number the NEXT applied round will carry — one past
     the log's last entry (1 for the first round). The project ontology's
