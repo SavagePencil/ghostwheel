@@ -1298,7 +1298,44 @@ def derive(ontology, graph):
     # schema row gets no membership and its derived connections would
     # silently vanish — refuse by name instead
     extractor.findings.extend(orphan_citizen_findings(extractor.graph))
+    # a spec's declared reader must be a kind the engine knows — an
+    # unknown one would mean bodies that silently never lift
+    extractor.findings.extend(unknown_reader_findings(extractor.graph))
     return extractor.graph, extractor.findings
+
+
+def unknown_reader_findings(graph):
+    """ERROR per schema row whose spec declares a reader the engine
+    does not know. The yaml loader once validated this; post-closure
+    the schema stratum is the only declaration surface, and an unknown
+    reader would mean the label's citizens' bodies silently never lift
+    — silence reading as held."""
+    import json as json_mod
+
+    from .ontology import Reader
+    known = sorted(str(kind) for kind in Reader)
+    findings = []
+    for (label, name), props in sorted(graph.nodes.items()):
+        if label != ARCHETYPE_LABEL or not props.get("spec_json"):
+            continue
+        try:
+            spec = json_mod.loads(props["spec_json"])
+        except ValueError:
+            continue  # a malformed embedding has its own reconstruction fate
+        reader = spec.get("reader") if isinstance(spec, dict) else None
+        if not reader or reader in known:
+            continue
+        findings.append(Finding(
+            ERROR, Category.ONTOLOGY, "canon", f"label {name}",
+            f"Attempted to read '{name}''s program bodies with reader "
+            f"'{reader}'. Failed due to: no such reader — the label's "
+            "citizens' bodies would never lift, and the engine never "
+            "treats a citizen as nothing. Declare a known reader "
+            f"({', '.join(known)}) or remove the reader from the spec.",
+            code="label-reader-unknown",
+            remedy="Declare a known reader, or remove the reader from "
+                   "the spec."))
+    return findings
 
 
 def orphan_citizen_findings(graph):
