@@ -293,6 +293,18 @@ class Extractor:
         if not exists and target_spec.get("implicit"):
             self.graph.ensure_node(to_label, target)
             exists = True
+            # a birth is never silent: the gate itemizes every citizen
+            # born by reference, by label and name
+            self.findings.append(Finding(
+                INFO, Category.DANGLING_REF, "canon",
+                f"{to_label}: {target}",
+                f"'{target}' ({to_label}) was born by reference — no "
+                f"citizen held that name, and '{to_label}' is declared "
+                f"to birth one when referenced (reached from "
+                f"'{from_name}' ({from_label})).",
+                code="citizen-born-by-reference",
+                remedy="Author the citizen properly if it deserves more "
+                       "than a name, or fix the reference."))
         if not exists:
             policy = rel.get("on_missing", self.ontology.default_on_missing)
             classify = grammars.get_optional("classify_clause")

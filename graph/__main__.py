@@ -1547,6 +1547,14 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                 for f in preview_findings
                 if f.severity == _ERROR
                 and not (branch and f.category == _Category.ROSTER)]
+            # a birth is never silent: every citizen the round's
+            # derivation would create by reference is itemized here,
+            # an advisory beside the changeset
+            derived_advisories += [
+                report_mod.Verdict(code=f.code, severity=report_mod.ADVISORY,
+                                   message=f.detail, remedy=f.remedy)
+                for f in preview_findings
+                if f.code == "citizen-born-by-reference"]
             before = {e for e in base.edges if is_derived_edge(e)}
             after = {e for e in derived_preview.edges if is_derived_edge(e)}
             leaving = sorted(before - after,

@@ -249,6 +249,8 @@ REF_KEYS = {
     "canon-log-head-diverged": "history-out-of-step",
     "branch-log-head-diverged": "history-out-of-step",
     "source-unregistered": "program-files-released",
+    "source-released": "source-released",
+    "citizen-born-by-reference": "born-by-reference",
     "source-unregistration-refused": "program-files-still-needed",
     "render-mapping-edited": "table-layout-edited",
     "render-mapping-unreadable": "table-layout-unreadable",
