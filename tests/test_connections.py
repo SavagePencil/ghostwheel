@@ -27,9 +27,11 @@ class FakeSystem:
         self.statements = []
         self.refuse = refuse
 
+    message = "Unsupported administration command"
+
     def run(self, statement):
         if self.refuse:
-            raise RuntimeError("Unsupported administration command")
+            raise RuntimeError(self.message)
         self.statements.append(statement)
 
 
@@ -144,3 +146,101 @@ def test_init_scaffolds_even_when_the_dbms_is_unreachable(
     assert "NEO4J_READER_PASSWORD" in \
         (target / ".env").read_text(encoding="utf-8")
     assert "python -m graph connections" in out  # the deferred half named
+
+
+# -- the field lessons: role names, diagnosis, convergence ----------------
+
+
+def test_role_names_are_legal_for_every_kb_name():
+    # Neo4j forbids hyphens in role names — including the verb's own
+    # old "-role" suffix, which failed EVERY name. Users keep their
+    # hyphens (legal); roles fold to underscores.
+    import re
+    for canon in ("emberhold", "tale-of-the-hearth", "hearth"):
+        creds = {
+            connections.READER_USERNAME_KEY: f"{canon}-reader",
+            connections.READER_PASSWORD_KEY: "pw1",
+            connections.WRITER_USERNAME_KEY: f"{canon}-writer",
+            connections.WRITER_PASSWORD_KEY: "pw2",
+        }
+        for s in connections.statements(canon, f"{canon}-scratch", creds):
+            for role in re.findall(r"ROLE `([^`]+)`", s):
+                assert re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", role), \
+                    (canon, s)
+            if "TO `" in s and "GRANT ROLE" not in s:
+                target = s.rsplit("TO `", 1)[1].rstrip("`")
+                assert re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", target), s
+
+
+def test_the_refusal_names_the_real_cause_and_redacts_secrets(
+        tmp_path, monkeypatch, capsys):
+    cases = [
+        ("Role name 'x-reader-role' contains illegal characters. Use "
+         "simple ascii characters, numbers and underscores.",
+         "illegal", "does not manage users"),
+        ("Unsupported administration command",
+         "does not manage users", "lacks the right"),
+        ("Permission denied executing CREATE USER",
+         "lacks the right", "does not manage users"),
+    ]
+    for exc_text, must_say, must_not_say in cases:
+        target = tmp_path / f"kb-{cases.index((exc_text, must_say, must_not_say))}"
+        fake = FakeSystem()
+        monkeypatch.setattr(connections, "_system_runner",
+                            lambda config: fake)
+        assert main_mod.cmd_init(target, name=target.name) == 0
+        fake.refuse = True
+        fake.message = exc_text
+        capsys.readouterr()
+        assert main_mod.cmd_connections(target) == 1
+        err = capsys.readouterr().err
+        assert must_say in err, (exc_text, err)
+        assert must_not_say not in err, (exc_text, err)
+        # the printed statements are runnable and secret-free
+        env = (target / ".env").read_text(encoding="utf-8")
+        for line in env.splitlines():
+            if "PASSWORD=" in line and line.split("=", 1)[1]:
+                assert line.split("=", 1)[1] not in err, "password leaked"
+        assert "SET PASSWORD '" not in err or "'***'" in err
+
+
+def test_reset_over_partial_state_converges_and_rotates(born):
+    # the field state: users exist, no roles, no grants. The reset run
+    # must create what is missing AND rotate the exposed passwords —
+    # CREATE ... IF NOT EXISTS before any ALTER, grants idempotent.
+    target, fake = born
+    fake.statements.clear()
+    assert main_mod.cmd_connections(target, reset_passwords=True) == 0
+    kinds = [s.split()[0:2] for s in fake.statements]
+    first_alter = next(i for i, s in enumerate(fake.statements)
+                       if s.startswith("ALTER USER"))
+    assert all("IF NOT EXISTS" in s for s in fake.statements
+               if s.startswith("CREATE ")), "a CREATE could not converge"
+    assert all(not s.startswith("CREATE") for s in
+               fake.statements[first_alter:]), "an ALTER preceded a CREATE"
+    env = (target / ".env").read_text(encoding="utf-8")
+    alter_text = " ".join(s for s in fake.statements
+                          if s.startswith("ALTER USER"))
+    for line in env.splitlines():
+        if line.startswith("NEO4J_READER_PASSWORD="):
+            assert line.split("=", 1)[1] in alter_text  # env == DBMS
+
+
+def test_the_plan_targets_the_reader_the_settings_name(
+        tmp_path, monkeypatch):
+    # a KB whose settings already name a hand-made reader: the verb
+    # grants THAT user, never shadows it with a generated twin
+    target = tmp_path / "hearth"
+    fake = FakeSystem()
+    monkeypatch.setattr(connections, "_system_runner",
+                        lambda config: fake)
+    assert main_mod.cmd_init(target, name="Hearth") == 0
+    env = (target / ".env").read_text(encoding="utf-8")
+    env = env.replace("NEO4J_READER_USERNAME=hearth-reader",
+                      "NEO4J_READER_USERNAME=keeper_reader")
+    (target / ".env").write_text(env, encoding="utf-8")
+    fake.statements.clear()
+    assert main_mod.cmd_connections(target) == 0
+    text = " ".join(fake.statements)
+    assert "keeper_reader" in text
+    assert "`hearth-reader`" not in text

@@ -13,6 +13,7 @@ a project's servers.
 """
 
 import json
+import re
 import secrets
 from pathlib import Path
 
@@ -46,6 +47,20 @@ def _system_runner(config):
 
 def usernames(canon_db):
     return f"{canon_db}-reader", f"{canon_db}-writer"
+
+
+def role_name(username):
+    """The user's role, in the only shape the DBMS accepts for roles:
+    word characters alone — hyphens are legal in USER names and illegal
+    in ROLE names, the verb's first field lesson."""
+    folded = re.sub(r"[^0-9A-Za-z_]", "_", username) + "_role"
+    return folded if not folded[0].isdigit() else f"kb_{folded}"
+
+
+def redacted(statement):
+    """The statement with any password literal masked — refusal output
+    never carries a secret."""
+    return re.sub(r"SET PASSWORD '[^']*'", "SET PASSWORD '***'", statement)
 
 
 def ensure_env(base_dir, canon_db):
@@ -96,8 +111,11 @@ def statements(canon_db, scratch_db, creds, reset=False):
     """The idempotent user/role/grant plan, in order. CREATE ... IF NOT
     EXISTS never touches an existing password; reset adds the explicit
     ALTERs."""
-    reader, writer = usernames(canon_db)
-    reader_role, writer_role = f"{reader}-role", f"{writer}-role"
+    # the plan targets exactly the usernames the settings name — a
+    # hand-made reader is granted, never shadowed by a generated twin
+    reader = creds[READER_USERNAME_KEY]
+    writer = creds[WRITER_USERNAME_KEY]
+    reader_role, writer_role = role_name(reader), role_name(writer)
     plan = [
         f"CREATE USER `{reader}` IF NOT EXISTS "
         f"SET PASSWORD '{creds[READER_PASSWORD_KEY]}' "
