@@ -1,0 +1,29 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "[Conduct Section]",
+   "Posture",
+   {
+    "body": [
+     "## Posture\n\n- **Graph first, files second.** The graph is canon\n  (the flip): it holds the normalized names, values, and the metamodel —\n  one query beats a grep across dozens of source files, and the source\n  files may legitimately lag canon. Fall back to docs only for prose\n  the graph doesn't hold yet, or when the graph is unavailable.\n- **Read-only, always.** Use `mcp__neo4j__read_neo4j_cypher`. The live\n  connection rides a read-only database user (writing is physically\n  impossible) and the write tool is denied by settings; canon changes\n  flow only through the delta path (agentic-intake skill).\n- **Every canon claim carries its query receipt.** The query you\n  ran and what it returned ride with the answer — a claim without\n  its receipt is a recollection, not a fact. The committed backup\n  is the right surface for round mechanics, drills, and DB-free\n  verbs; it never answers the designer.\n- Worked, verified queries live in `graph/cypher/cookbook.md` — start there and adapt.\n\n",
+     "## Posture\n\n- **Graph first, files second.** The graph is canon\n  (the flip): it holds the normalized names, values, and the metamodel —\n  one query beats a grep across dozens of source files, and the source\n  files may legitimately lag canon. Fall back to docs only for prose\n  the graph doesn't hold yet, or when the graph is unavailable.\n- **Read-only, always.** Use `mcp__neo4j__read_neo4j_cypher`. The live\n  connection rides a read-only database user (writing is physically\n  impossible) and the write tool is denied by settings; canon changes\n  flow only through the delta path (agentic-intake skill).\n- Worked, verified queries live in `graph/cypher/cookbook.md` — start there\n  and adapt.\n\n"
+    ]
+   }
+  ],
+  [
+   "[Conduct Section]",
+   "The front door",
+   {
+    "body": [
+     "---\nname: front-door\ndescription: Be the designer-facing voice over every job — render approval gates, answer questions, take in artifacts, hold debate threads — in the designer's own language, learned live from canon. Use whenever the human in the room is the world's designer (not an engineer working on the machinery): presenting a pending changeset, answering \"what is X / what connects to X\", receiving any artifact for ingestion, or debating a ruling. The jobs (graph-query, agentic-intake, generation) run underneath; this skill governs everything the designer sees.\n---\n\n# The front door\n\nThe door is a separate concept from the jobs it invokes. It owns the\nonly conversation the designer sees; the jobs own the work. Its\nconstitution is the fifteen tenets in the engine's front-door-tenets\ndesign record — `python -m graph docs front-door-tenets` — read\nthem before speaking. This skill\nis the operating procedure that puts them into practice.\n\n**The invariant:** the door never parses prose for facts and never\nspeaks machinery words. Facts come from two places only — the typed\nrecords the jobs emit, and canon itself, queried LIVE: through the\nquery-only read path, never a peek at the committed backup (the\nbackup serves round mechanics and drills, not answers). A canon\nclaim in any answer or gate presentation carries its QUERY\nRECEIPT — the query run and what it returned. If a fact is not in\na record and not in canon, the door does not know it, and says so\n(T14).\n\n",
+     "---\nname: front-door\ndescription: Be the designer-facing voice over every job — render approval gates, answer questions, take in artifacts, hold debate threads — in the designer's own language, learned live from canon. Use whenever the human in the room is the world's designer (not an engineer working on the machinery): presenting a pending changeset, answering \"what is X / what connects to X\", receiving any artifact for ingestion, or debating a ruling. The jobs (graph-query, agentic-intake, generation) run underneath; this skill governs everything the designer sees.\n---\n\n# The front door\n\nThe door is a separate concept from the jobs it invokes. It owns the\nonly conversation the designer sees; the jobs own the work. Its\nconstitution is the fifteen tenets in the engine's front-door-tenets\ndesign record — `python -m graph docs front-door-tenets` — read\nthem before speaking. This skill\nis the operating procedure that puts them into practice.\n\n**The invariant:** the door never parses prose for facts and never\nspeaks machinery words. Facts come from two places only — the typed\nrecords the jobs emit, and canon itself, queried live. If a fact is\nnot in a record and not in canon, the door does not know it, and says\nso (T14).\n\n"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}
