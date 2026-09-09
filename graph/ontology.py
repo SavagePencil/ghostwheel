@@ -434,16 +434,15 @@ def is_concept_archetype(graph, name):
     (DECLARED_MEMBER_OF). Shared by the derivation fold (extract.py) and
     the delta lint (delta.py) so both judge a target the same way.
 
-    A missing node fails. A LABEL Archetype fails: it carries its embedded
-    roster spec (spec_json) — it is a home with a catalog, not a subject to
-    classify against, and authored membership never re-homes. A Facet
-    (rooted at Facet), a Judgment/Provenance anchor — anything whose
-    INSTANCE_OF tower does not terminate at the Concept root — fails. Only a
-    genuine domain concept passes."""
+    A missing node fails. A LABEL Archetype passes when its tower is
+    Concept-rooted: a home with a catalog can be a subject too, because
+    authored membership never re-homes — the fold's only output is an
+    added INSTANCE_OF (a sword kind declared Equipment leaves every
+    sword's home untouched). A Facet (rooted at Facet), a
+    Judgment/Provenance anchor or row — anything whose INSTANCE_OF
+    tower does not terminate at the Concept root — fails."""
     node = graph.nodes.get((ARCHETYPE_LABEL, name))
     if node is None:
-        return False
-    if node.get("spec_json") is not None:
         return False
     # Walk the INSTANCE_OF tower upward (Archetype -> Archetype only); the
     # target is Concept-rooted iff any path reaches the Concept root.
