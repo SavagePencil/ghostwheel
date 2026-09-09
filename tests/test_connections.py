@@ -244,3 +244,61 @@ def test_the_plan_targets_the_reader_the_settings_name(
     text = " ".join(fake.statements)
     assert "keeper_reader" in text
     assert "`hearth-reader`" not in text
+
+
+def test_the_plan_creates_the_databases_it_grants_on(born):
+    # a newborn KB has cut no round: neither its canon database nor its
+    # working copy need exist yet, and a grant on a missing database
+    # refuses — so the plan opens by creating both, idempotently, the
+    # same shape restore uses. Born connected holds for exactly the
+    # newborn state, rotation included (the ALTERs still run last).
+    target, fake = born
+    fake.statements.clear()
+    assert main_mod.cmd_connections(target, reset_passwords=True) == 0
+    first_grant = next(i for i, s in enumerate(fake.statements)
+                       if s.startswith("GRANT"))
+    heads = fake.statements[:first_grant]
+    assert any(s.startswith("CREATE DATABASE `hearth`") and
+               "IF NOT EXISTS" in s for s in heads)
+    assert any(s.startswith("CREATE DATABASE `hearth-scratch`") and
+               "IF NOT EXISTS" in s for s in heads)
+    assert any(s.startswith("ALTER USER") for s in fake.statements)
+
+
+def test_a_declined_default_pair_is_named_never_abandoned(
+        tmp_path, monkeypatch, capsys):
+    # the settings name a hand-made reader, so the verb declines the
+    # per-KB default pair — if such users exist from an earlier run,
+    # they are named in the output with ready cleanup statements;
+    # silent abandonment is the one wrong answer, and the verb never
+    # deletes what it cannot see.
+    target = tmp_path / "hearth"
+    fake = FakeSystem()
+    monkeypatch.setattr(connections, "_system_runner",
+                        lambda config: fake)
+    assert main_mod.cmd_init(target, name="Hearth") == 0
+    env = (target / ".env").read_text(encoding="utf-8")
+    env = env.replace("NEO4J_READER_USERNAME=hearth-reader",
+                      "NEO4J_READER_USERNAME=keeper_reader")
+    (target / ".env").write_text(env, encoding="utf-8")
+    capsys.readouterr()
+    assert main_mod.cmd_connections(target) == 0
+    out = capsys.readouterr().out
+    assert "hearth-reader" in out and "DROP USER" in out
+    assert "keeper_reader" in out  # the settled name leads
+
+
+def test_the_example_agrees_with_the_settled_names(tmp_path, monkeypatch):
+    target = tmp_path / "hearth"
+    fake = FakeSystem()
+    monkeypatch.setattr(connections, "_system_runner",
+                        lambda config: fake)
+    assert main_mod.cmd_init(target, name="Hearth") == 0
+    env = (target / ".env").read_text(encoding="utf-8")
+    env = env.replace("NEO4J_READER_USERNAME=hearth-reader",
+                      "NEO4J_READER_USERNAME=keeper_reader")
+    (target / ".env").write_text(env, encoding="utf-8")
+    assert main_mod.cmd_connections(target) == 0
+    example = (target / ".env.example").read_text(encoding="utf-8")
+    assert "NEO4J_READER_USERNAME=keeper_reader" in example
+    assert "hearth-reader" not in example

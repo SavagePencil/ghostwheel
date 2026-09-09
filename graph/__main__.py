@@ -3165,6 +3165,17 @@ def cmd_connections(base_dir, reset_passwords=False):
         close = getattr(runner, "close", None)
         if close:
             close()
+    default_reader, default_writer = connections_mod.usernames(canon_db)
+    declined = [name for name in (default_reader, default_writer)
+                if name not in (reader, writer)]
+    if declined:
+        names = "' and '".join(declined)
+        print(f"Note: the settings name '{reader}'/'{writer}', so the "
+              f"default pair was not used. If '{names}' exist from an "
+              "earlier run they hold no access, but retire or rotate "
+              "them by hand — never leave a stray credential standing:"
+              + "".join(f"\n  DROP USER `{name}` IF EXISTS;"
+                        for name in declined))
     print(f"Connections ready: '{reader}' answers from '{canon_db}' "
           f"(query-only), '{writer}' authors '{scratch_db}'. The "
           f"project MCP scaffold ({connections_mod.MCP_FILE}) carries "
