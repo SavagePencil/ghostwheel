@@ -1065,6 +1065,20 @@ def lint_verdicts(delta, base=None):
     # ceremony_records above — permitted classes itemize for the gate,
     # everything else is already refused by name. Schema EDGES outside a
     # permitted concept's own declaration still refuse here.
+    # Membership targets are judged against the base PLUS this round's
+    # own additions — the taxonomy ceremony's pattern: a subject may be
+    # born by the round that declares into it.
+    membership_view = None
+    if base is not None:
+        from .extract import GraphData
+        membership_view = GraphData()
+        membership_view.nodes = dict(base.nodes)
+        for _label, _name, _props in delta.nodes_added:
+            membership_view.nodes[(_label, _name)] = dict(_props or {})
+        membership_view.edges = list(base.edges) + [
+            e for e in delta.edges_added
+            if e.from_label == ARCHETYPE_LABEL
+            and e.to_label == ARCHETYPE_LABEL]
     for edge in delta.edges_removed:
         if _is_schema_edge(edge) and id(edge) not in ceremony_edges:
             violations.append(Verdict(
@@ -1140,20 +1154,23 @@ def lint_verdicts(delta, base=None):
                         "target is checked against canon."),
                     remedy="Run the round through the delta pipeline "
                            "(python -m graph delta)."))
-            elif not is_concept_archetype(base, edge.to_name):
+            elif not is_concept_archetype(membership_view, edge.to_name):
                 violations.append(Verdict(
                     code="membership-target-not-concept",
                     subject=connection_ref(edge),
                     message=(
-                        prefix + f"'{edge.to_name}' is not an existing "
-                        "Concept-rooted Archetype — authored membership "
-                        "classifies a citizen against subject-matter "
-                        "Concepts only (never a Facet, a label's Archetype, "
-                        "or a missing node), and it never re-homes the "
-                        "citizen. To undo: point the edge at a Concept "
-                        "Archetype, or DELETE it from scratch."),
-                    remedy="Point the edge at a Concept Archetype, or "
-                           "DELETE it from scratch."))
+                        prefix + f"'{edge.to_name}' is not a Concept-rooted "
+                        "Archetype in the base or this round — authored "
+                        "membership classifies a citizen against "
+                        "Concept-rooted subjects only: a plain concept, or "
+                        "a label row that is also a concept (a home with a "
+                        "catalog can be a subject too); never a Facet, a "
+                        "Provenance-rooted row, or a missing node — and it "
+                        "never re-homes the citizen. To undo: point the "
+                        "edge at a Concept-rooted Archetype, or DELETE it "
+                        "from scratch."),
+                    remedy="Point the edge at a Concept-rooted Archetype, "
+                           "or DELETE it from scratch."))
             basis = dict(edge.props).get("basis")
             if not (basis and str(basis).strip()):
                 violations.append(Verdict(

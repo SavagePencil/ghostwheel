@@ -159,21 +159,22 @@ def test_lint_refuses_membership_from_an_archetype(built):
 def test_lint_refuses_a_facet_target(built):
     _, base = built
     problems = _lint_one(base, _membership("Golden Key", "Ordered"))
-    assert "not an existing Concept-rooted Archetype" in problems
+    assert "not a Concept-rooted Archetype" in problems
 
 
-def test_lint_refuses_a_label_archetype_target(built):
-    # a label's Archetype is a home with a catalog, not a subject to
-    # classify against — authored membership never re-homes.
+def test_a_concept_rooted_label_archetype_is_admitted(built):
+    # a home with a catalog can be a subject too (the many-to-many
+    # ruling): membership never re-homes, so a Concept-rooted label row
+    # is a legal target
     _, base = built
     problems = _lint_one(base, _membership("Golden Key", "Object"))
-    assert "not an existing Concept-rooted Archetype" in problems
+    assert "membership-target-not-concept" not in problems
 
 
 def test_lint_refuses_a_missing_target(built):
     _, base = built
     problems = _lint_one(base, _membership("Golden Key", "Nonesuch"))
-    assert "not an existing Concept-rooted Archetype" in problems
+    assert "not a Concept-rooted Archetype" in problems
 
 
 def test_lint_refuses_missing_basis(built):
