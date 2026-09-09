@@ -117,6 +117,11 @@ def statements(canon_db, scratch_db, creds, reset=False):
     writer = creds[WRITER_USERNAME_KEY]
     reader_role, writer_role = role_name(reader), role_name(writer)
     plan = [
+        # a grant on a missing database refuses, and a newborn KB has
+        # cut no round yet — the verb creates what it grants on, the
+        # same idempotent shape restore uses
+        f"CREATE DATABASE `{canon_db}` IF NOT EXISTS",
+        f"CREATE DATABASE `{scratch_db}` IF NOT EXISTS",
         f"CREATE USER `{reader}` IF NOT EXISTS "
         f"SET PASSWORD '{creds[READER_PASSWORD_KEY]}' "
         "SET PASSWORD CHANGE NOT REQUIRED",
@@ -182,13 +187,31 @@ def ensure_gitignore(base_dir):
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def ensure_example(base_dir, canon_db):
+def ensure_example(base_dir, canon_db, creds=None):
     """Key NAMES only — a password value in the example would be a
-    leak by construction."""
+    leak by construction. The usernames documented are the SETTLED
+    ones (what .env actually names); an existing example whose
+    username lines disagree is reconciled — usernames are not
+    secrets, and the scaffold and the verb must agree."""
     path = Path(base_dir) / ".env.example"
-    if path.exists():
-        return
     reader, writer = usernames(canon_db)
+    if creds:
+        reader = creds.get(READER_USERNAME_KEY) or reader
+        writer = creds.get(WRITER_USERNAME_KEY) or writer
+    if path.exists():
+        lines = path.read_text(encoding="utf-8").splitlines()
+        fixed = []
+        for line in lines:
+            key = line.partition("=")[0].strip()
+            if key == READER_USERNAME_KEY:
+                fixed.append(f"{READER_USERNAME_KEY}={reader}")
+            elif key == WRITER_USERNAME_KEY:
+                fixed.append(f"{WRITER_USERNAME_KEY}={writer}")
+            else:
+                fixed.append(line)
+        if fixed != lines:
+            path.write_text("\n".join(fixed) + "\n", encoding="utf-8")
+        return
     path.write_text(
         "# Copy to .env and fill in; .env stays out of source control.\n"
         "NEO4J_URI=bolt://localhost:7687\n"
@@ -209,5 +232,5 @@ def scaffold(base_dir, canon_db, scratch_db):
     creds = ensure_env(base_dir, canon_db)
     write_mcp(base_dir, canon_db, scratch_db)
     ensure_gitignore(base_dir)
-    ensure_example(base_dir, canon_db)
+    ensure_example(base_dir, canon_db, creds)
     return creds
