@@ -3048,7 +3048,8 @@ def cmd_init(target, name=None, world=False):
     env_file = target / ".env"
     canon_db = default_database_name(kb)
     scratch_db = f"{canon_db}-scratch"
-    if env_file.exists():
+    env_existed = env_file.exists()
+    if env_existed:
         print(f"Settings: {env_file.name} already exists — kept as-is."
               + (f" Add the dependency block by hand:\n"
                  f"{_DEPENDENCY_SETTINGS_BLOCK}" if world else ""))
@@ -3071,6 +3072,23 @@ def cmd_init(target, name=None, world=False):
               + (", and the dependency block to fill in" if world else "")
               + " — fill in the DBMS credentials there and keep the file "
               "out of source control.")
+    # Born connected: the scaffold and users ride a FRESH birth; an
+    # existing settings file stays byte-untouched (its owner's), with
+    # the verb named for when they choose.
+    if env_existed:
+        print("Connections: existing settings kept as-is — python -m "
+              "graph connections adds this knowledge base's reader and "
+              "writer and the MCP scaffold when you choose.")
+    else:
+        from . import connections as connections_mod
+        connections_mod.scaffold(target, canon_db, scratch_db)
+        print(f"Connections scaffold written: {connections_mod.MCP_FILE} "
+              "(reader on canon, writer on the working copy, credentials "
+              "by environment expansion) and generated passwords in "
+              ".env.")
+        if cmd_connections(target) != 0:
+            print("The DBMS half is deferred — run python -m graph "
+                  "connections once the DBMS is reachable.")
     print("Next: python -m graph restore (build its canon database from "
           f"the backup), then restore --database {scratch_db} to cut "
           "the first authoring round"
@@ -3089,6 +3107,55 @@ def default_database_name(kb):
     import re
     slug = re.sub(r"[^a-z0-9.-]+", "-", kb.lower()).strip("-.")
     return slug or "canon"
+
+
+def cmd_connections(base_dir, reset_passwords=False):
+    """Born connected: create (idempotently) this knowledge base's
+    query-only reader and working-copy writer on the DBMS, and lay the
+    project MCP scaffold. Re-runs change nothing unless
+    --reset-passwords says so."""
+    from . import connections as connections_mod
+    from . import load as load_mod
+    config = load_mod.read_config(base_dir)
+    canon_db = config["NEO4J_DATABASE"]
+    scratch_db = (config.get("NEO4J_SCRATCH_DATABASE") or "").strip() \
+        or f"{canon_db}-scratch"
+    creds = connections_mod.scaffold(base_dir, canon_db, scratch_db)
+    if reset_passwords:
+        creds.update(connections_mod.rotate_passwords(base_dir))
+    reader, writer = connections_mod.usernames(canon_db)
+    plan = connections_mod.statements(canon_db, scratch_db, creds,
+                                      reset=reset_passwords)
+    try:
+        runner = connections_mod._system_runner(config)
+    except Exception as exc:
+        print(f"Attempted to reach the DBMS to create '{reader}' and "
+              f"'{writer}'. Failed due to: {exc}. Is the DBMS running? "
+              "The settings and MCP scaffold are in place — re-run "
+              "python -m graph connections when it is up.",
+              file=sys.stderr)
+        return 1
+    try:
+        for statement in plan:
+            runner.run(statement)
+    except Exception as exc:
+        print(f"Attempted to create this knowledge base's reader and "
+              f"writer on the DBMS. Failed due to: {exc} — this DBMS "
+              "does not manage users (or the admin connection lacks the "
+              "right). Create them by hand with the statements the "
+              "engine would have run, or upgrade the DBMS:\n  "
+              + "\n  ".join(plan), file=sys.stderr)
+        return 1
+    finally:
+        close = getattr(runner, "close", None)
+        if close:
+            close()
+    print(f"Connections ready: '{reader}' answers from '{canon_db}' "
+          f"(query-only), '{writer}' authors '{scratch_db}'. The "
+          f"project MCP scaffold ({connections_mod.MCP_FILE}) carries "
+          "them by environment expansion — a session opened here is "
+          "offered both.")
+    return 0
 
 
 def cmd_terms(base_dir):
@@ -3682,6 +3749,15 @@ def main(argv=None):
         help="render an approved procedure back into rulebook-style markdown "
              "(prose-generation experiment; no DB needed)")
     generate.add_argument("procedure", help="Procedure name, e.g. 'Awaken a Gryphon'")
+    connections_parser = sub.add_parser(
+        "connections",
+        help="born connected: create this KB's query-only reader and "
+             "working-copy writer on the DBMS (idempotent) and lay the "
+             "project MCP scaffold")
+    connections_parser.add_argument(
+        "--reset-passwords", action="store_true",
+        help="generate fresh passwords, rewrite .env, and ALTER the "
+             "users — never done unasked")
     sub.add_parser("terms",
                    help="scan all docs for capitalized terms the glossary "
                         "cannot resolve (owner consolidation list)")
@@ -3888,6 +3964,9 @@ def main(argv=None):
         return cmd_dependencies(base_dir, branch=args.branch)
     if args.command == "load":
         return cmd_load(base_dir, database=args.database)
+    if args.command == "connections":
+        return cmd_connections(base_dir,
+                               reset_passwords=args.reset_passwords)
     if args.command == "check":
         return cmd_check(base_dir)
     if args.command == "render-tables":
