@@ -92,6 +92,40 @@ def ensure_env(base_dir, canon_db):
     return {key: have.get(key) or wanted[key] for key in wanted}
 
 
+def adoption_problems(base_dir):
+    """Refusals for a settings file that names a user the verb did not
+    create while carrying no password for it. The verb never invents a
+    credential for a user it didn't set: a minted password would reach
+    the scaffold but never the DBMS, and every session would then knock
+    with wrong credentials until the auth rate limit locks the user."""
+    env_file = Path(base_dir) / ".env"
+    if not env_file.exists():
+        return []
+    have = {}
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        if "=" in line and not line.lstrip().startswith("#"):
+            key, _, value = line.partition("=")
+            have[key.strip()] = value.strip()
+    problems = []
+    for side, user_key, pw_key in (
+            ("reader", READER_USERNAME_KEY, READER_PASSWORD_KEY),
+            ("writer", WRITER_USERNAME_KEY, WRITER_PASSWORD_KEY)):
+        username = have.get(user_key)
+        if username and not have.get(pw_key):
+            problems.append(
+                f"Attempted to scaffold the {side} connection for "
+                f"'{username}'. Failed due to: the settings name that "
+                f"user but carry no {pw_key} — the engine never invents "
+                "a credential for a user it did not create (a minted "
+                "password would reach the scaffold but never the DBMS, "
+                "and sessions would knock with wrong credentials until "
+                "the auth rate limit locks the user). Supply the real "
+                f"password as {pw_key} in .env, or run with "
+                "--reset-passwords to take ownership of the user's "
+                "password.")
+    return problems
+
+
 def rotate_passwords(base_dir):
     """New generated passwords written over the old ones in .env.
     Returns the fresh values (usernames untouched)."""

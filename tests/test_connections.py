@@ -302,3 +302,58 @@ def test_the_example_agrees_with_the_settled_names(tmp_path, monkeypatch):
     example = (target / ".env.example").read_text(encoding="utf-8")
     assert "NEO4J_READER_USERNAME=keeper_reader" in example
     assert "hearth-reader" not in example
+
+
+def test_adoption_without_a_password_refuses_before_any_write(
+        tmp_path, monkeypatch, capsys):
+    # the settings name a hand-made user but carry no password for it:
+    # the verb never invents a credential for a user it didn't create —
+    # a minted password would reach the scaffold but never the DBMS,
+    # and every session would then knock with wrong credentials until
+    # the auth rate limit locks the user.
+    target = tmp_path / "hearth"
+    fake = FakeSystem()
+    monkeypatch.setattr(connections, "_system_runner",
+                        lambda config: fake)
+    assert main_mod.cmd_init(target, name="Hearth") == 0
+    env = (target / ".env").read_text(encoding="utf-8")
+    env = env.replace("NEO4J_READER_USERNAME=hearth-reader",
+                      "NEO4J_READER_USERNAME=keeper_reader")
+    env = "\n".join(line for line in env.splitlines()
+                    if not line.startswith("NEO4J_READER_PASSWORD=")) + "\n"
+    (target / ".env").write_text(env, encoding="utf-8")
+    mcp_before = (target / ".mcp.json").read_text(encoding="utf-8")
+    fake.statements.clear()
+    capsys.readouterr()
+    assert main_mod.cmd_connections(target) == 1
+    err = capsys.readouterr().err
+    assert "keeper_reader" in err and "Failed due to" in err
+    assert "--reset-passwords" in err
+    assert fake.statements == []  # nothing reached the DBMS
+    assert (target / ".mcp.json").read_text(encoding="utf-8") == mcp_before
+    assert "NEO4J_READER_PASSWORD=" not in \
+        (target / ".env").read_text(encoding="utf-8")
+
+
+def test_reset_passwords_is_the_sanctioned_adoption_road(
+        tmp_path, monkeypatch):
+    target = tmp_path / "hearth"
+    fake = FakeSystem()
+    monkeypatch.setattr(connections, "_system_runner",
+                        lambda config: fake)
+    assert main_mod.cmd_init(target, name="Hearth") == 0
+    env = (target / ".env").read_text(encoding="utf-8")
+    env = env.replace("NEO4J_READER_USERNAME=hearth-reader",
+                      "NEO4J_READER_USERNAME=keeper_reader")
+    env = "\n".join(line for line in env.splitlines()
+                    if not line.startswith("NEO4J_READER_PASSWORD=")) + "\n"
+    (target / ".env").write_text(env, encoding="utf-8")
+    fake.statements.clear()
+    assert main_mod.cmd_connections(target, reset_passwords=True) == 0
+    env = (target / ".env").read_text(encoding="utf-8")
+    [pw_line] = [l for l in env.splitlines()
+                 if l.startswith("NEO4J_READER_PASSWORD=")]
+    minted = pw_line.split("=", 1)[1]
+    assert minted and any(
+        s.startswith("ALTER USER `keeper_reader`") and minted in s
+        for s in fake.statements)  # env and DBMS agree by construction

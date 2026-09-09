@@ -3120,6 +3120,12 @@ def cmd_connections(base_dir, reset_passwords=False):
     canon_db = config["NEO4J_DATABASE"]
     scratch_db = (config.get("NEO4J_SCRATCH_DATABASE") or "").strip() \
         or f"{canon_db}-scratch"
+    if not reset_passwords:
+        problems = connections_mod.adoption_problems(base_dir)
+        if problems:
+            for problem in problems:
+                print(problem, file=sys.stderr)
+            return 1
     creds = connections_mod.scaffold(base_dir, canon_db, scratch_db)
     if reset_passwords:
         creds.update(connections_mod.rotate_passwords(base_dir))
