@@ -3123,7 +3123,8 @@ def cmd_connections(base_dir, reset_passwords=False):
     creds = connections_mod.scaffold(base_dir, canon_db, scratch_db)
     if reset_passwords:
         creds.update(connections_mod.rotate_passwords(base_dir))
-    reader, writer = connections_mod.usernames(canon_db)
+    reader = creds[connections_mod.READER_USERNAME_KEY]
+    writer = creds[connections_mod.WRITER_USERNAME_KEY]
     plan = connections_mod.statements(canon_db, scratch_db, creds,
                                       reset=reset_passwords)
     try:
@@ -3139,12 +3140,26 @@ def cmd_connections(base_dir, reset_passwords=False):
         for statement in plan:
             runner.run(statement)
     except Exception as exc:
+        text = str(exc)
+        if "Unsupported administration command" in text:
+            cause = ("this DBMS does not manage users (a community "
+                     "edition) — use an Enterprise DBMS, or point the "
+                     "settings at one")
+        elif "Permission" in text or "Forbidden" in text \
+                or "denied" in text.lower():
+            cause = ("the admin connection lacks the right to manage "
+                     "users — grant it, or have an administrator run "
+                     "the statements")
+        else:
+            cause = f"the DBMS refused: {text}"
         print(f"Attempted to create this knowledge base's reader and "
-              f"writer on the DBMS. Failed due to: {exc} — this DBMS "
-              "does not manage users (or the admin connection lacks the "
-              "right). Create them by hand with the statements the "
-              "engine would have run, or upgrade the DBMS:\n  "
-              + "\n  ".join(plan), file=sys.stderr)
+              f"writer on the DBMS. Failed due to: {cause}. The "
+              "settings and MCP scaffold stand, and creation is "
+              "idempotent — a re-run converges. The exact statements "
+              "(passwords redacted; the real values are in .env), to "
+              "run by hand if that is the road:\n  "
+              + "\n  ".join(connections_mod.redacted(s) for s in plan),
+              file=sys.stderr)
         return 1
     finally:
         close = getattr(runner, "close", None)
