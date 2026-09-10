@@ -171,6 +171,11 @@ def statements(canon_db, scratch_db, creds, reset=False):
         f"GRANT ACCESS ON DATABASE `{scratch_db}` TO `{writer_role}`",
         f"GRANT MATCH {{*}} ON GRAPH `{scratch_db}` TO `{writer_role}`",
         f"GRANT WRITE ON GRAPH `{scratch_db}` TO `{writer_role}`",
+        # WRITE excludes token creation — a first-of-its-kind label,
+        # relationship type, or property key needs NAME MANAGEMENT,
+        # and a young KB hits that on nearly everything
+        f"GRANT NAME MANAGEMENT ON DATABASE `{scratch_db}` "
+        f"TO `{writer_role}`",
     ]
     if reset:
         plan += [
