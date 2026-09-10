@@ -126,6 +126,10 @@ REF_KEYS = {
     "move-kernel-name": "kernel-name-not-yours",
     "move-source-missing": "nothing-by-that-name",
     "move-target-held": "name-already-held",
+    "citizen-renamed": "renamed",
+    "citizen-rename-target-held": "name-already-held",
+    "citizen-rename-missing": "nothing-by-that-name",
+    "citizen-rename-label-unknown": "unknown-kind",
     "rehome-not-a-kind": "not-a-kind",
     "rehome-citizen-missing": "citizen-not-under-source",
     "moves-file-unreadable": "declaration-unreadable",
@@ -448,7 +452,7 @@ def render_markdown(report):
                   "declared concepts, label births, doc edits, added "
                   "aliases, render-mapping edits, source unregistration, "
                   "taxonomy declarations, unreferenced removals, "
-                  "declared moves — renames and re-homings); "
+                  "declared moves — renames, citizen renames, and re-homings); "
                   "approving this round is the ceremony ruling that "
                   "makes them schema.", ""]
         lines += [f"- ⚑ {item}" for item in report.ceremony] + [""]

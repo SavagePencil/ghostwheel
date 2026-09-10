@@ -16,10 +16,14 @@ inverse is the full ground diff, so a relabel walks back; the
 attribution ledger's refs move with the canon they name.
 
     {"rename": {"Old": "[New]"},
-     "rehome": {"[Source]": {"[Kind]": ["citizen", ...]}}}
+     "rehome": {"[Source]": {"[Kind]": ["citizen", ...]}},
+     "rename_citizens": {"[Label]": {"Old Name": "New Name"}}}
 
 RENAME: one Archetype row and everything under it — citizens relabeled,
-edges re-pointed, spec bindings rewritten. REHOME: the named citizens
+edges re-pointed, spec bindings rewritten. RENAME_CITIZENS: one citizen
+takes a new name with its identity whole — every property travels,
+every connection endpoint re-points, the attribution ledger follows —
+what a by-hand remove-and-add loses. REHOME: the named citizens
 leave one label for another that is a SUBTYPE_OF-descendant of it — a
 kind of what they were, so no fact is lost and the fold keeps them
 instances of the source. Kernel names never move here: a kernel rename
@@ -32,6 +36,7 @@ from .refs import CitizenRef
 from .report import CeremonyItem, Verdict
 
 RENAME, REHOME = "rename", "rehome"
+CITIZEN_RENAME = "rename_citizens"
 
 
 def normalize(doc, filename="moves.json"):
@@ -43,11 +48,12 @@ def normalize(doc, filename="moves.json"):
     if not isinstance(doc, dict):
         fail(f"the file holds a {type(doc).__name__}, not an object with "
              "'rename' and/or 'rehome'")
-    unknown = sorted(set(doc) - {RENAME, REHOME})
+    unknown = sorted(set(doc) - {RENAME, REHOME, CITIZEN_RENAME})
     if unknown:
         fail(f"unknown move kind(s) {', '.join(unknown)} — the kinds are "
-             "'rename' (old name -> new name) and 'rehome' (source label -> "
-             "{kind label -> [citizen names]})")
+             "'rename' (old name -> new name), 'rehome' (source label -> "
+             "{kind label -> [citizen names]}), and 'rename_citizens' "
+             "(label -> {old citizen name -> new name})")
     out = {}
     renames = doc.get(RENAME) or {}
     if not isinstance(renames, dict) or not all(
@@ -73,6 +79,20 @@ def normalize(doc, filename="moves.json"):
             clean[source][target] = sorted(set(names))
     if clean:
         out[REHOME] = {k: clean[k] for k in sorted(clean)}
+    citizen_renames = doc.get(CITIZEN_RENAME) or {}
+    if not isinstance(citizen_renames, dict):
+        fail("'rename_citizens' must map a label to {old citizen name -> "
+             "new name}")
+    cleaned = {}
+    for label, pairs in citizen_renames.items():
+        if not isinstance(pairs, dict) or not all(
+                isinstance(k, str) and isinstance(v, str) and k and v
+                for k, v in pairs.items()):
+            fail(f"'rename_citizens' under '{label}' must map old citizen "
+                 "names to new names (non-blank strings)")
+        cleaned[label] = {k: pairs[k] for k in sorted(pairs)}
+    if cleaned:
+        out[CITIZEN_RENAME] = {k: cleaned[k] for k in sorted(cleaned)}
     return out
 
 
@@ -187,6 +207,74 @@ def move_records(delta, base):
             data={"old": old, "new": new, "citizens": citizens,
                   "edges": edges, "specs": specs}))
     renamed_to = dict(moves.get(RENAME) or {})
+    from .ontology import MACHINE_LABELS
+    from .workspace import WORKSPACE_LABEL
+    for label, pairs in (moves.get(CITIZEN_RENAME) or {}).items():
+        final_label = renamed_to.get(label, label)
+        subject = CitizenRef(ARCHETYPE_LABEL, label)
+        if label in MACHINE_LABELS or label == ARCHETYPE_LABEL \
+                or label == WORKSPACE_LABEL \
+                or ((ARCHETYPE_LABEL, label) not in base.nodes
+                    and label not in born):
+            violations.append(Verdict(
+                code="citizen-rename-label-unknown", subject=subject,
+                message=(f"Attempted to rename citizens under '{label}'. "
+                         f"Failed due to: '{label}' is not one of this "
+                         "knowledge base's own labels — a schema row "
+                         "renames through the 'rename' verb, machinery "
+                         "never renames here, and an unknown label holds "
+                         "nothing. Fix the label or drop the move."),
+                remedy="Fix the label, or drop the move."))
+            continue
+        news = {}
+        for old, new in pairs.items():
+            cite = CitizenRef(label, old)
+            if new in news:
+                violations.append(Verdict(
+                    code="citizen-rename-target-held", subject=cite,
+                    message=(f"Attempted to rename '{old}' to '{new}' "
+                             f"under '{label}'. Failed due to: this "
+                             f"round also renames '{news[new]}' to "
+                             f"'{new}' — the two would collapse into "
+                             "one. Pick another name."),
+                    remedy="Pick another new name."))
+                continue
+            news[new] = old
+            if (label, old) not in base.nodes:
+                violations.append(Verdict(
+                    code="citizen-rename-missing", subject=cite,
+                    message=(f"Attempted to rename '{old}' to '{new}' "
+                             f"under '{label}'. Failed due to: nothing "
+                             f"named '{old}' lives under '{label}'. Fix "
+                             "the name or drop the move."),
+                    remedy="Fix the old name, or drop the move."))
+                continue
+            held = ((label, new) in base.nodes and new not in pairs) \
+                or any(lbl == label and name == new
+                       for lbl, name, _ in delta.nodes_added)
+            if held:
+                violations.append(Verdict(
+                    code="citizen-rename-target-held", subject=cite,
+                    message=(f"Attempted to rename '{old}' to '{new}' "
+                             f"under '{label}'. Failed due to: '{new}' "
+                             f"is already held under '{label}' — the two "
+                             "would collapse into one. Pick another "
+                             "name, or retire the holder first."),
+                    remedy="Pick another new name, or retire the holder "
+                           "first."))
+                continue
+            edges = sum(1 for e in base.edges
+                        if (e.from_label, str(e.from_name)) == (label, old)
+                        or (e.to_label, str(e.to_name)) == (label, old))
+            items.append(CeremonyItem(
+                code="citizen-renamed", subject=cite,
+                message=(f"CITIZEN RENAME — '{old}' becomes '{new}' under "
+                         f"'{final_label}': every property travels, "
+                         f"{edges} connection{'s' if edges != 1 else ''} "
+                         "re-pointed; the attribution ledger follows at "
+                         "apply"),
+                data={"label": final_label, "old": old, "new": new,
+                      "edges": edges}))
     for source, targets in (moves.get(REHOME) or {}).items():
         # a kind this round declares (its edge or its stitch) counts; a
         # source or target spelled under a name this round renames is
@@ -257,6 +345,32 @@ def apply_moves(ground, moves, kernel):
     if renames:
         moved, _adoptions = apply_renames(moved, renames, "round",
                                           kernel_names=set(kernel))
+    citizen_renames = moves.get(CITIZEN_RENAME) or {}
+    renamed = {}
+    if citizen_renames:
+        # a rename declared under a label this round renames resolves
+        # THROUGH it: the label rename ran first, so the citizen is
+        # found under the label's new name
+        for label, pairs in citizen_renames.items():
+            final = renames.get(label, label)
+            for old_name, new_name in pairs.items():
+                renamed[(final, str(old_name))] = new_name
+        out = GraphData()
+        for (label, name), props in moved.nodes.items():
+            out.ensure_node(label, renamed.get((label, str(name)), name),
+                            **dict(props))
+        for edge in moved.edges:
+            fn = renamed.get((edge.from_label, str(edge.from_name)),
+                             edge.from_name)
+            tn = renamed.get((edge.to_label, str(edge.to_name)),
+                             edge.to_name)
+            out.edges.append(make_edge(edge.type, edge.from_label, fn,
+                                       edge.to_label, tn, dict(edge.props)))
+        for (label, old_name), new_name in renamed.items():
+            if (label, new_name) not in out.nodes:
+                problems.append(f"'{old_name}' was not under '{label}' to "
+                                f"rename to '{new_name}'")
+        moved = out
     rehomes = moves.get(REHOME) or {}
     if rehomes:
         out = GraphData()
@@ -270,6 +384,9 @@ def apply_moves(ground, moves, kernel):
             for target, names in targets.items():
                 target = renames.get(target, target)
                 for name in names:
+                    # a rehomed citizen's name resolves through its own
+                    # rename — the rename ran first
+                    name = renamed.get((source, str(name)), name)
                     relabel[(source, name)] = target
         for (label, name), props in moved.nodes.items():
             new_label = relabel.get((label, str(name)), label)
@@ -297,8 +414,13 @@ def rewrite_ledger(base_dir, moves, branch=None):
     from .proposal import attribution_log_path
     changed = rewrite_attribution_labels(base_dir, moves.get(RENAME) or {},
                                          branch)
+    renames = moves.get(RENAME) or {}
+    citizen_renames = moves.get(CITIZEN_RENAME) or {}
+    renamed = {(renames.get(label, label), str(old)): new
+               for label, pairs in citizen_renames.items()
+               for old, new in pairs.items()}
     rehomes = moves.get(REHOME) or {}
-    if not rehomes:
+    if not rehomes and not renamed:
         return changed
     path = attribution_log_path(base_dir, branch)
     if not path.exists():
@@ -310,8 +432,10 @@ def rewrite_ledger(base_dir, moves, branch=None):
         if not line.strip():
             continue
         row = json.loads(line)
-        refs = [[relabel.get((r[0], str(r[1])), r[0]), r[1]]
-                for r in (row.get("citizens") or [])]
+        refs = []
+        for r in (row.get("citizens") or []):
+            name = renamed.get((r[0], str(r[1])), r[1])
+            refs.append([relabel.get((r[0], str(name)), r[0]), name])
         if refs != [list(r) for r in (row.get("citizens") or [])]:
             changed += 1
             row["citizens"] = refs

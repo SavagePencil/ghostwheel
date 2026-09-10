@@ -22,7 +22,7 @@ The items below cannot become canon as written — each says why, and what to do
 
 ## Schema changes — the ceremony
 
-The rows below change the graph's OWN SCHEMA. They are within the ceremony's permitted classes (new declared concepts, label births, doc edits, added aliases, render-mapping edits, source unregistration, taxonomy declarations, unreferenced removals, declared moves — renames and re-homings); approving this round is the ceremony ruling that makes them schema.
+The rows below change the graph's OWN SCHEMA. They are within the ceremony's permitted classes (new declared concepts, label births, doc edits, added aliases, render-mapping edits, source unregistration, taxonomy declarations, unreferenced removals, declared moves — renames, citizen renames, and re-homings); approving this round is the ceremony ruling that makes them schema.
 
 - ⚑ NEW CONCEPT 'Lore' — declared in Chronicle, an instance of Treasure; doc: "Old tales carried by wandering scribes"
 - ⚑ DOC EDIT on 'Tool' — doc: (none) → "A thing that does work"
