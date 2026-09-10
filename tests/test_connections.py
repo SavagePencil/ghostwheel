@@ -357,3 +357,21 @@ def test_reset_passwords_is_the_sanctioned_adoption_road(
     assert minted and any(
         s.startswith("ALTER USER `keeper_reader`") and minted in s
         for s in fake.statements)  # env and DBMS agree by construction
+
+
+def test_the_writer_may_name_what_it_writes(born):
+    # WRITE excludes token creation: a first-of-its-kind node label,
+    # relationship type, or property key needs NAME MANAGEMENT — a
+    # young KB hits this on nearly everything, so the writer role
+    # carries the umbrella grant on the working copy. The reader gets
+    # nothing: reads create no tokens.
+    target, fake = born
+    fake.statements.clear()
+    assert main_mod.cmd_connections(target) == 0
+    [grant] = [s for s in fake.statements if "NAME MANAGEMENT" in s]
+    assert "ON DATABASE `hearth-scratch`" in grant
+    assert grant.endswith("`hearth_writer_role`")
+    assert not any("NAME MANAGEMENT" in s and "`hearth`" in s.replace(
+        "hearth-scratch", "") for s in fake.statements)
+    assert not any("NAME MANAGEMENT" in s and "reader" in s
+                   for s in fake.statements)
