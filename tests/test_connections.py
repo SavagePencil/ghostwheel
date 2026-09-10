@@ -360,11 +360,14 @@ def test_reset_passwords_is_the_sanctioned_adoption_road(
 
 
 def test_the_writer_may_name_what_it_writes(born):
-    # WRITE excludes token creation: a first-of-its-kind node label,
-    # relationship type, or property key needs NAME MANAGEMENT — a
-    # young KB hits this on nearly everything, so the writer role
-    # carries the umbrella grant on the working copy. The reader gets
-    # nothing: reads create no tokens.
+    # WRITE excludes token creation, and the field hit ALL THREE token
+    # kinds: a first-of-its-kind node label refuses at one KB's first
+    # citizen, a first-of-its-kind property key at another's first
+    # ruling row (decided_by, notes...), and the first new relationship
+    # type follows immediately — so the writer carries NAME MANAGEMENT,
+    # the umbrella defined as exactly those three privileges' union, on
+    # the working copy. The reader gets nothing: reads create no
+    # tokens.
     target, fake = born
     fake.statements.clear()
     assert main_mod.cmd_connections(target) == 0
