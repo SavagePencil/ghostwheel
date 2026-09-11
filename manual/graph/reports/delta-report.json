@@ -1,13 +1,13 @@
 {
   "kb": "manual",
   "kind": "delta-report",
-  "proposal_id": "1b9fa21d65e30e35c88804d838d31c020de48b4767e73366797f80f136f61150",
+  "proposal_id": "cad01833122b823956f17a89d65a1ea4c3ee6c9b674ab4736ee096b35308e11c",
   "summary": {
     "edges_added": 0,
     "edges_changed": 0,
     "edges_removed": 0,
     "nodes_added": 0,
-    "nodes_changed": 1,
+    "nodes_changed": 2,
     "nodes_removed": 0
   }
 }

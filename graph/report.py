@@ -167,6 +167,7 @@ REF_KEYS = {
     "merge-round-replayed": "taken-up",
     "merge-round-skipped": "nothing-to-take-up",
     "merge-round-unreplayable": "could-not-take-up",
+    "branch-retired": "retired",
     "branch-pocket": "pocket",
     "branch-line": "working-line",
     "branch-adopted": "adopted",

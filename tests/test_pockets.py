@@ -216,8 +216,8 @@ def test_branches_lists_pockets_and_lines_from_the_backups(driven_kb, capsys):
     assert main_mod.cmd_branches(base) == 0
     out = capsys.readouterr().out
     assert "pocket    maren-sketches — cut by Maren" in out
-    assert "invited: Pip; sequence " in out
-    assert "line      rebuild — schema-only; sequence " in out
+    assert "invited: Pip; rounds landed " in out
+    assert "line      rebuild — schema-only; rounds landed " in out
     record = json.loads(record_path(base, REPORT_FILE)
                         .read_text(encoding="utf-8"))
     assert record["kind"] == "branches-report"
