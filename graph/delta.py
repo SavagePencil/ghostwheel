@@ -377,12 +377,28 @@ def _citizens_still_needing_files(label_name, delta, base):
 
 
 def _alias_target_exists(row_name, target, delta, base):
-    """Does the target citizen exist under the row's label — in the base,
-    or born by this same round?"""
+    """Does the target citizen exist under the row's label — in the
+    base, born by this same round, or born under its NEW name by the
+    round's own citizen renames? A renamed citizen is born under its
+    new name just the same: the graph the round produces holds it (the
+    rehome precedent, applied to aliases)."""
     if base is not None and (row_name, target) in base.nodes:
         return True
-    return any(label == row_name and name == target
-               for label, name, _ in delta.nodes_added)
+    if any(label == row_name and name == target
+           for label, name, _ in delta.nodes_added):
+        return True
+    # "rename_citizens" is the moves declaration's third verb (a
+    # string here to keep delta free of a moves import)
+    pairs = ((delta.moves or {}).get("rename_citizens") or {}) \
+        .get(row_name) or {}
+    for old_name, new_name in pairs.items():
+        if new_name != target:
+            continue
+        if (base is not None and (row_name, old_name) in base.nodes) \
+                or any(label == row_name and name == old_name
+                       for label, name, _ in delta.nodes_added):
+            return True
+    return False
 
 
 def ceremony_records(delta, base=None):

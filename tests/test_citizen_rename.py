@@ -167,3 +167,30 @@ def test_the_ledger_s_citizen_refs_follow(tmp_path):
     kept = json.loads(path.read_text(encoding="utf-8"))
     assert kept["citizens"] == [["Character", "Pip the Elder"],
                                 ["Place", "Hearth"]]
+
+
+def test_an_alias_may_target_the_round_s_own_rename():
+    # the alias ceremony admits a target born by the round — and a
+    # citizen RENAMED by the round is born under its new name just the
+    # same: the graph the round produces holds it
+    from graph.delta import ceremony_records
+    base = build_canon()
+    spec_before = {"properties": {}}
+    spec_after = {"properties": {},
+                  "aliases": {"The Elder": "Pip the Elder"}}
+    delta = _moved({CITIZEN_RENAME: {"Character": {"Pip": "Pip the Elder"}}})
+    base.ensure_node(ARCHETYPE_LABEL, "Character-Roster", doc="a roster",
+                     spec_json=json.dumps(spec_before))
+    delta.nodes_changed.append(
+        ("Archetype", "Character-Roster",
+         {"spec_json": (json.dumps(spec_before), json.dumps(spec_after))}))
+    # the alias resolves through the round's own citizen rename... but
+    # only under the RIGHT label: the roster row's citizens live under
+    # its own label, so the through-resolution reads the rename map of
+    # the row's label
+    delta.moves = {CITIZEN_RENAME: {"Character-Roster":
+                                    {"Pip": "Pip the Elder"}}}
+    base.ensure_node("Character-Roster", "Pip", doc="the same soul")
+    _items, violations = ceremony_records(delta, base)[0:2]
+    missing = [v for v in violations if v.code == "alias-target-missing"]
+    assert missing == [], [v.message for v in missing]

@@ -1483,7 +1483,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     if attribution_problem:
         violations.append(attribution_problem)
     violations += delta_mod.stitch_verdicts(changes, scratch)
-    violations += delta_mod.attribution_verdicts(changes, base)
+    violations += delta_mod.attribution_verdicts(changes, diff_base)
     violations += delta_mod.body_sync_verdicts(scratch, base_dir)
     # the floor receipt: a cited fingerprint must match its file's bytes
     violations += delta_mod.fingerprint_verdicts(changes, base_dir)
@@ -1837,10 +1837,14 @@ def cmd_canonize(base_dir, database, apply, branch=None):
                 f"{exc}")
         print(text, file=sys.stderr)
         return bail("attribution-file-unreadable", text)
-    violations = delta_mod.lint(changes, base)
+    # judged against the SAME base the gate judged — the moved one for
+    # a merge round — so what the gate admitted, apply lands: a
+    # post-approval refusal on an approved diff is the one wrong answer
+    violations = delta_mod.lint(changes, diff_base)
     violations += delta_mod.lint_stitch(changes, scratch)
     violations += [str(v)
-                   for v in delta_mod.attribution_verdicts(changes, base)]
+                   for v in delta_mod.attribution_verdicts(changes,
+                                                           diff_base)]
     if violations:
         text = ("REFUSED: the delta has ground-facts lint violations — "
                 "fix scratch first (python -m graph delta):")
