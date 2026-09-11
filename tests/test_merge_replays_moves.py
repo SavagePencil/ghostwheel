@@ -148,3 +148,36 @@ def test_merge_moves_ride_the_pinned_proposal():
     assert not delta.empty  # a merge of moves-only rounds is a round
     again = parse_delta(serialize_delta(delta))
     assert again.merge_moves == delta.merge_moves
+
+
+def test_gate_passes_implies_apply_passes_for_alias_onto_renamed(driven_kb):
+    # the field forensics: the merge folds a rename round and an
+    # alias-onto-the-renamed-target round into ONE prepared round; the
+    # gate passed and apply refused. Both sides judge against the same
+    # moved base now — gate-passes implies apply-passes.
+    base, fake, _ = driven_kb
+    _cut_pocket(base)
+    _land_pocket_round(base, fake, moves={
+        "rename_citizens": {"Character": {"Pip": "Pip the Elder"}}})
+    def alias_edit(graph):
+        spec = json.loads(
+            graph.nodes[("Archetype", "Character")]["spec_json"])
+        spec.setdefault("aliases", {})["The Elder"] = "Pip the Elder"
+        graph.nodes[("Archetype", "Character")]["spec_json"] = \
+            json.dumps(spec)
+    _land_pocket_round(base, fake, edit=alias_edit)
+    _mount_live_canon(base, fake)
+    assert main_mod.cmd_restore(base, database="scratch") == 0
+    assert main_mod.cmd_merge(base, POCKET, "canon") == 0
+    assert main_mod.cmd_delta(base, None) == 0
+    from graph.report import record_path
+    report = record_path(base, "delta-report.json").read_text(
+        encoding="utf-8")
+    assert "alias-target-missing" not in report  # the gate admits it
+    assert main_mod.cmd_approve(base, "owner") == 0
+    # what the gate admitted, apply lands — never a post-approval refusal
+    assert main_mod.cmd_canonize(base, None, apply=True) == 0
+    landed = read_export(export_dir(base))
+    spec = json.loads(landed.nodes[("Archetype", "Character")]["spec_json"])
+    assert spec["aliases"]["The Elder"] == "Pip the Elder"
+    assert ("Character", "Pip the Elder") in landed.nodes
