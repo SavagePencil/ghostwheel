@@ -64,6 +64,98 @@ def pocket_row(graph, branch):
     return graph.nodes.get((KERNEL_POCKET_LABEL, branch))
 
 
+RETIRED_MARKER = "retired.json"
+
+
+def retirement_marker_path(base_dir, branch):
+    from .proposal import branch_home
+    return branch_home(base_dir, branch) / RETIRED_MARKER
+
+
+def read_retirement(base_dir, branch):
+    """The line's retirement record, or None while it lives."""
+    import json
+    path = retirement_marker_path(base_dir, branch)
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        return {"retired_by": "unrecorded", "retired_at": "unrecorded"}
+
+
+def retired_problem(base_dir, branch, attempted):
+    """The refusal for working a retired line, or None. The record
+    stands; deliberate rehydration (restore --from the archived export
+    into an inspection database) is the road for walking history."""
+    record = read_retirement(base_dir, branch)
+    if record is None:
+        return None
+    return (f"Attempted to {attempted} on branch '{branch}'. Failed due "
+            f"to: the line was retired by {record.get('retired_by')}'s "
+            f"word on {record.get('retired_at')} — its record stands "
+            f"whole at graph/branches/{branch}/, and a retired line "
+            "takes no further rounds. To walk its history, rehydrate "
+            "deliberately: restore --from "
+            f"graph/branches/{branch}/export --database <inspection>.")
+
+
+def retirement_problems(base_dir, branch, by):
+    """Verify-all before anything: the refusals that keep retirement
+    honest, collated. A line retires when the owner's word is recorded
+    (--by) and every round it landed has crossed into canon (or it
+    landed none); un-crossed work says merge first, and deliberate
+    abandonment is a different act, unbuilt on purpose."""
+    from .proposal import (branch_home, read_applied_log,
+                          taken_up_rounds)
+    problems = []
+    if read_retirement(base_dir, branch) is not None:
+        problems.append(f"Attempted to retire branch '{branch}'. Failed "
+                        "due to: it is already retired; the record "
+                        "stands.")
+        return problems
+    if not branch_home(base_dir, branch).is_dir():
+        problems.append(f"Attempted to retire branch '{branch}'. Failed "
+                        f"due to: no such line — nothing at "
+                        f"graph/branches/{branch}/.")
+        return problems
+    if not (by or "").strip():
+        problems.append(f"Attempted to retire branch '{branch}'. Failed "
+                        "due to: retirement IS the owner's word, and "
+                        "--by records it — name who ruled.")
+    taken = taken_up_rounds(base_dir, None, branch)
+    uncrossed = [(seq, delta_hash)
+                 for seq, delta_hash, *_rest
+                 in read_applied_log(base_dir, branch)
+                 if delta_hash not in taken]
+    for seq, delta_hash in uncrossed:
+        problems.append(f"Attempted to retire branch '{branch}'. Failed "
+                        f"due to: its round {seq} ({delta_hash[:12]}) "
+                        "was never taken up by canon — merge first, so "
+                        "no work is abandoned. (Deliberate abandonment "
+                        "is a different act, and no verb performs it.)")
+    return problems
+
+
+def write_retirement(base_dir, branch, by):
+    """The closed-by-the-owner's-word record, the adoption marker's
+    sibling. Returns the record written."""
+    import json
+    from datetime import datetime, timezone
+    from .proposal import read_applied_log
+    record = {
+        "retired_by": by,
+        "retired_at": datetime.now(timezone.utc).isoformat(
+            timespec="seconds"),
+        "rounds_taken_up": [delta_hash for _seq, delta_hash, *_rest
+                            in read_applied_log(base_dir, branch)],
+    }
+    path = retirement_marker_path(base_dir, branch)
+    path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8")
+    return record
+
+
 def strip_declarations(graph):
     """A copy without any declaration row — what succession adopts."""
     copy = GraphData()
@@ -123,7 +215,13 @@ def branch_rows(base_dir):
         row["adopted"] = ({"by": adoption.get("adopted_by"),
                            "at": adoption.get("adopted_at")}
                           if isinstance(adoption, dict) else None)
-        if row["adopted"]:
+        retirement = read_retirement(base_dir, branch)
+        row["retired"] = ({"by": retirement.get("retired_by"),
+                           "at": retirement.get("retired_at")}
+                          if retirement else None)
+        if row["retired"]:
+            row.update(status="retired", code="branch-retired")
+        elif row["adopted"]:
             row.update(status="adopted", code="branch-adopted")
         elif pocket:
             row.update(status="pocket", code="branch-pocket")
@@ -156,11 +254,14 @@ def render_rows(rows):
             lines.append(f"{head} — cut by {pocket.get('cut_by')} "
                          f"({pocket.get('cut_at')}) from canon at sequence "
                          f"{pocket.get('forked_sequence')}; invited: "
-                         f"{invited}; sequence {row['sequence']}")
+                         f"{invited}; rounds landed {row['sequence']}")
         else:
-            lines.append(f"{head} — {row['base']}; sequence "
+            lines.append(f"{head} — {row['base']}; rounds landed "
                          f"{row['sequence']}")
         if row.get("adopted"):
             lines[-1] += (f"; adopted by {row['adopted']['by']} at "
                           f"{row['adopted']['at']}")
+        if row.get("retired"):
+            lines[-1] += (f"; retired by {row['retired']['by']} at "
+                          f"{row['retired']['at']}")
     return "\n".join(lines)

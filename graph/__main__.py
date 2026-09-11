@@ -293,6 +293,14 @@ def _restore_branch(base_dir, branch, base, database, by=None,
     clone-of-canon (canon's whole graph — a POCKET, declared in-band by
     who cut it and who is invited). Collates every problem before
     touching the DBMS."""
+    from . import pockets as retire_mod
+    retired = retire_mod.retired_problem(base_dir, branch,
+                                         "cut or re-cut a working copy")
+    if retired:
+        print(retired, file=sys.stderr)
+        _file_restore(base_dir, code="restore-guard", status="refused",
+                      branch=branch, problems=[retired])
+        return 1
     from . import load as load_mod
     from . import pockets as pockets_mod
     from . import proposal as proposal_mod
@@ -1325,6 +1333,13 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     With --branch <name>: the base and round files are the branch's own,
     and the authoring copy defaults to <name>-scratch — the branch's half
     of the ceremony surface."""
+    if branch is not None:
+        from . import pockets as retire_mod
+        retired = retire_mod.retired_problem(base_dir, branch,
+                                             "draft a round")
+        if retired:
+            print(retired, file=sys.stderr)
+            return 1
     from . import delta as delta_mod
     from . import load as load_mod
 
@@ -1705,6 +1720,13 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     and log are all the branch's own — and the hard guard refuses if the
     branch's target database is the KB's live canon (a branch never
     becomes canon by flag; succession is the owner's ceremony)."""
+    if branch is not None:
+        from . import pockets as retire_mod
+        retired = retire_mod.retired_problem(
+            base_dir, branch, "canonize a round")
+        if retired:
+            print(retired, file=sys.stderr)
+            return 1
     from . import canonize as canonize_mod
     from . import delta as delta_mod
     from . import load as load_mod
@@ -3419,6 +3441,15 @@ def cmd_merge(base_dir, source, target, database=None):
     listed base / yours / theirs), merge.json rides the round, and
     delta → approve → canonize --apply land it like any round. Both
     directions between canon and a pocket."""
+    from . import pockets as retire_mod
+    from . import merge as merge_lines_mod
+    for line in (source, target):
+        name = merge_lines_mod.resolve_line(line)
+        if name is not None:
+            retired = retire_mod.retired_problem(base_dir, name, "merge")
+            if retired:
+                print(retired, file=sys.stderr)
+                return 1
     from . import delta as delta_mod
     from . import load as load_mod
     from . import merge as merge_mod
@@ -3534,7 +3565,8 @@ def cmd_merge(base_dir, source, target, database=None):
     return 0
 
 
-def cmd_branch(base_dir, branch, invite=None, uninvite=None):
+def cmd_branch(base_dir, branch, invite=None, uninvite=None,
+               retire=False, by=None):
     """A pocket's declaration, shown or changed. With --invite/--uninvite
     the [Pocket Universe] row in the branch's backup is rewritten, the branch
     database reloaded from it and read back byte-identical, and the
@@ -3549,6 +3581,40 @@ def cmd_branch(base_dir, branch, invite=None, uninvite=None):
     from . import succession as succession_mod
     from . import workspace as workspace_mod
 
+    if retire:
+        problems = pockets_mod.retirement_problems(base_dir, branch, by)
+        if problems:
+            for problem in problems:
+                print(problem, file=sys.stderr)
+            return 1
+        record = pockets_mod.write_retirement(base_dir, branch, by)
+        # the line's databases drop through the same admin road that
+        # creates them — idempotent, deferring plainly when unreachable
+        from . import connections as connections_mod
+        config = load_mod.read_config(base_dir)
+        drops = [f"DROP DATABASE `{branch}` IF EXISTS",
+                 f"DROP DATABASE `{branch}-scratch` IF EXISTS"]
+        try:
+            runner = connections_mod._system_runner(config)
+            try:
+                for statement in drops:
+                    runner.run(statement)
+            finally:
+                close = getattr(runner, "close", None)
+                if close:
+                    close()
+        except Exception as exc:
+            print(f"Note: the line's databases were not dropped ({exc}) "
+                  "— run these by hand when the DBMS is up:\n  "
+                  + "\n  ".join(drops))
+        print(f"Branch '{branch}' retired by {record['retired_by']}'s "
+              f"word at {record['retired_at']}: "
+              f"{len(record['rounds_taken_up'])} round"
+              f"{'s' if len(record['rounds_taken_up']) != 1 else ''} "
+              "all taken up by canon, the record standing whole at "
+              f"graph/branches/{branch}/, the databases dropped. "
+              "The roster lists it under --all.")
+        return 0
     invite, uninvite = list(invite or []), list(uninvite or [])
     try:
         graph = restore_mod.read_export(proposal_mod.export_dir(base_dir,
@@ -3622,7 +3688,7 @@ def cmd_branch(base_dir, branch, invite=None, uninvite=None):
     return 0
 
 
-def cmd_branches(base_dir):
+def cmd_branches(base_dir, all_lines=False):
     """The pocket roster: every branch of this knowledge base from its
     backup — pocket or rebuild line, cut by whom, invited, sequence,
     adopted — printed and recorded. No DBMS needed."""
@@ -3642,7 +3708,15 @@ def cmd_branches(base_dir):
     rows = pockets_mod.branch_rows(base_dir)
     doc = pockets_mod.branches_report(base_dir, rows)
     report_mod.write_record(base_dir, pockets_mod.REPORT_FILE, doc)
-    print(pockets_mod.render_rows(rows))
+    shown = rows if all_lines else \
+        [row for row in rows if row.get("status") != "retired"]
+    hidden = len(rows) - len(shown)
+    text = pockets_mod.render_rows(shown)
+    if hidden:
+        text += (f"\n({hidden} retired line"
+                 f"{'s' if hidden != 1 else ''} hidden — branches --all "
+                 "shows them.)")
+    print(text)
     return 0
 
 
@@ -3777,11 +3851,23 @@ def main(argv=None):
                                metavar="NAME", help="invite a person")
     branch_parser.add_argument("--uninvite", action="append", default=None,
                                metavar="NAME", help="withdraw an invitation")
-    sub.add_parser(
+    branch_parser.add_argument(
+        "--retire", action="store_true",
+        help="close a spent line by the owner's word: every round taken "
+             "up (or none landed), the record stands, the databases "
+             "drop, further rounds refuse")
+    branch_parser.add_argument(
+        "--by", default=None,
+        help="who ruled the retirement — recorded in retired.json "
+             "(required with --retire)")
+    branches_parser = sub.add_parser(
         "branches",
         help="list this knowledge base's branches from their backups — "
              "pocket or rebuild line, cut by whom, invited, sequence, "
              "adopted — recorded at graph/reports/branches-report.json")
+    branches_parser.add_argument(
+        "--all", action="store_true",
+        help="show retired lines too (hidden by default)")
     dependencies_parser = sub.add_parser(
         "dependencies",
         help="the drift query: every pinned dependency against what its "
@@ -4068,12 +4154,13 @@ def main(argv=None):
                            base=args.base, by=args.by, invite=args.invite)
     if args.command == "branch":
         return cmd_branch(base_dir, args.name, invite=args.invite,
-                          uninvite=args.uninvite)
+                          uninvite=args.uninvite, retire=args.retire,
+                          by=args.by)
     if args.command == "merge":
         return cmd_merge(base_dir, args.source, args.target,
                          database=args.database)
     if args.command == "branches":
-        return cmd_branches(base_dir)
+        return cmd_branches(base_dir, all_lines=args.all)
     if args.command == "rederive":
         return cmd_rederive(base_dir, apply=args.apply)
     if args.command == "kernel-migrate":
