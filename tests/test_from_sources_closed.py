@@ -132,3 +132,41 @@ def test_packaged_canon_carries_no_retired_kernel_name():
                 hits.append(f"{label} / {name}: '{token}'")
     assert not hits, "retired kernel names in packaged canon:\n" + \
         "\n".join(hits)
+
+
+# -- machinery citizens are never reference targets -------------------------
+
+
+def test_prose_never_references_the_machinery_stratum(tmp_path):
+    # a line's identity citizen named a common word ('equipment' in the
+    # field) must not attract derived references from prose that uses
+    # the word as a word — bracket-marked machinery never shadows the
+    # designer's vocabulary, now enforced where resolution lives
+    import json as json_mod
+
+    from graph.extract import derive, make_edge
+    from graph.ontology import (ARCHETYPE_LABEL, KERNEL_POCKET_LABEL,
+                                ontology_from_graph)
+    from tests.test_branch import build_canon
+    canon = build_canon()
+    canon.ensure_node(KERNEL_POCKET_LABEL, "equipment", cut_by="Maren")
+    canon.ensure_node(ARCHETYPE_LABEL, "Notice", doc="a posted notice",
+                      spec_json=json_mod.dumps({
+                          "reader": "markdown_sections",
+                          "relationships": [{"type": "MENTIONS",
+                                             "to": "any",
+                                             "parser": "mentions"}]}))
+    canon.edges.append(make_edge("DECLARED_IN", ARCHETYPE_LABEL, "Notice",
+                                 ARCHETYPE_LABEL, "Ontology"))
+    canon.ensure_node("Notice", "the armory rules",
+                      body="# the armory rules\n\nStore equipment "
+                           "beside the hearth, and Pip checks it.\n")
+    derived, _ = derive(ontology_from_graph(canon, tmp_path), canon)
+    onto_machinery = [e for e in derived.edges
+                      if e.to_label == KERNEL_POCKET_LABEL]
+    assert onto_machinery == [], onto_machinery
+    # the designer's own citizens still resolve from the same prose
+    assert any(e.type == "MENTIONS" and e.to_name == "Pip"
+               for e in derived.edges
+               if (e.from_label, str(e.from_name)) ==
+               ("Notice", "the armory rules"))

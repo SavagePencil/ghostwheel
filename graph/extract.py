@@ -144,9 +144,14 @@ class Extractor:
                 if rel.get("parser") != RelParser.EFFECTS_TABLE:
                     continue
                 effect_label = rel["effect_label"]
+                from .ontology import DECLARATION_LABELS
+                from .workspace import WORKSPACE_LABEL
+                machinery = {ARCHETYPE_LABEL, effect_label, STEP_LABEL,
+                             OUTCOME_LABEL, WORKSPACE_LABEL} \
+                    | set(DECLARATION_LABELS)
                 candidates = {}
                 for (node_label, name) in self.graph.nodes:
-                    if node_label not in (ARCHETYPE_LABEL, effect_label):
+                    if node_label not in machinery:
                         candidates.setdefault(name, []).append(node_label)
                 for (node_label, name), props in sorted(
                         self.graph.nodes.items()):
@@ -200,7 +205,13 @@ class Extractor:
     def rel_mentions(self, label, rel):
         """(section)-[:MENTIONS]->(node) for every known node name appearing
         verbatim in the section body. Deterministic exact matching."""
-        skip_labels = {label, "Archetype"}
+        from .ontology import DECLARATION_LABELS
+        from .workspace import WORKSPACE_LABEL
+        # machinery is not vocabulary: a line's identity citizens and
+        # the workspace stamp never attract mentions, whatever common
+        # word they were named with
+        skip_labels = {label, "Archetype", STEP_LABEL, OUTCOME_LABEL,
+                       WORKSPACE_LABEL} | set(DECLARATION_LABELS)
         candidates = {}
         for (node_label, name) in self.graph.nodes:
             if node_label not in skip_labels:
@@ -414,7 +425,17 @@ class Extractor:
             index.setdefault(surface, set()).add((label, name))
 
         for (node_label, name) in self.graph.nodes:
-            if node_label in (STEP_LABEL, OUTCOME_LABEL):
+            # Structure and machinery are not vocabulary: steps and
+            # outcomes, a line's identity citizens ([Pocket Universe]
+            # and kin), and the workspace stamp never enter the index —
+            # bracket-marked machinery never shadows a designer's word,
+            # so a pocket named 'equipment' cannot attract references
+            # from prose that uses the word as a word.
+            from .ontology import DECLARATION_LABELS
+            from .workspace import WORKSPACE_LABEL
+            if node_label in (STEP_LABEL, OUTCOME_LABEL) \
+                    or node_label in DECLARATION_LABELS \
+                    or node_label == WORKSPACE_LABEL:
                 continue
             for variant in parsers.name_variants(name):
                 add(variant, node_label, name)
