@@ -99,3 +99,52 @@ def test_the_roundtrip_refusal_shows_its_first_differences():
     assert "Pip" in text and "temperament" in text
     assert "Hearth" in text
     assert len(lines) <= 4
+
+
+def test_a_merged_round_lands_through_the_ordinary_gate(driven_kb):
+    # the round the merge prepares is an ORDINARY round: the gate shows
+    # the replayed renames as ceremony move lines (never remove+add),
+    # the lint reads re-pointed derived edges as the rename's shadow
+    # (never as authored), and canonize lands the copy exactly.
+    base, fake, _ = driven_kb
+    _cut_pocket(base)
+    _land_pocket_round(base, fake, moves={
+        "rename_citizens": {"Character": {"Pip": "Pip the Elder"}}})
+    def edit(graph):
+        graph.ensure_node("Place", "Hearth")
+        graph.edges.append(make_edge("LIVES_IN", "Character",
+                                     "Pip the Elder", "Place", "Hearth"))
+    _land_pocket_round(base, fake, edit=edit)
+    _mount_live_canon(base, fake)
+    assert main_mod.cmd_restore(base, database="scratch") == 0
+    assert main_mod.cmd_merge(base, POCKET, "canon") == 0
+    # the ordinary gate
+    assert main_mod.cmd_delta(base, None) == 0
+    from graph.report import record_path
+    report = json.loads(record_path(base, "delta-report.json")
+                        .read_text(encoding="utf-8"))
+    text = json.dumps(report)
+    assert "derived-edge-authored" not in text
+    assert "citizen-renamed" in text  # the ceremony line
+    assert '"Pip the Elder"' in text
+    # the diff never presents the rename as remove+add
+    assert "cannot remove" not in text
+    assert main_mod.cmd_approve(base, "owner") == 0
+    assert main_mod.cmd_canonize(base, None, apply=True) == 0
+    landed = read_export(export_dir(base))
+    assert ("Character", "Pip the Elder") in landed.nodes
+    assert ("Character", "Pip") not in landed.nodes
+    assert any((e.from_label, str(e.from_name)) ==
+               ("Character", "Pip the Elder") and e.type == "LIVES_IN"
+               for e in landed.edges)
+
+
+def test_merge_moves_ride_the_pinned_proposal():
+    from graph.delta import Delta
+    from graph.proposal import parse_delta, serialize_delta
+    delta = Delta()
+    delta.merge_moves = [
+        {"rename_citizens": {"Character": {"Pip": "Pip the Elder"}}}]
+    assert not delta.empty  # a merge of moves-only rounds is a round
+    again = parse_delta(serialize_delta(delta))
+    assert again.merge_moves == delta.merge_moves

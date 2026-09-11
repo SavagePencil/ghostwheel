@@ -96,6 +96,11 @@ def serialize_delta(delta):
         # round declares them, so every earlier round's archived document
         # still hashes to its recorded id
         doc["moves"] = delta.moves
+    if delta.merge_moves:
+        # A merge round's replayed moves, per source round in order —
+        # embedded so the approval hash covers what the copy already
+        # performed and what apply must perform on canon first
+        doc["merge_moves"] = delta.merge_moves
     if delta.attribution:
         # Recorded attribution (the provenance-recording rung): present
         # only when the round declares links, so every earlier round's
@@ -161,6 +166,7 @@ def parse_delta(text):
     delta.stitch = [_edge_from_doc(d) for d in doc.get("stitch", [])]
     delta.attribution = [dict(d) for d in doc.get("attribution", [])]
     delta.moves = dict(doc.get("moves") or {})
+    delta.merge_moves = list(doc.get("merge_moves") or [])
     return delta
 
 

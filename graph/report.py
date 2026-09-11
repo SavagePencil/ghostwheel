@@ -162,6 +162,7 @@ REF_KEYS = {
     "location-unreadable": "unreadable-file",
     "location-unverified": "not-yet-verified",
     "location-unverifiable": "unverifiable-by-design",
+    "merge-moves-failed": "crossing-broken",
     "merge-contested": "changed-on-both-lines",
     "merge-round-replayed": "taken-up",
     "merge-round-skipped": "nothing-to-take-up",
