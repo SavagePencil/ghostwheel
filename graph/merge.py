@@ -234,6 +234,27 @@ def prepare(base_dir, source, target, source_graph, target_graph, copy):
             continue
         part = filtered(delta, contested_nodes, contested_edges)
         problems = apply_delta(merged, part)
+        move_count = 0
+        if not problems and delta.moves:
+            # a moves-only round is not an empty round: its renames and
+            # re-homings ARE the round, performed here in sequence
+            # exactly as canonize performed them on the source line
+            # (moves are identity operations, never filtered by
+            # contest — a contested citizen keeps the target's VALUES
+            # while its identity still moves with the source's ruling)
+            from .moves import CITIZEN_RENAME, REHOME, RENAME
+            from .moves import apply_moves as apply_declared_moves
+            from .moves import kernel_names as kernel_names_of
+            merged, move_problems = apply_declared_moves(
+                merged, delta.moves, kernel_names_of(merged))
+            problems = list(move_problems)
+            move_count = (
+                len(delta.moves.get(RENAME) or {})
+                + sum(len(pairs) for pairs in
+                      (delta.moves.get(CITIZEN_RENAME) or {}).values())
+                + sum(len(names) for targets in
+                      (delta.moves.get(REHOME) or {}).values()
+                      for names in targets.values()))
         if problems:
             row.update(code="merge-round-unreplayable", problems=problems)
             unreplayable.extend(f"round {seq} ({delta_hash[:12]}): {p}"
@@ -243,9 +264,11 @@ def prepare(base_dir, source, target, source_graph, target_graph, copy):
                        nodes=len(part.nodes_added) + len(part.nodes_changed)
                        + len(part.nodes_removed),
                        edges=len(part.edges_added) + len(part.edges_changed)
-                       + len(part.edges_removed) + len(part.stitch))
+                       + len(part.edges_removed) + len(part.stitch),
+                       moves=move_count)
             replayed["nodes"] += row["nodes"]
             replayed["edges"] += row["edges"]
+            replayed["moves"] = replayed.get("moves", 0) + move_count
         round_rows.append(row)
 
     all_rounds = source_rounds + target_rounds
@@ -374,6 +397,38 @@ def render_report(doc):
                  "the round lands like any other, and this line's log "
                  "records the rounds taken up.")
     return "\n".join(lines)
+
+
+def first_differences(a, b, limit=4):
+    """The first few ways graph `a` differs from graph `b`, in
+    designer-readable lines — what a refused landing shows instead of
+    blaming the driver blind."""
+    lines = []
+    for key in sorted(set(a.nodes) | set(b.nodes), key=str):
+        if len(lines) >= limit:
+            return lines
+        label, name = key
+        mine, theirs = a.nodes.get(key), b.nodes.get(key)
+        if mine is None:
+            lines.append(f"({label}) '{name}' is missing from the copy")
+        elif theirs is None:
+            lines.append(f"({label}) '{name}' appears only in the copy")
+        elif dict(mine) != dict(theirs):
+            prop = next(p for p in sorted(set(mine) | set(theirs), key=str)
+                        if mine.get(p) != theirs.get(p))
+            lines.append(f"({label}) '{name}'.{prop} reads "
+                         f"{mine.get(prop)!r}, the replay wrote "
+                         f"{theirs.get(prop)!r}")
+    a_edges = {_edge_identity(e) for e in a.edges}
+    b_edges = {_edge_identity(e) for e in b.edges}
+    for identity in sorted(a_edges ^ b_edges, key=str):
+        if len(lines) >= limit:
+            return lines
+        edge_type, fl, fn, tl, tn = identity
+        where = "missing from" if identity in b_edges else "only in"
+        lines.append(f"({fl}) {fn} -[{edge_type}]-> ({tl}) {tn} is "
+                     f"{where} the copy")
+    return lines
 
 
 def serialize_equal(a, b):

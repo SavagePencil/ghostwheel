@@ -3425,10 +3425,13 @@ def cmd_merge(base_dir, source, target, database=None):
               "merge again.", file=sys.stderr)
         return 1
     if not merge_mod.serialize_equal(readback, merged):
+        differences = merge_mod.first_differences(readback, merged)
         print(f"Attempted to land the replay in '{database}'. Failed due "
-              "to: the copy read back differently than what was written "
-              "(driver round-trip fault). Re-cut it and merge again.",
-              file=sys.stderr)
+              "to: the copy read back differently than what was written. "
+              "The first differences:\n  " + "\n  ".join(differences)
+              + "\nRe-cut the copy and merge again; if the differences "
+              "name types or citizens rather than driver noise, report "
+              "them.", file=sys.stderr)
         return 1
     workspace_mod.stamp(config, "working-copy",
                         proposal_mod.base_identity(target_graph),
