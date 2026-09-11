@@ -295,6 +295,8 @@ def prepare(base_dir, source, target, source_graph, target_graph, copy):
     record = {
         "from": line_name(source), "into": line_name(target),
         "fork_sequence": fork,
+        "replayed_moves": [delta.moves for _s, _h, delta in source_rounds
+                           if delta is not None and delta.moves],
         "rounds": [h for _s, h, d in source_rounds if d is not None],
         "round_rows": round_rows,
         "replayed": replayed,

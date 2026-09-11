@@ -48,16 +48,19 @@ class Delta:
     stitch: list = field(default_factory=list)         # Edge — lands after re-derivation (the stitch mechanism)
     attribution: list = field(default_factory=list)    # claim→citizen link rows (recorded provenance)
     moves: dict = field(default_factory=dict)          # declared renames / re-homings (moves.json)
+    merge_moves: list = field(default_factory=list)    # a merge round's replayed moves, per source round in order
 
     @property
     def empty(self):
         # a links-only round is a real proposal: recording provenance
         # for already-authored citizens changes no ground but is a
-        # ruling all the same — and so is a moves-only round
+        # ruling all the same — and so are a moves-only round and a
+        # merge of moves-only rounds
         return not (self.nodes_added or self.nodes_removed
                     or self.nodes_changed or self.edges_added
                     or self.edges_removed or self.edges_changed
-                    or self.stitch or self.attribution or self.moves)
+                    or self.stitch or self.attribution or self.moves
+                    or self.merge_moves)
 
 
 def read_graph(config):

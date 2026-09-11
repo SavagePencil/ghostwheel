@@ -1380,7 +1380,31 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         return 1
     from . import report as report_mod
 
-    changes = delta_mod.diff(base, scratch)
+    # A prepared merge's replayed moves were already performed in the
+    # copy: the diff runs against the base WITH those moves applied, so
+    # a rename never reads as remove+add and its re-pointed derived
+    # edges never read as authored — and the moves ride the proposal so
+    # the approval hash covers them.
+    merge_moves = []
+    merge_current = proposal_mod.current_dir(base_dir, branch) / \
+        proposal_mod.MERGE_FILE
+    diff_base = base
+    merge_move_problems = []
+    if merge_current.exists():
+        try:
+            merge_moves = list(proposal_mod.read_json(merge_current)
+                               .get("replayed_moves") or [])
+        except ValueError:
+            merge_moves = []
+        if merge_moves:
+            from . import moves as merge_moves_mod
+            for moved_round in merge_moves:
+                diff_base, probs = merge_moves_mod.apply_moves(
+                    diff_base, moved_round,
+                    merge_moves_mod.kernel_names(diff_base))
+                merge_move_problems.extend(probs)
+    changes = delta_mod.diff(diff_base, scratch)
+    changes.merge_moves = merge_moves
     stitch_problem = None
     try:
         changes.stitch = proposal_mod.read_stitch(base_dir, branch)
@@ -1425,12 +1449,33 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                    "the delta.",
             data={"path": f"{attribution_rel}/"
                           f"{proposal_mod.ATTRIBUTION_FILE}"})
-    violations = delta_mod.lint_verdicts(changes, base)
-    ceremony_items = delta_mod.ceremony_records(changes, base)[0]
+    violations = delta_mod.lint_verdicts(changes, diff_base)
+    ceremony_items = delta_mod.ceremony_records(changes, diff_base)[0]
     from . import moves as moves_mod
-    move_items, move_refusals = moves_mod.move_records(changes, base)
+    move_items, move_refusals = moves_mod.move_records(changes, diff_base)
     ceremony_items += move_items
     violations += move_refusals
+    # the replayed moves itemize as ceremony lines, per source round in
+    # order, judged against the base as it evolves — the owner rules on
+    # the renames the merge took up, presented as what they are
+    if changes.merge_moves:
+        evolving = base
+        for moved_round in changes.merge_moves:
+            stub = delta_mod.Delta()
+            stub.moves = moved_round
+            merged_items, merged_refusals = moves_mod.move_records(
+                stub, evolving)
+            ceremony_items += merged_items
+            violations += merged_refusals
+            evolving, _probs = moves_mod.apply_moves(
+                evolving, moved_round, moves_mod.kernel_names(evolving))
+        for problem in merge_move_problems:
+            violations.append(report_mod.Verdict(
+                code="merge-moves-failed",
+                message=("Attempted to apply the prepared merge's "
+                         f"replayed moves for the gate. Failed due to: "
+                         f"{problem}"),
+                remedy="Re-cut the copy and merge again."))
     if moves_problem:
         violations.append(moves_problem)
     if stitch_problem:
@@ -1524,6 +1569,10 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         from .extract import derive, strip_derived
         from .ontology import is_derived_edge
         preview = strip_derived(base)
+        if changes.merge_moves:
+            for moved_round in changes.merge_moves:
+                preview, _ = moves_mod.apply_moves(
+                    preview, moved_round, moves_mod.kernel_names(preview))
         if not proposal_mod.apply_delta(preview, changes):
             if changes.moves and not move_refusals:
                 preview, _ = moves_mod.apply_moves(
@@ -1756,7 +1805,24 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         text = f"cannot read '{database}': {exc}"
         print(text, file=sys.stderr)
         return bail("scratch-unreadable", text)
-    changes = delta_mod.diff(base, scratch)
+    merge_current = proposal_mod.current_dir(base_dir, branch) / \
+        proposal_mod.MERGE_FILE
+    merge_moves = []
+    diff_base = base
+    if merge_current.exists():
+        try:
+            merge_moves = list(proposal_mod.read_json(merge_current)
+                               .get("replayed_moves") or [])
+        except ValueError:
+            merge_moves = []
+        if merge_moves:
+            from . import moves as merge_moves_mod
+            for moved_round in merge_moves:
+                diff_base, _probs = merge_moves_mod.apply_moves(
+                    diff_base, moved_round,
+                    merge_moves_mod.kernel_names(diff_base))
+    changes = delta_mod.diff(diff_base, scratch)
+    changes.merge_moves = merge_moves
     try:
         changes.stitch = proposal_mod.read_stitch(base_dir, branch)
     except (ValueError, KeyError) as exc:
@@ -1879,6 +1945,23 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     # --- apply the PINNED artifact to the ground layer, then re-derive -
     pinned_delta = proposal_mod.parse_delta(pinned_text)
     ground = strip_derived(base)
+    if pinned_delta.merge_moves:
+        # a merge round's changeset was diffed against the base WITH
+        # the replayed moves applied, so those moves land first — the
+        # pinned copy of them, under the approval's hash
+        from . import moves as moves_mod
+        merge_problems = []
+        for moved_round in pinned_delta.merge_moves:
+            ground, probs = moves_mod.apply_moves(
+                ground, moved_round, moves_mod.kernel_names(ground))
+            merge_problems.extend(probs)
+        if merge_problems:
+            text = ("the merge's replayed moves cannot be performed; "
+                    "nothing was written:")
+            print("--apply refused — " + text, file=sys.stderr)
+            for problem in merge_problems:
+                print(f"  ⚠ {problem}", file=sys.stderr)
+            return bail("merge-moves-failed", text, merge_problems)
     problems = proposal_mod.apply_delta(ground, pinned_delta)
     if problems:
         text = "preconditions failed; nothing was written:"
@@ -2019,7 +2102,7 @@ def cmd_canonize(base_dir, database, apply, branch=None):
     # honest walk-back for a relabel; otherwise the changeset's own
     inverse_delta = (proposal_mod.invert_delta(
         delta_mod.diff(strip_derived(base), strip_derived(dumped)))
-                     if pinned_delta.moves
+                     if pinned_delta.moves or pinned_delta.merge_moves
                      else proposal_mod.invert_delta(pinned_delta))
     inverse_text = proposal_mod.serialize_delta(inverse_delta)
     (current / proposal_mod.INVERSE_FILE).write_text(inverse_text,
