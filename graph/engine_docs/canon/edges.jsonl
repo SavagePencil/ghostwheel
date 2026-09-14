@@ -226,7 +226,7 @@
 {"from": {"label": "[Section]", "name": "The engine as corpus"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The gate's guarantees: silence never reads as held"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
-{"from": {"label": "[Section]", "name": "The grade is the content held"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "The grade is two facets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The isolation decision"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The keeper walkthrough (the design's acceptance story) [owner]"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "The kernel stays honest"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
@@ -356,7 +356,7 @@
 {"from": {"label": "[Section]", "name": "The engine as corpus"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The four roots, one line each"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Two Ontology Layers"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The gate's guarantees: silence never reads as held"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
-{"from": {"label": "[Section]", "name": "The grade is the content held"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The artifact model — identity, location, meaning"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "The grade is two facets"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The artifact model — identity, location, meaning"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The isolation decision"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The keeper walkthrough (the design's acceptance story) [owner]"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "The kernel stays honest"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The engine as corpus"}, "type": "PART_OF"}

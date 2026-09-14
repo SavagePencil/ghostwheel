@@ -142,6 +142,7 @@ REF_KEYS = {
     "artifact-edge-misused": "artifact-link-misused",
     "location-kind-unknown": "location-kind-unknown",
     "depiction-role-unknown": "unknown-role",
+    "grade-facet-legacy": "split-the-grade",
     "reference-correlated": "correlated",
     "second-primary-reference": "second-reference",
     "machinery-marker-authored": "machine-made-only",
