@@ -1521,6 +1521,8 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     violations += artifacts_mod.gate_verdicts(changes, scratch, base_dir)
     depiction_callouts = artifacts_mod.depiction_advisories(changes,
                                                             scratch)
+    depiction_callouts += artifacts_mod.legacy_grade_advisories(changes,
+                                                                scratch)
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,

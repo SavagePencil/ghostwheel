@@ -39,6 +39,29 @@ ABOUT = "ABOUT"
 
 GRADES = ("Cited", "Attested", "Transcribed")
 ROLE_PROP = "role"
+PROVENANCE_GRADE_PROP = "provenance_known_at"
+EXAMINED_GRADE_PROP = "examined_known_at"
+LEGACY_GRADE_PROP = "known_at"
+
+
+def facet_grades(props):
+    """(provenance, examined, legacy_facet): the artifact's two grade
+    facets, with a legacy single grade read asymmetrically by what it
+    always meant — Cited was metadata-derived (the provenance facet),
+    Attested was always eyes-on (the examined facet). The new
+    properties win when present; legacy_facet names which facet the
+    legacy value was read into, or None."""
+    provenance = props.get(PROVENANCE_GRADE_PROP)
+    examined = props.get(EXAMINED_GRADE_PROP)
+    legacy_facet = None
+    if _blank(provenance) and _blank(examined):
+        legacy = props.get(LEGACY_GRADE_PROP)
+        if not _blank(legacy):
+            if legacy == "Attested":
+                examined, legacy_facet = legacy, "examined"
+            else:
+                provenance, legacy_facet = legacy, "provenance"
+    return provenance, examined, legacy_facet
 ROLES = ("primary", "also-shows")
 # the machinery's signature on a derived boilerplate interpretation —
 # never authorable by hand; the strip keys on it for the fixpoint
@@ -297,29 +320,57 @@ def gate_verdicts(delta, scratch, base_dir):
                     "primary. Mark one."),
                 remedy="Mark exactly one location primary: true.",
                 data={"primaries": sorted(str(p) for p in primaries)}))
-        grade = props.get("known_at")
-        if not _blank(grade) and grade not in GRADES:
-            verdicts.append(Verdict(
-                code="artifact-grade-unknown",
-                subject=ref,
-                message=(
-                    f"Attempted to grade artifact '{name}' as '{grade}'. "
-                    "Failed due to: an artifact's grade is Cited, "
-                    "Attested, or Transcribed — how much of it canon "
-                    "holds. Set one of the three."),
-                remedy="Set known_at to Cited, Attested, or Transcribed.",
-                data={"known_at": grade}))
-        elif grade == "Transcribed":
-            verdicts.append(Verdict(
-                code="artifact-grade-parked",
-                subject=ref,
-                message=(
-                    f"Attempted to grade artifact '{name}' as "
-                    "Transcribed. Failed due to: region-grain receipts "
-                    "are not built yet — Attested is the highest grade "
-                    "an artifact can hold today."),
-                remedy="Grade it Attested."))
-        elif grade == "Attested":
+        provenance, examined, _legacy = facet_grades(props)
+        facets = (("what the source says", PROVENANCE_GRADE_PROP,
+                   provenance),
+                  ("what was examined", EXAMINED_GRADE_PROP, examined))
+        for facet_name, prop, grade in facets:
+            if _blank(grade):
+                continue
+            if grade not in GRADES:
+                verdicts.append(Verdict(
+                    code="artifact-grade-unknown",
+                    subject=ref,
+                    message=(
+                        f"Attempted to grade artifact '{name}''s "
+                        f"{facet_name} facet as '{grade}'. Failed due "
+                        "to: each facet's grade is Cited, Attested, or "
+                        "Transcribed. Set one of the three."),
+                    remedy=f"Set {prop} to Cited, Attested, or "
+                           "Transcribed.",
+                    data={prop: grade}))
+            elif grade == "Transcribed":
+                verdicts.append(Verdict(
+                    code="artifact-grade-parked",
+                    subject=ref,
+                    message=(
+                        f"Attempted to grade artifact '{name}''s "
+                        f"{facet_name} facet as Transcribed. Failed due "
+                        "to: region-grain receipts are not built yet — "
+                        "Attested is the highest grade a facet can hold "
+                        "today."),
+                    remedy="Grade the facet Attested."))
+        if provenance == "Attested":
+            checked = any(
+                not _blank((scratch.nodes.get(
+                    (edge.to_label, edge.to_name)) or {})
+                    .get(VERIFIED_FINGERPRINT))
+                for edge in located if edge.from_name == name)
+            if not checked:
+                verdicts.append(Verdict(
+                    code="artifact-grade-unearned",
+                    subject=ref,
+                    message=(
+                        f"Attempted to grade artifact '{name}''s "
+                        "what-the-source-says facet as Attested. Failed "
+                        "due to: no location of it carries the "
+                        "verification stamp — an attested chain is a "
+                        "CHECKED chain, and the engine has read no "
+                        "bytes for this artifact. Land a verified file "
+                        "location first, or grade the facet Cited."),
+                    remedy="Land a verified file location, or grade the "
+                           "facet Cited."))
+        if examined == "Attested":
             lacks = []
             if _blank(props.get("description")):
                 lacks.append("a description")
@@ -330,8 +381,9 @@ def gate_verdicts(delta, scratch, base_dir):
                     code="artifact-grade-unearned",
                     subject=ref,
                     message=(
-                        f"Attempted to grade artifact '{name}' as "
-                        f"Attested. Failed due to: it lacks "
+                        f"Attempted to grade artifact '{name}''s "
+                        "what-was-examined facet as Attested. Failed "
+                        f"due to: it lacks "
                         f"{' and '.join(lacks)} — Attested means a "
                         "description and its depicted contents are on "
                         "record. Add them in this round, or grade it "
@@ -515,6 +567,34 @@ def depiction_advisories(delta, scratch):
                          "also-shows."),
                 data={"subject": list(subject),
                       "artifacts": sorted(holders)}))
+    return advisories
+
+
+def legacy_grade_advisories(delta, scratch):
+    """A round touching an artifact still on the legacy single grade
+    hears where that grade now reads — loud, never blocking. Split it
+    while you're here."""
+    from .report import ADVISORY
+    from .refs import CitizenRef
+    advisories = []
+    facet_words = {"provenance": "what the source says",
+                   "examined": "what was examined"}
+    for label, name in sorted(touched_artifacts(delta, scratch), key=str):
+        props = scratch.nodes.get((label, name)) or {}
+        _prov, _exam, legacy_facet = facet_grades(props)
+        if legacy_facet is None:
+            continue
+        legacy = props.get(LEGACY_GRADE_PROP)
+        advisories.append(Verdict(
+            code="grade-facet-legacy", severity=ADVISORY,
+            subject=CitizenRef(label, name),
+            message=(f"artifact '{name}' still carries the single grade "
+                     f"'{legacy}', read as its "
+                     f"{facet_words[legacy_facet]} facet — split it "
+                     "while this round is here "
+                     f"({PROVENANCE_GRADE_PROP} / "
+                     f"{EXAMINED_GRADE_PROP})."),
+            data={"legacy": legacy, "reads_as": legacy_facet}))
     return advisories
 
 
