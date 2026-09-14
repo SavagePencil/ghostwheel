@@ -38,6 +38,12 @@ OPENS_WITH = "OPENS_WITH"
 ABOUT = "ABOUT"
 
 GRADES = ("Cited", "Attested", "Transcribed")
+ROLE_PROP = "role"
+ROLES = ("primary", "also-shows")
+# the machinery's signature on a derived boilerplate interpretation —
+# never authorable by hand; the strip keys on it for the fixpoint
+DERIVED_MARKER = "derived_from"
+DERIVED_MARKER_VALUE = "primary depiction"
 VERIFIED_FINGERPRINT = "verified_fingerprint"
 VERIFIED_AT = "verified_at_sequence"
 SIZE = "size"
@@ -178,6 +184,22 @@ def gate_verdicts(delta, scratch, base_dir):
                     "citizen of this world (create it here) or a recorded "
                     "omission, never a dangling name."),
                 remedy="Create the citizen here, or record the omission."))
+        if edge.type == DEPICTS:
+            role = dict(edge.props).get(ROLE_PROP)
+            if role is not None and role not in ROLES:
+                verdicts.append(Verdict(
+                    code="depiction-role-unknown",
+                    subject=connection_ref(edge),
+                    message=(
+                        f"Attempted to record that artifact "
+                        f"'{edge.from_name}' depicts '{edge.to_name}' "
+                        f"with role '{role}'. Failed due to: a depiction "
+                        "pairing's role is 'primary' (the blessed "
+                        "reference assignment) or 'also-shows' (an "
+                        "inventory fact), or absent (a plain fact). Fix "
+                        "the role."),
+                    remedy="Use role 'primary' or 'also-shows', or drop "
+                           "the role."))
 
     # -- each touched artifact -----------------------------------------------
     for label, name in sorted(touched_artifacts(delta, scratch), key=str):
@@ -447,6 +469,53 @@ def gate_verdicts(delta, scratch, base_dir):
 
 
 # -- the apply-time stamp: what the engine verified --------------------------
+
+
+def depiction_advisories(delta, scratch):
+    """The gate calls the correlations out: each NEW primary pairing's
+    derived reference interpretation, named while the owner is already
+    looking, and a subject gaining a second primary reference — a fact
+    worth the eye, never a refusal."""
+    from .report import ADVISORY
+    advisories = []
+    artifacts = artifact_labels(scratch)
+    primaries_of = {}
+    for edge in _edges(scratch, DEPICTS):
+        if dict(edge.props).get(ROLE_PROP) == "primary":
+            primaries_of.setdefault(
+                (edge.to_label, str(edge.to_name)), set()).add(
+                str(edge.from_name))
+    seconds_called = set()
+    for edge in delta.edges_added:
+        if edge.type != DEPICTS or edge.from_label not in artifacts:
+            continue
+        if dict(edge.props).get(ROLE_PROP) != "primary":
+            continue
+        subject = (edge.to_label, str(edge.to_name))
+        advisories.append(Verdict(
+            code="reference-correlated", severity=ADVISORY,
+            subject=connection_ref(edge),
+            message=(f"correlated: '{edge.from_name}' → "
+                     f"({edge.to_label}) '{edge.to_name}' — the "
+                     "reference interpretation derives with this "
+                     "round."),
+            data={"artifact": str(edge.from_name),
+                  "subject": list(subject)}))
+        holders = primaries_of.get(subject, set()) | {str(edge.from_name)}
+        if len(holders) > 1 and subject not in seconds_called:
+            seconds_called.add(subject)
+            names = ", ".join(f"'{h}'" for h in sorted(holders))
+            advisories.append(Verdict(
+                code="second-primary-reference", severity=ADVISORY,
+                subject=connection_ref(edge),
+                message=(f"({edge.to_label}) '{edge.to_name}' now has "
+                         f"{len(holders)} primary references ({names}) "
+                         "— each derives its own interpretation; if one "
+                         "should be the reference, make the others "
+                         "also-shows."),
+                data={"subject": list(subject),
+                      "artifacts": sorted(holders)}))
+    return advisories
 
 
 def sniff_medium(data):

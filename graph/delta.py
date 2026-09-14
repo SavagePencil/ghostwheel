@@ -1071,6 +1071,22 @@ def lint_verdicts(delta, base=None):
                    "keep only sentence-grain quotes in from_text.")
 
     from .comprehension import is_row_text
+    from .artifacts import DERIVED_MARKER
+    for label, name, props in delta.nodes_added:
+        if (props or {}).get(DERIVED_MARKER):
+            violations.append(Verdict(
+                code="machinery-marker-authored",
+                subject=CitizenRef(label, name),
+                message=(
+                    f"Attempted to author '{name}' ({label}) carrying "
+                    f"the machinery's marker ({DERIVED_MARKER}). Failed "
+                    "due to: that marker is the derivation's own "
+                    "signature on the boilerplate it writes — a hand "
+                    "never writes it, and a hand-authored "
+                    "interpretation needs no marker to be kept. Remove "
+                    "the property."),
+                remedy="Remove the property from the citizen in "
+                       "scratch."))
     for label, name, props in delta.nodes_added:
         receipt = (props or {}).get("from_text")
         if receipt and is_row_text(receipt):

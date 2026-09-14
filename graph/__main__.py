@@ -1519,6 +1519,8 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     # interpretations well-formed, resolvers bound
     from . import artifacts as artifacts_mod
     violations += artifacts_mod.gate_verdicts(changes, scratch, base_dir)
+    depiction_callouts = artifacts_mod.depiction_advisories(changes,
+                                                            scratch)
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,
@@ -1672,6 +1674,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     report_model = delta_mod.build_report(
         changes, violations, ceremony_items,
         roster_advisories + receipt_advisories + dependency_advisories
+        + depiction_callouts
         + merge_advisories + derived_advisories)
     report = report_mod.render_markdown(report_model)
     reports_dir = base_dir / "graph" / "reports"
