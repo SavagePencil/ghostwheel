@@ -1010,6 +1010,61 @@ class Extractor:
         embed_schema_stratum(self.ontology, self.graph)
         self.derive_instance_metamodel()
 
+    def derive_reference_interpretations(self):
+        """The boilerplate interpretation, derived: a pure function of
+        every PRIMARY depiction pairing — "X as Y reference", intent
+        "reference image for Y", ABOUT the artifact, INTERPRETED_AS and
+        DRAWS_ON the one depicted thing. Idempotent over the whole
+        graph, so a new primary gains its interpretation at its round's
+        apply and a retrofit needs one rederive. A hand-authored
+        interpretation covering the pair wins — only judgment-free
+        boilerplate automates — and the derived rows carry the
+        machinery's marker, which the strip keys on and no hand may
+        write."""
+        from .artifacts import (DEPICTS, DERIVED_MARKER,
+                                DERIVED_MARKER_VALUE, ROLE_PROP,
+                                artifact_labels)
+        from .ontology import KERNEL_INTERPRETATION_LABEL
+        interp = KERNEL_INTERPRETATION_LABEL
+        arts = artifact_labels(self.graph)
+        about, interpreted = {}, {}
+        for edge in self.graph.edges:
+            if edge.from_label != interp:
+                continue
+            key = (edge.from_label, str(edge.from_name))
+            if edge.type == "ABOUT":
+                about[key] = (edge.to_label, str(edge.to_name))
+            elif edge.type == "INTERPRETED_AS":
+                interpreted[key] = (edge.to_label, str(edge.to_name))
+        covered = {(about[key], interpreted[key])
+                   for key in about if key in interpreted
+                   and not (self.graph.nodes.get(key) or {})
+                   .get(DERIVED_MARKER)}
+        for edge in list(self.graph.edges):
+            if edge.type != DEPICTS or edge.from_label not in arts:
+                continue
+            if dict(edge.props).get(ROLE_PROP) != "primary":
+                continue
+            artifact = (edge.from_label, str(edge.from_name))
+            subject = (edge.to_label, str(edge.to_name))
+            if (artifact, subject) in covered:
+                continue  # the hand's reading stands; boilerplate yields
+            name = f"{edge.from_name} as {edge.to_name} reference"
+            existing = self.graph.nodes.get((interp, name))
+            if existing is not None and not existing.get(DERIVED_MARKER):
+                continue  # a ground row holds the name; never overwrite
+            self.graph.ensure_node(
+                interp, name,
+                intent=f"reference image for {edge.to_name}",
+                **{DERIVED_MARKER: DERIVED_MARKER_VALUE})
+            for edge_type, (to_label, to_name) in (
+                    ("ABOUT", artifact), ("INTERPRETED_AS", subject),
+                    ("DRAWS_ON", subject)):
+                candidate = make_edge(edge_type, interp, name,
+                                      to_label, to_name)
+                if candidate not in self.graph.edges:
+                    self.graph.edges.append(candidate)
+
     def derive_instance_metamodel(self):
         """The instance-level metamodel rows — the only metamodel
         stratum that still re-derives since the inversion: every
@@ -1162,13 +1217,19 @@ def strip_derived(graph):
     Archetype-level ladders all survive the strip — they are authored
     truth, not derivation. Every ground prop, receipts included,
     survives. derive() rebuilds exactly what this removes."""
+    from .artifacts import DERIVED_MARKER
+    marked = {key for key, props in graph.nodes.items()
+              if props.get(DERIVED_MARKER)}
     from .ontology import MACHINE_LABELS, is_derived_edge
     ground = GraphData()
     for (label, name), props in graph.nodes.items():
-        if label not in MACHINE_LABELS:
+        if label not in MACHINE_LABELS and (label, name) not in marked:
             ground.ensure_node(label, name, **dict(props))
     ground.edges = [
-        edge for edge in graph.edges if not is_derived_edge(edge)]
+        edge for edge in graph.edges
+        if not is_derived_edge(edge)
+        and (edge.from_label, edge.from_name) not in marked
+        and (edge.to_label, edge.to_name) not in marked]
     return ground
 
 
@@ -1324,6 +1385,7 @@ def derive(ontology, graph):
     # never rebuilds Archetype citizens or their edges — seed_archetypes
     # and build_metamodel run only in the from-sources bootstrap. Only
     # the instance-level metamodel re-derives here.
+    extractor.derive_reference_interpretations()
     extractor.derive_instance_metamodel()
     extractor.findings.extend(
         procedure_roster_findings(ontology, extractor.graph))
