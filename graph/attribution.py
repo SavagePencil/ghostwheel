@@ -52,6 +52,15 @@ scope):
   text is receipt-grain prose the OWNING procedure carries; a claim
   found there attributes at receipt grade citing the procedure (the
   owning procedure is the step name's prefix before the section mark).
+- **Boolean value-match (properties rung).** A tick mark is a
+  rendering decision based on a bool, never an embedded fact — so a
+  fact-grain claim whose terminal token (the value seat of "… is
+  {value}") parses through the intake's own boolean lens value-matches
+  the exactly-named citizen's stored bool: name anchored whole, at
+  least one of the property's own words spoken, and the parsed value
+  EQUAL to the stored one — a tick against a stored False is an honest
+  gap, never a silent pass. The same lens both ways: parse_bool made
+  the cell a boolean at intake; attribution reads it back.
 - **Paraphrase tolerance (properties rung).** Value matching folds
   mechanical normalizations only: a wrapping-parenthesis strip so a
   name-with-parenthetical's inner words are tokens, ONE delegated
@@ -89,6 +98,7 @@ import simplemma
 
 from .comprehension import is_row_text, markdown_table_claims
 from .judge import claims_of, normalize
+from .parsers import parse_bool
 from .ontology import (KERNEL_PROCEDURE_LABEL, STEP_LABEL,
                        UNAUTHORABLE_EDGE_TYPES)
 from .refs import CitizenRef
@@ -127,6 +137,8 @@ METADATA_PROPS = frozenset({
 # which structural surface a match fired on — carried on the row so the
 # report can show WHY a claim found its home
 EV_VALUE = "value"      # citizen name + a structured value (rung 1)
+EV_BOOL = "bool"        # citizen name + a boolean read through the
+#                         intake's own lens (rung 1)
 EV_EDGE = "edge"        # both endpoints of a ground edge + its type words
 EV_STEP = "step"        # a procedure's lifted step text (rung 2)
 EV_RECEIPT = "receipt"  # a citizen's carried from_text sentence (rung 2)
@@ -269,6 +281,7 @@ class CanonIndex:
             is_step = label == STEP_LABEL
             value_tokens = set()
             prop_words = set()
+            bool_surfaces = []
             receipt_sentences = []
             prose_sentences = []
             for key, value in props.items():
@@ -296,9 +309,14 @@ class CanonIndex:
                     prose_sentences += [normalize(s) for s in
                                         claims_of(str(value))]
                 elif isinstance(value, bool):
-                    # Y/N flags carry no citable token, but the flag's
-                    # NAME is still a word surface the citizen owns
-                    prop_words |= {w for w in key.lower().split("_") if w}
+                    # a flag's NAME is a word surface the citizen owns,
+                    # and the flag itself is a rung-1 value surface: a
+                    # claim's boolean mark matches it through the
+                    # intake's own lens
+                    words = {w for w in key.lower().split("_") if w}
+                    prop_words |= words
+                    bool_surfaces.append(
+                        (frozenset(_canon(w) for w in words), value))
                 else:
                     value_tokens |= _tokens(str(value))
                     prop_words |= {w for w in key.lower().split("_") if w}
@@ -313,6 +331,7 @@ class CanonIndex:
                 "name_canon": name_canon,
                 "value_canon": _canon_set(value_tokens),
                 "prop_canon": _canon_set(prop_words),
+                "bools": bool_surfaces,
                 "receipts": [s for s in receipt_sentences if s],
                 "step_lifts": [],
                 "prose": [s for s in prose_sentences if s],
@@ -329,7 +348,7 @@ class CanonIndex:
             if entry is None:
                 entry = {"key": (KERNEL_PROCEDURE_LABEL, owner), "name_canon":
                          _canon_set(_tokens(owner)), "value_canon": set(),
-                         "prop_canon": set(),
+                         "prop_canon": set(), "bools": [],
                          "receipts": [], "step_lifts": [], "prose": []}
                 self.entries.append(entry)
             entry["step_lifts"].extend(sentences)
@@ -417,6 +436,27 @@ class CanonIndex:
                        | (entry["prop_canon"] & claim_canon))
             matches.append((_jaccard(claim_canon, surface),
                             entry["key"], EV_VALUE))
+        # the boolean arm: a fact-grain claim's value seat is its
+        # terminal token — read through the intake's own lens
+        # (parse_bool), matched against the anchored citizen's stored
+        # bool, which must AGREE (a tick against a stored False is an
+        # honest gap, never a silent pass)
+        terminal = claim_norm.split()[-1] if claim_norm else ""
+        claimed, readable = parse_bool(terminal) if terminal else (None,
+                                                                   False)
+        if readable and isinstance(claimed, bool):
+            for entry in self.entries:
+                if not entry["name_canon"] or \
+                        not entry["name_canon"] <= claim_canon:
+                    continue
+                for words, stored in entry["bools"]:
+                    spoken = (words & claim_canon) - _FUNCTION_WORDS
+                    if not spoken or stored is not claimed:
+                        continue
+                    surface = (entry["name_canon"] | spoken
+                               | {_canon(terminal)})
+                    matches.append((_jaccard(claim_canon, surface),
+                                    entry["key"], EV_BOOL))
         for edge in self.edges:
             if not (edge["from_canon"] <= claim_canon
                     and edge["to_canon"] <= claim_canon):
