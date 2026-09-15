@@ -1151,10 +1151,11 @@ class Extractor:
         - otherwise EMIT (citizen)-[:INSTANCE_OF]->(target). Dedup is
           automatic (edges are hashable, deduped at load/export)."""
         from .ontology import (conferred_ancestors, confers_map,
-                               declined_parents)
+                               declined_map)
         authored = [edge for edge in self.graph.edges
                     if edge.type == MEMBERSHIP_EDGE_TYPE]
         marked = confers_map(self.graph.edges) if authored else {}
+        declined = declined_map(self.graph.edges) if authored else {}
         for edge in authored:
             citizen, target = edge.from_name, edge.to_name
             if edge.from_label == ARCHETYPE_LABEL:
@@ -1193,10 +1194,12 @@ class Extractor:
                 self.graph.edges.append(direct)
             # The conferral climb: exactly the SUBTYPE_OF links whose
             # own `confers` declaration says membership flows through
-            # them, hop by hop — an unmarked link stops the climb, a
-            # declined parent cuts it at that hop. Policy is canon
-            # content; nothing confers unstated.
-            declines = declined_parents(edge.props)
+            # them, hop by hop — an unmarked link stops the climb, and
+            # the member's own DECLINES_CONFERRAL connections cut it at
+            # their hop (member-grained: the citizen is not that thing
+            # by conferral, whichever membership raised the question).
+            # Policy is canon content; nothing confers unstated.
+            declines = declined.get((edge.from_label, str(citizen)), set())
             for ancestor in conferred_ancestors(target, marked, declines):
                 conferred = make_edge("INSTANCE_OF", edge.from_label,
                                       citizen, ARCHETYPE_LABEL, ancestor)

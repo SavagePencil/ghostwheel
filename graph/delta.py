@@ -17,11 +17,12 @@ from dataclasses import dataclass, field
 from . import report as report_mod
 from .extract import GraphData, make_edge
 from .ontology import (ARCHETYPE_LABEL, CONFERS_PROP, DECLARATION_LABELS,
-                       MACHINE_LABELS, MEMBERSHIP_EDGE_TYPE,
+                       DECLINES_EDGE_TYPE, MACHINE_LABELS,
+                       MEMBERSHIP_EDGE_TYPE,
                        RENDERED_VIEWS_PROP, SCHEMA_EDGE_TYPES, SCHEMA_LABELS,
                        STRATIFIED_EDGE_TYPES, UNAUTHORABLE_EDGE_TYPES,
                        UNAUTHORABLE_LABELS, Reader, conferred_ancestors,
-                       declined_parents, is_concept_archetype,
+                       declined_map, is_concept_archetype,
                        is_derived_edge, node_reader, rendered_views_problems)
 from .refs import KB_NAME_PROP, CitizenRef, ONTOLOGY_ANCHOR, connection_ref
 from .report import CeremonyItem, Verdict
@@ -54,39 +55,72 @@ def _conferring_members(delta, base, marked, parent):
     """The citizens whose declared membership reaches `parent` through
     confers-marked taxonomy links (base plus this round), each member's
     own declines honored."""
+    declined = declined_map(list(base.edges) + list(delta.edges_added))
     members = []
     for edge in list(base.edges) + list(delta.edges_added):
         if edge.type != MEMBERSHIP_EDGE_TYPE:
             continue
-        declines = declined_parents(edge.props)
+        declines = declined.get((edge.from_label, str(edge.from_name)),
+                                set())
         if parent in conferred_ancestors(str(edge.to_name), marked,
                                          declines):
             members.append((edge.from_label, str(edge.from_name)))
     return members
 
 
-def _decline_verdicts(edge, delta, base, prefix):
-    """A decline answers a conferral that exists: every declined name
-    must be a parent the kind's confers-marked links actually carry.
-    Collated per name."""
-    declines = declined_parents(edge.props)
-    if not declines:
-        return []
-    marked = _confers_view(delta, base)
-    legal = set(conferred_ancestors(str(edge.to_name), marked))
+def _decline_verdicts(edge, delta, base):
+    """One DECLINES_CONFERRAL connection's shape, collated: it runs
+    from a citizen, answers a conferral that actually reaches that
+    citizen through some membership's marked links, and carries its
+    own required `basis` — symmetric with the membership it answers."""
+    prefix = (f"Attempted to author the decline ({edge.from_name})-"
+              f"[:{DECLINES_EDGE_TYPE}]->({edge.to_name}). Failed "
+              "due to: ")
     verdicts = []
-    for name in sorted(declines - legal):
+    if edge.from_label == ARCHETYPE_LABEL:
         verdicts.append(Verdict(
             code="membership-decline-unknown",
             subject=connection_ref(edge),
-            message=(
-                prefix + f"the membership declines '{name}', but "
-                f"({edge.to_name})'s declared conferral does not carry "
-                "it — a decline answers a conferral that exists. Remove "
-                "the entry, or declare conferral on the kind's taxonomy "
-                "link."),
-            remedy="Remove the entry, or declare conferral on the "
-                   "kind's taxonomy link."))
+            message=(prefix + "the connection runs FROM a concept — a "
+                     "decline is a member's own answer, written from "
+                     "the citizen. Point it from the citizen, or "
+                     "DELETE it from scratch."),
+            remedy="Point it from the citizen, or DELETE it from "
+                   "scratch."))
+        return verdicts
+    basis = dict(edge.props).get("basis")
+    if not (basis and str(basis).strip()):
+        verdicts.append(Verdict(
+            code="decline-basis-missing",
+            subject=connection_ref(edge),
+            message=(prefix + "the connection carries no `basis` "
+                     "rationale — a decline is a hand assertion like "
+                     "the membership it answers, so its reason is the "
+                     "audit record and is required. Add a `basis` "
+                     "naming why this member is the exception, or "
+                     "DELETE the connection from scratch."),
+            remedy="Add a `basis` naming why this member is the "
+                   "exception, or DELETE the connection from scratch."))
+    if base is not None:
+        marked = _confers_view(delta, base)
+        member = (edge.from_label, str(edge.from_name))
+        reachable = set()
+        for held in list(base.edges) + list(delta.edges_added):
+            if held.type == MEMBERSHIP_EDGE_TYPE \
+                    and (held.from_label, str(held.from_name)) == member:
+                reachable |= set(conferred_ancestors(str(held.to_name),
+                                                     marked))
+        if str(edge.to_name) not in reachable:
+            verdicts.append(Verdict(
+                code="membership-decline-unknown",
+                subject=connection_ref(edge),
+                message=(
+                    prefix + f"no membership of ({edge.from_name}) "
+                    f"confers ({edge.to_name}) — a decline answers a "
+                    "conferral that exists. Remove the connection, or "
+                    "declare conferral on the kind's taxonomy link."),
+                remedy="Remove the connection, or declare conferral "
+                       "on the kind's taxonomy link."))
     return verdicts
 
 
@@ -106,12 +140,14 @@ def membership_advisories(delta, base):
                 and edge.to_label == ARCHETYPE_LABEL:
             parents.setdefault(str(edge.from_name), set()).add(
                 str(edge.to_name))
+    declined = declined_map(list(base.edges) + list(delta.edges_added))
     advisories = []
     for edge in delta.edges_added:
         if edge.type != MEMBERSHIP_EDGE_TYPE:
             continue
         kind = str(edge.to_name)
-        declines = declined_parents(edge.props)
+        declines = declined.get((edge.from_label, str(edge.from_name)),
+                                set())
         conferred = set(conferred_ancestors(kind, marked, declines))
         for parent in sorted(parents.get(kind, ())):
             if parent in conferred or parent in declines:
@@ -1084,10 +1120,13 @@ def ceremony_records(delta, base=None):
         # a new membership under conferring links: announce what the
         # member becomes, and name the decline road — silence accepts a
         # DECLARED default, so the default is read out where it applies
+        declined = declined_map(list(base.edges)
+                                + list(delta.edges_added))
         for edge in delta.edges_added:
             if edge.type != MEMBERSHIP_EDGE_TYPE:
                 continue
-            declines = declined_parents(edge.props)
+            declines = declined.get(
+                (edge.from_label, str(edge.from_name)), set())
             for parent in conferred_ancestors(str(edge.to_name), marked,
                                               declines):
                 items.append(CeremonyItem(
@@ -1391,9 +1430,22 @@ def lint_verdicts(delta, base=None):
                         "the edge from scratch."),
                     remedy="Add a `basis` property naming why the citizen "
                            "belongs, or DELETE the edge from scratch."))
-            if base is not None:
-                violations.extend(_decline_verdicts(edge, delta, base,
-                                                    prefix))
+            if "declines" in dict(edge.props):
+                violations.append(Verdict(
+                    code="membership-declines-embedded",
+                    subject=connection_ref(edge),
+                    message=(
+                        prefix + "it carries a `declines` property — "
+                        "the owner's standing law is \"no embedded "
+                        "lists\": a decline is its own connection, "
+                        f"({edge.from_name})-[:{DECLINES_EDGE_TYPE}]->"
+                        "(the declined concept), with its own `basis`. "
+                        "Remove the property and author the "
+                        "connection."),
+                    remedy="Remove the property and author the "
+                           f"{DECLINES_EDGE_TYPE} connection."))
+        elif edge.type == DECLINES_EDGE_TYPE:
+            violations.extend(_decline_verdicts(edge, delta, base))
         if edge.from_name is None or edge.to_name is None:
             violations.append(Verdict(
                 code="edge-endpoint-unnamed",
@@ -1441,13 +1493,23 @@ def lint_verdicts(delta, base=None):
                        "or reset scratch.",
                 data=_changes_data(changes)))
         elif edge.type == MEMBERSHIP_EDGE_TYPE:
-            edit_prefix = (
-                f"Attempted to edit the membership ({edge.from_name})-"
-                f"[:{MEMBERSHIP_EDGE_TYPE}]->({edge.to_name}). Failed "
-                "due to: ")
-            if base is not None:
-                violations.extend(_decline_verdicts(edge, delta, base,
-                                                    edit_prefix))
+            if "declines" in dict(edge.props):
+                violations.append(Verdict(
+                    code="membership-declines-embedded",
+                    subject=connection_ref(edge),
+                    message=(
+                        f"Attempted to edit the membership "
+                        f"({edge.from_name})-[:{MEMBERSHIP_EDGE_TYPE}]->"
+                        f"({edge.to_name}). Failed due to: the edit "
+                        "leaves a `declines` property on it — the "
+                        "owner's standing law is \"no embedded "
+                        "lists\": a decline is its own connection, "
+                        f"({edge.from_name})-[:{DECLINES_EDGE_TYPE}]->"
+                        "(the declined concept), with its own `basis`. "
+                        "Remove the property and author the "
+                        "connection."),
+                    remedy="Remove the property and author the "
+                           f"{DECLINES_EDGE_TYPE} connection."))
             # An edit must not strip the audit record the add-side lint
             # required: the basis survives every edit.
             basis = dict(edge.props).get("basis")
@@ -1465,6 +1527,8 @@ def lint_verdicts(delta, base=None):
                     remedy="Restore or rewrite the `basis` property in "
                            "scratch.",
                     data=_changes_data(changes)))
+        elif edge.type == DECLINES_EDGE_TYPE:
+            violations.extend(_decline_verdicts(edge, delta, base))
     return violations
 
 
