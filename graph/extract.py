@@ -1150,8 +1150,11 @@ class Extractor:
           stays the single home for roster-implied membership);
         - otherwise EMIT (citizen)-[:INSTANCE_OF]->(target). Dedup is
           automatic (edges are hashable, deduped at load/export)."""
+        from .ontology import (conferred_ancestors, confers_map,
+                               declined_parents)
         authored = [edge for edge in self.graph.edges
                     if edge.type == MEMBERSHIP_EDGE_TYPE]
+        marked = confers_map(self.graph.edges) if authored else {}
         for edge in authored:
             citizen, target = edge.from_name, edge.to_name
             if edge.from_label == ARCHETYPE_LABEL:
@@ -1184,9 +1187,21 @@ class Extractor:
                     f"its {edge.from_label} binding; the declared membership "
                     "is redundant and adds no INSTANCE_OF.")
                 continue
-            self.graph.edges.append(make_edge(
-                "INSTANCE_OF", edge.from_label, citizen,
-                ARCHETYPE_LABEL, target))
+            direct = make_edge("INSTANCE_OF", edge.from_label, citizen,
+                               ARCHETYPE_LABEL, target)
+            if direct not in self.graph.edges:
+                self.graph.edges.append(direct)
+            # The conferral climb: exactly the SUBTYPE_OF links whose
+            # own `confers` declaration says membership flows through
+            # them, hop by hop — an unmarked link stops the climb, a
+            # declined parent cuts it at that hop. Policy is canon
+            # content; nothing confers unstated.
+            declines = declined_parents(edge.props)
+            for ancestor in conferred_ancestors(target, marked, declines):
+                conferred = make_edge("INSTANCE_OF", edge.from_label,
+                                      citizen, ARCHETYPE_LABEL, ancestor)
+                if conferred not in self.graph.edges:
+                    self.graph.edges.append(conferred)
 
     def tower_reachable(self, label):
         """Every Archetype name reachable from `label`'s Archetype through

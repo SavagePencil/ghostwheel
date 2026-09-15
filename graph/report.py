@@ -68,6 +68,10 @@ REF_KEYS = {
     "membership-target-not-concept": "wrong-membership-target",
     "membership-basis-missing": "missing-reason",
     "membership-basis-blanked": "reason-removed",
+    "membership-confers": "conferred",
+    "membership-intent-open": "intent-open",
+    "membership-decline-unknown": "unknown-decline",
+    "taxonomy-confers": "confers",
     # the stitch
     "stitch-schema-edge": "structure-change",
     "stitch-derived-edge": "machine-managed-link",

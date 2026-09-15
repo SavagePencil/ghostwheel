@@ -1,80 +1,13 @@
 {
-  "advisories": [
-    {
-      "code": "derived-edges-leaving",
-      "data": {
-        "count": 1,
-        "examples": [
-          {
-            "from": {
-              "label": "[Section]",
-              "name": "The grade is the content held"
-            },
-            "to": {
-              "label": "Archetype",
-              "name": "[Section]"
-            }
-          }
-        ],
-        "type": "INSTANCE_OF"
-      },
-      "message": "1 derived INSTANCE_OF connection leave with this round (([Section]) The grade is the content held -> (Archetype) [Section]) — the machine layer re-derives them from the facts you changed; if they should stay, the facts they hung on must stay.",
-      "ref": "connections-lost",
-      "remedy": "Keep the facts those connections hang on, or approve their leaving knowingly.",
-      "severity": "advisory"
-    },
-    {
-      "code": "derived-edges-leaving",
-      "data": {
-        "count": 1,
-        "examples": [
-          {
-            "from": {
-              "label": "[Section]",
-              "name": "The grade is the content held"
-            },
-            "to": {
-              "label": "[Design Record]",
-              "name": "The artifact model — identity, location, meaning"
-            }
-          }
-        ],
-        "type": "PART_OF"
-      },
-      "message": "1 derived PART_OF connection leave with this round (([Section]) The grade is the content held -> ([Design Record]) The artifact model — identity, location, meaning) — the machine layer re-derives them from the facts you changed; if they should stay, the facts they hung on must stay.",
-      "ref": "connections-lost",
-      "remedy": "Keep the facts those connections hang on, or approve their leaving knowingly.",
-      "severity": "advisory"
-    }
-  ],
-  "ceremony": [
-    {
-      "code": "citizen-renamed",
-      "data": {
-        "edges": 2,
-        "label": "[Section]",
-        "new": "The grade is two facets",
-        "old": "The grade is the content held"
-      },
-      "message": "CITIZEN RENAME — 'The grade is the content held' becomes 'The grade is two facets' under '[Section]': every property travels, 2 connections re-pointed; the attribution ledger follows at apply",
-      "ref": "renamed",
-      "subject": {
-        "kb": "manual",
-        "kind": "citizen",
-        "label": "[Section]",
-        "name": "The grade is the content held"
-      }
-    }
-  ],
   "kb": "manual",
   "kind": "delta-report",
-  "proposal_id": "7e90d6c0120b957cccbdd87bfc96c37e1cfa8eca67d7cb80a41964690368273b",
+  "proposal_id": "0eca35a5d58dc01d543924b4e8044d0831bbb5515dcb112b94fc3ea11cf6d63b",
   "summary": {
     "edges_added": 0,
     "edges_changed": 0,
     "edges_removed": 0,
     "nodes_added": 0,
-    "nodes_changed": 2,
+    "nodes_changed": 1,
     "nodes_removed": 0
   }
 }

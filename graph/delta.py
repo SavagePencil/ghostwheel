@@ -16,14 +16,122 @@ from dataclasses import dataclass, field
 
 from . import report as report_mod
 from .extract import GraphData, make_edge
-from .ontology import (ARCHETYPE_LABEL, DECLARATION_LABELS, MACHINE_LABELS,
-                       MEMBERSHIP_EDGE_TYPE,
+from .ontology import (ARCHETYPE_LABEL, CONFERS_PROP, DECLARATION_LABELS,
+                       MACHINE_LABELS, MEMBERSHIP_EDGE_TYPE,
                        RENDERED_VIEWS_PROP, SCHEMA_EDGE_TYPES, SCHEMA_LABELS,
                        STRATIFIED_EDGE_TYPES, UNAUTHORABLE_EDGE_TYPES,
-                       UNAUTHORABLE_LABELS, Reader, is_concept_archetype,
+                       UNAUTHORABLE_LABELS, Reader, conferred_ancestors,
+                       declined_parents, is_concept_archetype,
                        is_derived_edge, node_reader, rendered_views_problems)
 from .refs import KB_NAME_PROP, CitizenRef, ONTOLOGY_ANCHOR, connection_ref
 from .report import CeremonyItem, Verdict
+
+
+def _confers_view(delta, base):
+    """The taxonomy's conferral marks as this round leaves them: base
+    links, links born this round, and changed links at their post-round
+    properties. kind -> the parents whose links confer."""
+    states = {}
+
+    def note(edge):
+        if edge.type == "SUBTYPE_OF" \
+                and edge.from_label == ARCHETYPE_LABEL \
+                and edge.to_label == ARCHETYPE_LABEL:
+            states[(str(edge.from_name), str(edge.to_name))] = \
+                bool(dict(edge.props).get(CONFERS_PROP))
+    for edge in list(base.edges) + list(delta.edges_added):
+        note(edge)
+    for edge, _changes in delta.edges_changed:
+        note(edge)
+    marked = {}
+    for (kind, parent), confers in states.items():
+        if confers:
+            marked.setdefault(kind, set()).add(parent)
+    return marked
+
+
+def _conferring_members(delta, base, marked, parent):
+    """The citizens whose declared membership reaches `parent` through
+    confers-marked taxonomy links (base plus this round), each member's
+    own declines honored."""
+    members = []
+    for edge in list(base.edges) + list(delta.edges_added):
+        if edge.type != MEMBERSHIP_EDGE_TYPE:
+            continue
+        declines = declined_parents(edge.props)
+        if parent in conferred_ancestors(str(edge.to_name), marked,
+                                         declines):
+            members.append((edge.from_label, str(edge.from_name)))
+    return members
+
+
+def _decline_verdicts(edge, delta, base, prefix):
+    """A decline answers a conferral that exists: every declined name
+    must be a parent the kind's confers-marked links actually carry.
+    Collated per name."""
+    declines = declined_parents(edge.props)
+    if not declines:
+        return []
+    marked = _confers_view(delta, base)
+    legal = set(conferred_ancestors(str(edge.to_name), marked))
+    verdicts = []
+    for name in sorted(declines - legal):
+        verdicts.append(Verdict(
+            code="membership-decline-unknown",
+            subject=connection_ref(edge),
+            message=(
+                prefix + f"the membership declines '{name}', but "
+                f"({edge.to_name})'s declared conferral does not carry "
+                "it — a decline answers a conferral that exists. Remove "
+                "the entry, or declare conferral on the kind's taxonomy "
+                "link."),
+            remedy="Remove the entry, or declare conferral on the "
+                   "kind's taxonomy link."))
+    return verdicts
+
+
+def membership_advisories(delta, base):
+    """The intent question, asked aloud: a new membership in a kind
+    whose taxonomy link does NOT confer a parent leaves that parent
+    unanswered — the member does not become one unless the author says
+    so. One advisory per unanswered direct parent link; a declined
+    parent is already answered."""
+    if base is None:
+        return []
+    marked = _confers_view(delta, base)
+    parents = {}
+    for edge in list(base.edges) + list(delta.edges_added):
+        if edge.type == "SUBTYPE_OF" \
+                and edge.from_label == ARCHETYPE_LABEL \
+                and edge.to_label == ARCHETYPE_LABEL:
+            parents.setdefault(str(edge.from_name), set()).add(
+                str(edge.to_name))
+    advisories = []
+    for edge in delta.edges_added:
+        if edge.type != MEMBERSHIP_EDGE_TYPE:
+            continue
+        kind = str(edge.to_name)
+        declines = declined_parents(edge.props)
+        conferred = set(conferred_ancestors(kind, marked, declines))
+        for parent in sorted(parents.get(kind, ())):
+            if parent in conferred or parent in declines:
+                continue
+            advisories.append(Verdict(
+                code="membership-intent-open",
+                severity=report_mod.ADVISORY,
+                subject=connection_ref(edge),
+                message=(
+                    f"({kind}) is a kind of ({parent}), and membership "
+                    f"does not confer it — ({edge.from_name}) does not "
+                    f"become an instance of ({parent}) unless you say "
+                    "so. If this member is one, declare it directly on "
+                    "the citizen; to make it every member's default, "
+                    "declare conferral on the kind's taxonomy link."),
+                remedy="Declare it directly on the citizen, or declare "
+                       "conferral on the kind's taxonomy link.",
+                data={"member": str(edge.from_name), "kind": kind,
+                      "parent": parent}))
+    return advisories
 
 
 def _is_schema_edge(edge):
@@ -951,6 +1059,16 @@ def ceremony_records(delta, base=None):
                 matches = 1
                 consequence = (f"; ({edge.from_name}) becomes an instance "
                                f"of ({edge.to_name}) at derivation")
+            if dict(edge.props).get(CONFERS_PROP):
+                # the link lands already marked: the conferral is part
+                # of what the declaration does, counted the same way
+                conferring = _conferring_members(
+                    delta, base, _confers_view(delta, base),
+                    str(edge.to_name))
+                consequence += (f"; membership confers it — "
+                                f"{len(conferring)} declared member"
+                                f"{'' if len(conferring) == 1 else 's'} "
+                                "join at derivation")
             items.append(CeremonyItem(
                 code="taxonomy-declared",
                 subject=connection_ref(edge),
@@ -959,6 +1077,59 @@ def ceremony_records(delta, base=None):
                          "the declaration itself, and reconstruction "
                          "reads it back" + consequence),
                 data={"matches": matches, "concept": edge.to_name}))
+
+    # The conferral ceremony: policy is canon content, spoken aloud.
+    if base is not None:
+        marked = _confers_view(delta, base)
+        # a new membership under conferring links: announce what the
+        # member becomes, and name the decline road — silence accepts a
+        # DECLARED default, so the default is read out where it applies
+        for edge in delta.edges_added:
+            if edge.type != MEMBERSHIP_EDGE_TYPE:
+                continue
+            declines = declined_parents(edge.props)
+            for parent in conferred_ancestors(str(edge.to_name), marked,
+                                              declines):
+                items.append(CeremonyItem(
+                    code="membership-confers",
+                    subject=connection_ref(edge),
+                    message=(f"MEMBERSHIP CONFERS — ({edge.from_name}) "
+                             f"joins ({edge.to_name}), whose declared "
+                             f"conferral carries ({parent}): the member "
+                             "becomes an instance at derivation; decline "
+                             "it on the membership if this member is the "
+                             "exception"),
+                    data={"member": str(edge.from_name),
+                          "kind": str(edge.to_name), "parent": parent}))
+        # the mark itself lands or lifts on an existing link: the
+        # ceremony counts the citizens that actually confer, so the
+        # owner rules on what the declaration really does
+        for edge, changes in delta.edges_changed:
+            if edge.type != "SUBTYPE_OF" \
+                    or set(changes) != {CONFERS_PROP} \
+                    or edge.from_label != ARCHETYPE_LABEL \
+                    or edge.to_label != ARCHETYPE_LABEL:
+                continue
+            if bool(dict(edge.props).get(CONFERS_PROP)):
+                members = _conferring_members(delta, base, marked,
+                                              str(edge.to_name))
+                count = len(members)
+                message = (f"TAXONOMY CONFERRAL — ({edge.from_name})'s "
+                           f"membership now confers ({edge.to_name}): "
+                           f"{count} declared member"
+                           f"{'' if count == 1 else 's'} become"
+                           f"{'s' if count == 1 else ''} an instance of "
+                           f"({edge.to_name}) at derivation")
+            else:
+                count = 0
+                message = (f"TAXONOMY CONFERRAL — ({edge.from_name})'s "
+                           f"membership no longer confers "
+                           f"({edge.to_name}); members keep only what "
+                           "they declare directly")
+            items.append(CeremonyItem(
+                code="taxonomy-confers", subject=connection_ref(edge),
+                message=message,
+                data={"matches": count, "concept": str(edge.to_name)}))
 
     return items, violations, permitted_nodes, permitted_edges
 
@@ -1220,6 +1391,9 @@ def lint_verdicts(delta, base=None):
                         "the edge from scratch."),
                     remedy="Add a `basis` property naming why the citizen "
                            "belongs, or DELETE the edge from scratch."))
+            if base is not None:
+                violations.extend(_decline_verdicts(edge, delta, base,
+                                                    prefix))
         if edge.from_name is None or edge.to_name is None:
             violations.append(Verdict(
                 code="edge-endpoint-unnamed",
@@ -1230,6 +1404,14 @@ def lint_verdicts(delta, base=None):
                 remedy="Name the node or remove the connection."))
     for edge, changes in delta.edges_changed:
         if _is_schema_edge(edge):
+            if edge.type == "SUBTYPE_OF" \
+                    and set(changes) == {CONFERS_PROP} \
+                    and edge.from_label == ARCHETYPE_LABEL \
+                    and edge.to_label == ARCHETYPE_LABEL:
+                # the conferral declaration is the one schema-edge edit
+                # a designer makes by hand — adjudicated aloud by the
+                # taxonomy ceremony (taxonomy-confers), never frozen
+                continue
             violations.append(Verdict(
                 code="schema-edge-modified",
                 subject=connection_ref(edge),
@@ -1259,6 +1441,13 @@ def lint_verdicts(delta, base=None):
                        "or reset scratch.",
                 data=_changes_data(changes)))
         elif edge.type == MEMBERSHIP_EDGE_TYPE:
+            edit_prefix = (
+                f"Attempted to edit the membership ({edge.from_name})-"
+                f"[:{MEMBERSHIP_EDGE_TYPE}]->({edge.to_name}). Failed "
+                "due to: ")
+            if base is not None:
+                violations.extend(_decline_verdicts(edge, delta, base,
+                                                    edit_prefix))
             # An edit must not strip the audit record the add-side lint
             # required: the basis survives every edit.
             basis = dict(edge.props).get("basis")

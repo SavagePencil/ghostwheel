@@ -1523,6 +1523,10 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                                                             scratch)
     depiction_callouts += artifacts_mod.legacy_grade_advisories(changes,
                                                                 scratch)
+    # membership intent: an unmarked taxonomy link leaves a new member's
+    # parent unanswered — the question is asked aloud, never presumed
+    depiction_callouts += delta_mod.membership_advisories(changes,
+                                                          diff_base)
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,

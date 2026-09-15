@@ -414,6 +414,57 @@ UNAUTHORABLE_EDGE_TYPES = (DERIVED_EDGE_TYPES | SCHEMA_EDGE_TYPES
 # re-derives; the DECLARED_MEMBER_OF edge itself never does.
 MEMBERSHIP_EDGE_TYPE = "DECLARED_MEMBER_OF"
 
+# The conferral policy is canon content, never engine code (the ruling:
+# kind parentage never holds automatically over members — the spiked
+# boot is a Weapon, most boots aren't). A `confers` mark on a kind's
+# own SUBTYPE_OF link declares that membership below flows through that
+# link; each link answers for itself, hop by hop. A member that is the
+# exception declines the parent on its own membership edge — a
+# comma-separated string of parent names beside the required `basis`
+# (a string, not a list: an edge's properties must stay hashable).
+# Nothing confers unstated.
+CONFERS_PROP = "confers"
+DECLINES_PROP = "declines"
+
+
+def declined_parents(props):
+    """The parents a membership edge declines, from its comma-separated
+    `declines` declaration."""
+    raw = dict(props).get(DECLINES_PROP) or ""
+    return {part.strip() for part in str(raw).split(",") if part.strip()}
+
+
+def confers_map(edges):
+    """kind -> the parents its SUBTYPE_OF links declare conferral for
+    (Archetype -> Archetype links carrying a truthy `confers`)."""
+    marked = {}
+    for edge in edges:
+        if edge.type == "SUBTYPE_OF" \
+                and edge.from_label == ARCHETYPE_LABEL \
+                and edge.to_label == ARCHETYPE_LABEL \
+                and dict(edge.props).get(CONFERS_PROP):
+            marked.setdefault(str(edge.from_name), set()).add(
+                str(edge.to_name))
+    return marked
+
+
+def conferred_ancestors(kind, marked, declines=()):
+    """Every ancestor a member of `kind` becomes an instance of: the
+    walk climbs exactly the confers-marked links, hop by hop — an
+    unmarked link stops the climb, and a declined parent cuts it at
+    that hop (everything above it through that hop goes too)."""
+    seen, out = set(), []
+    frontier = [str(kind)]
+    while frontier:
+        current = frontier.pop()
+        for parent in sorted(marked.get(current, ())):
+            if parent in declines or parent in seen:
+                continue
+            seen.add(parent)
+            out.append(parent)
+            frontier.append(parent)
+    return out
+
 
 def is_derived_edge(edge):
     """Machine-derived edge? Plain derived types and the ASSIGNS_ family
