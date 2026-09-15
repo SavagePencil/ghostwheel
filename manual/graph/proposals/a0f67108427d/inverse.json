@@ -1,0 +1,19 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "Metaontology",
+   {
+    "fingerprint": [
+     "bd46d767f074ffb5feff65fe4a99828d3023c5f08bc6d4c9758716b6891a8de9",
+     "9920dcd56b34e819ceba91e99dbe77cdea923d8fcbe558c742462e877abfacc8"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}

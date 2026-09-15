@@ -255,7 +255,17 @@ def test_every_round_hears_a_behind_pin_and_the_verb_answers(driven_kb,
                         .read_text(encoding="utf-8"))
     assert record["passed"] is False
     assert record["dependencies"][0]["ref"] == "pin-behind"
-    # nothing configured: unreachable, exit 1, and the remedy names the key
+    # nothing configured: the checkout happens to sit as a sibling of
+    # the knowledge base, so the CONVENTION resolves it — still behind,
+    # never unreachable (convention over configuration)
     monkeypatch.delenv("GHOSTWHEEL_DEPENDENCY_HERBAL")
     assert main_mod.cmd_dependencies(base) == 1
-    assert "GHOSTWHEEL_DEPENDENCY_HERBAL=<path" in capsys.readouterr().out
+    assert "behind      herbal (read)" in capsys.readouterr().out
+    # gone from the sibling seat too: unreachable, naming all three roads
+    import shutil
+    shutil.move(str(base.parent / "herbal"),
+                str(base.parent / "herbal-put-away"))
+    assert main_mod.cmd_dependencies(base) == 1
+    out = capsys.readouterr().out
+    assert "GHOSTWHEEL_DEPENDENCY_HERBAL" in out
+    assert ".env" in out and "herbal" in out
