@@ -523,6 +523,26 @@ def gate_verdicts(delta, scratch, base_dir):
 # -- the apply-time stamp: what the engine verified --------------------------
 
 
+def depicted_subject(scratch, edge):
+    """What a DEPICTS target MEANS: (identity, voice). A [Citizen
+    Bookmark] target means the FOREIGN citizen the bookmark names —
+    identity at (knowledge base, label, name) grain so two rows citing
+    one citizen read as one subject — and the voice speaks the foreign
+    name with its home, never the bookmark row's machinery name. A
+    local target is itself."""
+    from .ontology import KERNEL_BOOKMARK_LABEL
+    if edge.to_label == KERNEL_BOOKMARK_LABEL:
+        props = scratch.nodes.get((edge.to_label, edge.to_name)) or {}
+        kb = props.get("dependency")
+        label = props.get("citizen_label")
+        name = props.get("citizen_name")
+        if kb and label and name:
+            return ((str(kb), str(label), str(name)),
+                    f"({label}) '{name}' (in {kb})")
+    return ((None, edge.to_label, str(edge.to_name)),
+            f"({edge.to_label}) '{edge.to_name}'")
+
+
 def depiction_advisories(delta, scratch):
     """The gate calls the correlations out: each NEW primary pairing's
     derived reference interpretation, named while the owner is already
@@ -534,8 +554,8 @@ def depiction_advisories(delta, scratch):
     primaries_of = {}
     for edge in _edges(scratch, DEPICTS):
         if dict(edge.props).get(ROLE_PROP) == "primary":
-            primaries_of.setdefault(
-                (edge.to_label, str(edge.to_name)), set()).add(
+            identity, _voice = depicted_subject(scratch, edge)
+            primaries_of.setdefault(identity, set()).add(
                 str(edge.from_name))
     seconds_called = set()
     for edge in delta.edges_added:
@@ -543,16 +563,16 @@ def depiction_advisories(delta, scratch):
             continue
         if dict(edge.props).get(ROLE_PROP) != "primary":
             continue
-        subject = (edge.to_label, str(edge.to_name))
+        subject, voice = depicted_subject(scratch, edge)
         advisories.append(Verdict(
             code="reference-correlated", severity=ADVISORY,
             subject=connection_ref(edge),
-            message=(f"correlated: '{edge.from_name}' → "
-                     f"({edge.to_label}) '{edge.to_name}' — the "
+            message=(f"correlated: '{edge.from_name}' → {voice} — the "
                      "reference interpretation derives with this "
                      "round."),
             data={"artifact": str(edge.from_name),
-                  "subject": list(subject)}))
+                  "subject": [part for part in subject
+                              if part is not None]}))
         holders = primaries_of.get(subject, set()) | {str(edge.from_name)}
         if len(holders) > 1 and subject not in seconds_called:
             seconds_called.add(subject)
@@ -560,12 +580,13 @@ def depiction_advisories(delta, scratch):
             advisories.append(Verdict(
                 code="second-primary-reference", severity=ADVISORY,
                 subject=connection_ref(edge),
-                message=(f"({edge.to_label}) '{edge.to_name}' now has "
+                message=(f"{voice} now has "
                          f"{len(holders)} primary references ({names}) "
                          "— each derives its own interpretation; if one "
                          "should be the reference, make the others "
                          "also-shows."),
-                data={"subject": list(subject),
+                data={"subject": [part for part in subject
+                                  if part is not None],
                       "artifacts": sorted(holders)}))
     return advisories
 

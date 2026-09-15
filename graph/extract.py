@@ -1023,7 +1023,7 @@ class Extractor:
         write."""
         from .artifacts import (DEPICTS, DERIVED_MARKER,
                                 DERIVED_MARKER_VALUE, ROLE_PROP,
-                                artifact_labels)
+                                artifact_labels, depicted_subject)
         from .ontology import KERNEL_INTERPRETATION_LABEL
         interp = KERNEL_INTERPRETATION_LABEL
         arts = artifact_labels(self.graph)
@@ -1049,13 +1049,19 @@ class Extractor:
             subject = (edge.to_label, str(edge.to_name))
             if (artifact, subject) in covered:
                 continue  # the hand's reading stands; boilerplate yields
-            name = f"{edge.from_name} as {edge.to_name} reference"
+            # a bookmarked target means the FOREIGN citizen it names:
+            # the interpretation speaks the designer's word for the
+            # depicted thing, while its edges stay on the local
+            # stand-in (the graph is closed; the bookmark is the seat)
+            _identity, _voice = depicted_subject(self.graph, edge)
+            spoken = _identity[2]
+            name = f"{edge.from_name} as {spoken} reference"
             existing = self.graph.nodes.get((interp, name))
             if existing is not None and not existing.get(DERIVED_MARKER):
                 continue  # a ground row holds the name; never overwrite
             self.graph.ensure_node(
                 interp, name,
-                intent=f"reference image for {edge.to_name}",
+                intent=f"reference image for {spoken}",
                 **{DERIVED_MARKER: DERIVED_MARKER_VALUE})
             for edge_type, (to_label, to_name) in (
                     ("ABOUT", artifact), ("INTERPRETED_AS", subject),
