@@ -1511,10 +1511,10 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     from . import dependencies as dependencies_mod
     violations += dependencies_mod.gate_verdicts(changes, scratch)
     dependency_refusals = dependencies_mod.resolution_verdicts(
-        changes, scratch, config)
+        changes, scratch, config, base_dir=base_dir)
     violations += dependency_refusals
     dependency_advisories = dependencies_mod.drift_advisories(
-        scratch, config,
+        scratch, config, base_dir=base_dir,
         skip={v.subject.name for v in dependency_refusals
               if v.subject is not None
               and v.subject.label == dependencies_mod.KERNEL_DEPENDENCY_LABEL})
@@ -3756,7 +3756,7 @@ def cmd_dependencies(base_dir, branch=None):
         print(refusal, file=sys.stderr)
         return 1
     config = load_mod.read_config(base_dir)
-    rows = dependencies_mod.drift_rows(base, config)
+    rows = dependencies_mod.drift_rows(base, config, base_dir=base_dir)
     doc = dependencies_mod.dependencies_report(base_dir, rows, branch)
     report_mod.write_record(base_dir, dependencies_mod.REPORT_FILE, doc)
     print(dependencies_mod.render_report(doc))

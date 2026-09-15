@@ -201,7 +201,7 @@
 # SUBTYPE_OF chain (the taxonomy-membership rule), DAG-enforced at the
 # ceremony. MINOR bump under the 0.x convention; the rename is named
 # here plainly.
-version: "0.17.0"
+version: "0.17.1"
 
 # Names this kernel renamed, old -> new. kernel-migrate reads this map:
 # a canon carrying a citizen label, an Archetype row, a spec binding, or
@@ -317,7 +317,15 @@ concepts:
       knowledge base holds toward it (read, or write when a shared
       activity may land rounds there), and the git ref the edition was
       tagged at — that ref is provenance only. Where the dependency's
-      checkout lives on this machine is settings, never canon. A
+      checkout sits on this machine is settings and convention, never
+      canon: resolution tries the settings lanes first (the environment
+      beats the .env line), then the convention — a sibling directory
+      of this knowledge base, named by the pin's optional `checkout`
+      word or the dependency's own name, and trusted only after the
+      found checkout declares this dependency's kb name (a directory's
+      name is never trusted over what its graph says). What the
+      checkout is CALLED is machine-independent and may ride the pin;
+      where its parent sits never enters canon. A
       knowledge base holding dependency entries is playing the world
       role; a dependency may itself hold dependencies. Machinery, never
       subject matter — hence bracketed.

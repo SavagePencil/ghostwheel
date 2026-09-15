@@ -168,6 +168,7 @@
 {"from": {"label": "[Decision]", "name": "Answer keys enter the kernel (0.14.0)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Decision]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Decision]", "name": "Dependencies and bookmarks enter the kernel (0.15.0)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Decision]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Decision]", "name": "The bracket sweep and artifacts enter the kernel (0.17.0)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Decision]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Decision]", "name": "The dependency doc learns the convention road (0.17.1)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Decision]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Decision]", "name": "The pocket declares itself (0.16.0)"}, "properties": {}, "to": {"label": "Archetype", "name": "[Decision]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Design Record]", "name": "Front Door Tenets"}, "properties": {}, "to": {"label": "Archetype", "name": "[Design Record]"}, "type": "INSTANCE_OF"}

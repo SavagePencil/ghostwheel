@@ -1,0 +1,23 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "Metaontology",
+   {
+    "fingerprint": [
+     "bfa28b22356de989e5d22b43ac7ad8625f043b33c14d43b9782e575a7b66f8fd",
+     "bd46d767f074ffb5feff65fe4a99828d3023c5f08bc6d4c9758716b6891a8de9"
+    ],
+    "version": [
+     "0.17.1",
+     "0.17.0"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}
