@@ -310,6 +310,16 @@ def apply_delta(graph, delta):
     edges.extend(delta.edges_added)
     for target_edge, changes in delta.edges_changed:
         edges[edges.index(pre_state(target_edge, changes))] = target_edge
+    struck = {(label, str(name)) for label, name, _ in delta.nodes_removed}
+    if struck:
+        # a removed citizen keeps no connections: whatever still touches
+        # it here — the derived layer a changeset never carries — leaves
+        # with it, as the database's detach would take it (on a ground
+        # graph this sweep finds nothing; the changeset already named
+        # every ground connection)
+        edges = [e for e in edges
+                 if (e.from_label, str(e.from_name)) not in struck
+                 and (e.to_label, str(e.to_name)) not in struck]
     graph.edges = edges
     return []
 
