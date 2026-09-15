@@ -4,7 +4,7 @@ Only module that imports the neo4j driver, so validate/export stay
 database-free. Connection settings come from environment variables, falling
 back to the .env file in the repo root (see .env.example). The load is a full
 rebuild: everything in the target database is deleted first — safe because
-the graph is entirely derived from the sources in git.
+the graph is entirely rebuilt from the committed backup.
 """
 
 import os

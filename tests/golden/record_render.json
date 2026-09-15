@@ -1,6 +1,6 @@
 {
-  "agentic-approach": "e13d3c676b0fc283257ae06eeaa02991473c5630f46206676eab29ff4916a54c",
-  "agentic-etl": "5f8442de1b0aa24a1ee8f77d33389bba9f329f41d76354b0f8e4bc1383bed2fc",
+  "agentic-approach": "1c843d0545d266a93242ee11fe0c75c0750854169d7ab4094d66ad5dff6adf56",
+  "agentic-etl": "b9eabc8a0c72a830e5e9bd4e9c7775fcc5c2c0746aea7c30937e3920c29f4b2d",
   "agentic-intake": "83d8e40032f720fa0f8226280509bb44bec1a1d84ce9972df3c762d10b76d211",
   "artifact-model": "a422e9cce11de601ee21871757668c185598577c66ccd45cb590c6cdba82e9e0",
   "engine-as-corpus": "71eaf34441f7b518e4765de790f252e6767044fdabefb187f25024c3f4959543",
@@ -10,9 +10,9 @@
   "graph-query": "f1d35e42eea00e4320c3f4e331cd7b0528a26f30028b96f0eaf107aeceeabda2",
   "lenses": "1ba99466e8d258bf63b946162b29a34de6f081aeff6c2753e52f53363a88afe3",
   "merging-lines": "b76b6d92581744bff09b8bb903d21b8dc57a685e0cadae2213b4b0297428c271",
-  "north-star-workflow": "4dcc583b7cb1f77bd8d452f6ad749e2d91d2bb1c0e3b616126986a86d458f9b2",
-  "ontology-doctrine": "7be8774b3b935e67d61c86e2207d724efd9517ca9d39ae729f07f347b43d366f",
-  "ontology-intake": "275b87196e4b8030e8394a62b82e6fe78e45acc35242da0b489ba0b17cba4330",
+  "north-star-workflow": "805ccd803bf2f8074fcc1a7207af67b04e1377cb4ac680f592d071ba713854d4",
+  "ontology-doctrine": "01b3b595a7aff31ad74c8b9489926c802d9628610f8d35852e4aee09af3d1cce",
+  "ontology-intake": "06480aeed64d7a6efe1f97163280b59e7d8ad76132a6de4eec1c587d3f9fce5c",
   "procedure-intake": "08eee9c3c406c6aff3293957ada8ad9591360919a1caa7a98408bc05ca075603",
   "rebuild-graph": "bb1aa95b07d4f03b28d9dab88c2797a8767b37627aa9301b196fe75bdb06d8ae",
   "worlds-layer": "c7a3fc5ec089562cb80b5d300380d426f5490c64ba65e6b1a8c47a857a3d7fd7"

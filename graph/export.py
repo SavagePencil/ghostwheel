@@ -1,6 +1,6 @@
-"""Deterministic text serialization of the graph — committed to git.
+"""Deterministic text serialization of the graph — the committed backup.
 
-Same graph -> byte-identical files, so `git diff` reads as a semantic graph
+Same graph -> byte-identical files, so a text diff reads as a semantic graph
 diff and the test suite can use the export as a golden snapshot. Rules that
 make this work (and keep it reusable for the future export-from-DB):
 stable sort order, sorted JSON keys, name-based keys only — never internal

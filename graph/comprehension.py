@@ -11,7 +11,7 @@ build → archive → dispose lifecycle:
   (default 'comprehension'), wiped per round like scratch. Never a
   standing database per asset.
 - ARCHIVE: at round close the room serializes to small flat JSONL files
-  filed with the proposal (git-tracked — ordinary git recovery is the
+  filed with the proposal (kept with the record — ordinary file recovery is the
   first line of deletion defense). Archives batch-import: any set of
   rounds rehydrates into the workspace in one command, coexisting
   because every citizen carries its artifact's fingerprint.
@@ -310,7 +310,7 @@ def read_artifact(data, title, origin="", cited_sections=(),
                    sections=sections)
 
 
-# -- archive: small flat files, batch-importable, git-friendly ------------
+# -- archive: small flat files, batch-importable, custody-friendly --------
 
 
 def serialize(reading):
