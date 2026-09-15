@@ -16,6 +16,7 @@ Storybook domain: Pip's heirloom blade, and what a blade is a kind of.
 
 from graph.delta import (Delta, ceremony_records, lint_verdicts,
                          membership_advisories)
+from graph.ontology import DECLINES_EDGE_TYPE as DECLINE
 from graph.extract import derive, make_edge, strip_derived
 from graph.ontology import (ARCHETYPE_LABEL, CONCEPT_ROOT,
                             ontology_from_graph)
@@ -36,12 +37,17 @@ def _taxonomy(canon, kind, parent, confers=False):
                                  ARCHETYPE_LABEL, parent, props))
 
 
-def _membership(kind, declines=None, citizen="Pip"):
-    props = {"basis": "the owner's ruling"}
-    if declines:
-        props["declines"] = declines
+def _membership(kind, citizen="Pip", **extra):
+    props = {"basis": "the owner's ruling", **extra}
     return make_edge(MEMBER, "Character", citizen,
                      ARCHETYPE_LABEL, kind, props)
+
+
+def _decline(concept, citizen="Pip",
+             basis: "str | None" = "this one is the exception"):
+    props = {"basis": basis} if basis is not None else {}
+    return make_edge(DECLINE, "Character", citizen,
+                     ARCHETYPE_LABEL, concept, props)
 
 
 def _world(confers_heirloom=False, confers_tool=False,
@@ -96,7 +102,8 @@ def test_the_climb_is_policy_gated_hop_by_hop(tmp_path):
 def test_a_decline_cuts_its_parent_and_the_climb_through_it(tmp_path):
     canon = _world(confers_heirloom=True, confers_tool=True,
                    confers_treasure=True)
-    canon.edges.append(_membership("Blade", declines="Heirloom"))
+    canon.edges.append(_membership("Blade"))
+    canon.edges.append(_decline("Heirloom"))
     targets = _instance_targets(_derive(canon, tmp_path))
     assert "Heirloom" not in targets
     assert "Treasure" not in targets  # only reachable through the cut
@@ -108,14 +115,16 @@ def test_an_unknown_decline_refuses_by_name(tmp_path):
     delta = Delta()
     # Tool's link does not confer — a decline answers a conferral
     # that exists
-    delta.edges_added.append(_membership("Blade", declines="Tool"))
+    delta.edges_added.append(_membership("Blade"))
+    delta.edges_added.append(_decline("Tool"))
     faults = [v for v in lint_verdicts(delta, canon)
               if v.code == "membership-decline-unknown"]
     [fault] = faults
     assert "Tool" in fault.message
     # declining the conferral that exists is clean
     delta2 = Delta()
-    delta2.edges_added.append(_membership("Blade", declines="Heirloom"))
+    delta2.edges_added.append(_membership("Blade"))
+    delta2.edges_added.append(_decline("Heirloom"))
     assert [v for v in lint_verdicts(delta2, canon)
             if v.code == "membership-decline-unknown"] == []
 
@@ -131,7 +140,8 @@ def test_the_gate_announces_the_conferral_with_the_decline_road(tmp_path):
     assert "decline" in line.message.lower()
     # a declined parent is answered — no announcement for it
     delta2 = Delta()
-    delta2.edges_added.append(_membership("Blade", declines="Heirloom"))
+    delta2.edges_added.append(_membership("Blade"))
+    delta2.edges_added.append(_decline("Heirloom"))
     items2, _v, _n, _e = ceremony_records(delta2, canon)
     assert [i for i in items2 if i.code == "membership-confers"] == []
 
@@ -153,8 +163,8 @@ def test_the_confers_declaration_counts_its_members(tmp_path):
     # citizens that actually confer — and a decline is subtracted
     canon = _world()
     canon.edges.append(_membership("Blade"))
-    canon.edges.append(_membership("Blade", citizen="Maren",
-                                   declines="Heirloom"))
+    canon.edges.append(_membership("Blade", citizen="Maren"))
+    canon.edges.append(_decline("Heirloom", citizen="Maren"))
     delta = Delta()
     changed = make_edge("SUBTYPE_OF", ARCHETYPE_LABEL, "Blade",
                         ARCHETYPE_LABEL, "Heirloom", {"confers": True})
@@ -180,3 +190,43 @@ def test_fixpoint_holds_and_the_double_declaration_folds_to_one(tmp_path):
     assert len(rows) == 1
     twice = _derive(strip_derived(once), tmp_path)
     assert _instance_targets(twice) == _instance_targets(once)
+
+# -- the graph carries the declines: no embedded lists ----------------------
+
+
+def test_a_decline_is_member_grained(tmp_path):
+    # two kinds confer the same parent; one decline answers both —
+    # the citizen is not that thing by conferral, period
+    canon = build_canon()
+    for name in ("Blade", "Trinket", "Heirloom"):
+        _concept(canon, name)
+    _taxonomy(canon, "Blade", "Heirloom", confers=True)
+    _taxonomy(canon, "Trinket", "Heirloom", confers=True)
+    canon.edges.append(_membership("Blade"))
+    canon.edges.append(_membership("Trinket"))
+    canon.edges.append(_decline("Heirloom"))
+    assert "Heirloom" not in _instance_targets(_derive(canon, tmp_path))
+
+
+def test_a_decline_carries_its_own_reason(tmp_path):
+    canon = _world(confers_heirloom=True)
+    canon.edges.append(_membership("Blade"))
+    delta = Delta()
+    delta.edges_added.append(_decline("Heirloom", basis=None))
+    [fault] = [v for v in lint_verdicts(delta, canon)
+               if v.code == "decline-basis-missing"]
+    assert "basis" in fault.message
+    delta2 = Delta()
+    delta2.edges_added.append(_decline("Heirloom"))
+    assert [v for v in lint_verdicts(delta2, canon)
+            if v.code == "decline-basis-missing"] == []
+
+
+def test_an_embedded_declines_property_refuses_by_the_law(tmp_path):
+    canon = _world(confers_heirloom=True)
+    delta = Delta()
+    delta.edges_added.append(_membership("Blade", declines="Heirloom"))
+    [fault] = [v for v in lint_verdicts(delta, canon)
+               if v.code == "membership-declines-embedded"]
+    assert "no embedded lists" in fault.message.lower()
+    assert DECLINE in fault.message

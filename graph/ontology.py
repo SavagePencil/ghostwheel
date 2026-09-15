@@ -419,19 +419,28 @@ MEMBERSHIP_EDGE_TYPE = "DECLARED_MEMBER_OF"
 # boot is a Weapon, most boots aren't). A `confers` mark on a kind's
 # own SUBTYPE_OF link declares that membership below flows through that
 # link; each link answers for itself, hop by hop. A member that is the
-# exception declines the parent on its own membership edge — a
-# comma-separated string of parent names beside the required `basis`
-# (a string, not a list: an edge's properties must stay hashable).
+# exception declines the parent with its own connection —
+# (member)-[:DECLINES_CONFERRAL]->(concept), MEMBER-grained: the
+# citizen is not that thing by conferral, whichever membership raised
+# the question — carrying its own required `basis`, symmetric with the
+# membership it answers. The owner's standing law, verbatim: "no
+# embedded lists" — a plural fact is connections, never a packed
+# string (and an edge's properties must stay hashable besides).
 # Nothing confers unstated.
 CONFERS_PROP = "confers"
-DECLINES_PROP = "declines"
+DECLINES_EDGE_TYPE = "DECLINES_CONFERRAL"
 
 
-def declined_parents(props):
-    """The parents a membership edge declines, from its comma-separated
-    `declines` declaration."""
-    raw = dict(props).get(DECLINES_PROP) or ""
-    return {part.strip() for part in str(raw).split(",") if part.strip()}
+def declined_map(edges):
+    """(label, name) -> the concepts that citizen declines by its own
+    DECLINES_CONFERRAL connections."""
+    declined = {}
+    for edge in edges:
+        if edge.type == DECLINES_EDGE_TYPE:
+            declined.setdefault(
+                (edge.from_label, str(edge.from_name)), set()).add(
+                str(edge.to_name))
+    return declined
 
 
 def confers_map(edges):

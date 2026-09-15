@@ -71,6 +71,8 @@ REF_KEYS = {
     "membership-confers": "conferred",
     "membership-intent-open": "intent-open",
     "membership-decline-unknown": "unknown-decline",
+    "decline-basis-missing": "missing-reason",
+    "membership-declines-embedded": "embedded-list",
     "taxonomy-confers": "confers",
     # the stitch
     "stitch-schema-edge": "structure-change",
