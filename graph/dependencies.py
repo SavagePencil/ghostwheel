@@ -245,6 +245,21 @@ def dependency_path(config, name):
     return Path(value).expanduser() if value else None
 
 
+# The one machine-independent word a pin may record: what the
+# dependency's checkout directory is CALLED when it is not called by
+# the dependency's own name. Where the checkout's parent sits stays
+# settings and convention — never canon.
+CHECKOUT_PROP = "checkout"
+
+
+def conventional_path(base_dir, name, props=None):
+    """The convention's one try: a sibling of the depending knowledge
+    base, named by the pin's `checkout` word or the dependency's own
+    name."""
+    dirname = str((props or {}).get(CHECKOUT_PROP) or name)
+    return Path(base_dir).resolve().parent / dirname
+
+
 @dataclass
 class Checkout:
     """A dependency's checkout as it stands on disk."""
@@ -266,14 +281,33 @@ def anchor_sequence(graph):
     return version
 
 
-def read_dependency(config, name):
+def read_dependency(config, name, base_dir=None, props=None):
     """(Checkout, None) when the dependency's checkout can be read, else
-    (None, a designer-facing problem)."""
+    (None, a designer-facing problem). Resolution ladder: the settings
+    lanes first (the environment beats .env inside the merged config),
+    then — when the depending knowledge base's home is known — the
+    CONVENTION: a sibling directory named by the pin's `checkout` word
+    or the dependency's own name. The convention never trusts a
+    directory's name: the found checkout must declare the dependency's
+    kb name, or resolution refuses by name."""
     from .proposal import base_identity
     from .refs import kb_name
     from .restore import read_export
 
     path = dependency_path(config, name)
+    by_convention = False
+    if path is None and base_dir is not None:
+        candidate = conventional_path(base_dir, name, props)
+        if (candidate / "graph" / "export").is_dir():
+            path, by_convention = candidate, True
+        else:
+            return None, (
+                f"Attempted to reach dependency '{name}'. Failed due to: "
+                "no road reaches a checkout — the environment does not "
+                f"set {settings_key(name)}, no .env line names it, and "
+                f"the convention's sibling ({candidate}) holds no "
+                "committed backup. Set the environment variable, add the "
+                ".env line, or place the checkout at the sibling path.")
     if path is None:
         return None, (
             f"Attempted to reach dependency '{name}'. Failed due to: no "
@@ -286,15 +320,24 @@ def read_dependency(config, name):
             f"Attempted to read dependency '{name}' at {path}. Failed due "
             f"to: {exc}. Check the path in .env and that the checkout "
             "carries a committed backup (graph/export).")
+    declared = kb_name(graph, path)
+    if by_convention and declared != name:
+        return None, (
+            f"Attempted to reach dependency '{name}' by convention at "
+            f"{path}. Failed due to: the checkout there declares itself "
+            f"'{declared}', not '{name}' — a directory's name is never "
+            "trusted over what its graph says. Point "
+            f"{settings_key(name)} at the true checkout, or record the "
+            f"right `{CHECKOUT_PROP}` word on the pin.")
     return Checkout(name, path, base_identity(graph), anchor_sequence(graph),
-                    kb_name(graph, path), graph), None
+                    declared, graph), None
 
 
 def _short(value):
     return str(value or "")[:12] or "none"
 
 
-def resolution_verdicts(delta, scratch, config):
+def resolution_verdicts(delta, scratch, config, base_dir=None):
     """The gate reads the dependency's backup: every [Knowledge Base Dependency] the
     round touches must be pinned at what its checkout holds (identity
     and sequence) and carry the name the checkout declares; every
@@ -328,7 +371,9 @@ def resolution_verdicts(delta, scratch, config):
     for name in sorted(needed, key=str):
         if (dependency, name) not in scratch.nodes:
             continue  # the structural gate names an unpinned dependency
-        checkout, problem = read_dependency(config, name)
+        checkout, problem = read_dependency(
+            config, name, base_dir=base_dir,
+            props=scratch.nodes.get((dependency, name)) or {})
         if checkout is None:
             verdicts.append(Verdict(
                 code="dependency-unreachable",
@@ -408,7 +453,7 @@ def resolution_verdicts(delta, scratch, config):
 # -- drift: is a pin behind its checkout? -----------------------------------
 
 
-def drift_rows(graph, config):
+def drift_rows(graph, config, base_dir=None):
     """One row per [Knowledge Base Dependency] on the graph: its pin, what its checkout
     holds now, and a status — held, behind (the checkout differs from
     the pin), or unreachable."""
@@ -422,7 +467,8 @@ def drift_rows(graph, config):
         row = {"dependency": name, "intent": props.get("intent"),
                "pinned": {"edition": props.get("edition"),
                           "sequence": props.get("sequence")}}
-        checkout, problem = read_dependency(config, name)
+        checkout, problem = read_dependency(config, name,
+                                            base_dir=base_dir, props=props)
         if checkout is None:
             row.update(current=None, status="unreachable",
                        code="dependency-unreachable", problem=str(problem))
@@ -440,7 +486,7 @@ def drift_rows(graph, config):
     return rows
 
 
-def drift_advisories(graph, config, skip=()):
+def drift_advisories(graph, config, skip=(), base_dir=None):
     """The behind-pin warning every round hears: an ADVISORY per
     dependency whose checkout differs from its pin or cannot be reached
     (never a refusal — a re-pin round moves the pin). `skip` names
@@ -448,7 +494,7 @@ def drift_advisories(graph, config, skip=()):
     from .report import ADVISORY
 
     advisories = []
-    for row in drift_rows(graph, config):
+    for row in drift_rows(graph, config, base_dir=base_dir):
         name = row["dependency"]
         if row["status"] == "held" or name in skip:
             continue

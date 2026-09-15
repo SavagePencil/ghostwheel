@@ -1,0 +1,18 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [],
+ "nodes_changed": [],
+ "nodes_removed": [
+  [
+   "[Decision]",
+   "The dependency doc learns the convention road (0.17.1)",
+   {
+    "decided_by": "James Clarendon",
+    "decided_on": "2026-09-15",
+    "doc": "Kernel 0.17.1, a docs-only patch under the ceremony: the [Knowledge Base Dependency] doc learns the convention road — resolution tries the settings lanes, then a sibling directory named by the pin's optional `checkout` word or the dependency's own name, trusted only after the found checkout declares the dependency's kb name. The split the ruling drew: what a checkout is CALLED is machine-independent and may ride the pin; where its parent sits stays settings and convention, never canon. The owner's word calling the endgame, verbatim: \"let's just cut to the endgame then\" — convention over configuration, the machine-wide export interim skipped. No names moved; no semantics changed; the 0.15.0 decision's text stands as the record of its day."
+   }
+  ]
+ ]
+}

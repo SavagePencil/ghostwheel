@@ -1,0 +1,3 @@
+# schema-version ledger: (file, version, sha256) — the metaontology's ceremony ledger;
+# every kernel change appends its row (the tripwire test's contract)
+graph/metaontology.yaml 0.17.1 bfa28b22356de989e5d22b43ac7ad8625f043b33c14d43b9782e575a7b66f8fd

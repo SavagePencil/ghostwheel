@@ -1,0 +1,19 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "Archetype",
+   "[Knowledge Base Dependency]",
+   {
+    "doc": [
+     "Another knowledge base this one pins to an edition. The citizen's name is that knowledge base's own declared name; it carries the edition it is pinned to (the dependency's committed backup identity hash and its event-log sequence), the intent this knowledge base holds toward it (read, or write when a shared activity may land rounds there), and the git ref the edition was tagged at — that ref is provenance only. Where the dependency's checkout lives on this machine is settings, never canon. A knowledge base holding dependency entries is playing the world role; a dependency may itself hold dependencies. Machinery, never subject matter — hence bracketed.",
+     "Another knowledge base this one pins to an edition. The citizen's name is that knowledge base's own declared name; it carries the edition it is pinned to (the dependency's committed backup identity hash and its event-log sequence), the intent this knowledge base holds toward it (read, or write when a shared activity may land rounds there), and the git ref the edition was tagged at — that ref is provenance only. Where the dependency's checkout sits on this machine is settings and convention, never canon: resolution tries the settings lanes first (the environment beats the .env line), then the convention — a sibling directory of this knowledge base, named by the pin's optional `checkout` word or the dependency's own name, and trusted only after the found checkout declares this dependency's kb name (a directory's name is never trusted over what its graph says). What the checkout is CALLED is machine-independent and may ride the pin; where its parent sits never enters canon. A knowledge base holding dependency entries is playing the world role; a dependency may itself hold dependencies. Machinery, never subject matter — hence bracketed."
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}
