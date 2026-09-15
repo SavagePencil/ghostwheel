@@ -28,8 +28,8 @@ def read_export(export_dir):
             raise FileNotFoundError(
                 f"Attempted to restore from the backup at {export_dir}. "
                 f"Failed due to: {path.name} is missing. Run "
-                "'python -m graph export' first, or restore the file "
-                "from git.")
+                "'python -m graph export' first, or recover the file "
+                "from wherever this knowledge base keeps its history.")
     for line in nodes_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue  # a zero-row file serializes as a lone newline

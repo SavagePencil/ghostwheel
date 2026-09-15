@@ -20,7 +20,7 @@ deleted or renamed reports as "the guard is gone", naming the approval
 it orphaned, instead of silently ceasing to protect anything.
 
 The ledger is graph/corpus/floors.jsonl — append-only, one floor per
-line, git-tracked. `python -m graph corpus` re-checks every floor and
+line, committed beside the graph. `python -m graph corpus` re-checks every floor and
 reports in owner-facing language: passed / FAILED (with its
 provenance) / GUARD MISSING (with its provenance). Pure logic (ledger, matching,
 report) is driver-free and unit-tested; only the collect/run helpers

@@ -14,7 +14,7 @@ Lifecycle (precedent: the reading room, graph/comprehension.py):
 
 - BUILD: rows accumulate on a Run in memory while the run works.
 - ARCHIVE: at run end, small flat JSONL files under graph/runs/<run-id>/
-  filed with the round's reports, git-tracked — inspectable forever,
+  filed with the round's reports, kept with the record — inspectable forever,
   canon never.
 - Deletion tolerance: canon never references archive internals. A
   ratified row carries the run id and the judgment's own content, so
@@ -288,7 +288,7 @@ def render_margin(artifact_text, entries):
     return "\n".join(lines) + "\n"
 
 
-# -- archive: small flat files, batch-importable, git-friendly ------------
+# -- archive: small flat files, batch-importable, custody-friendly --------
 
 
 def serialize(run):

@@ -5,7 +5,8 @@ human approved is frozen by content hash, and apply replays only that.
 
 - CUT: when scratch is created the round starts — base.json pins the
   content identity of the source-derived base (a hash of the
-  deterministic serialization) plus the git ref for humans.
+  deterministic serialization) plus a checkout ref for humans —
+  provenance only, 'unknown' outside revision control.
 - PROPOSE: `delta` writes the machine-readable changeset (delta.json,
   canonical form); its sha256 IS the proposal's id. If the base has
   moved since the cut (sources edited mid-round), delta WARNS and keeps
@@ -20,7 +21,8 @@ human approved is frozen by content hash, and apply replays only that.
   changeset (divergence NAMED item by item), and otherwise applies
   exactly the pinned artifact.
 - ARCHIVE: on success the round's artifacts move to
-  graph/proposals/<id12>/ — git-tracked, the durable audit trail.
+  graph/proposals/<id12>/ — the durable audit trail, plain files
+  kept under the knowledge base's own custody.
 
 Pure logic (canonical serialization, hashing, divergence naming) is
 driver-free and unit-tested; file I/O helpers take explicit paths.

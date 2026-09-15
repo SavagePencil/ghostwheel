@@ -253,8 +253,10 @@ def cmd_restore(base_dir, database=None, from_dir=None, branch=None,
         for problem in problems:
             print(problem, file=sys.stderr)
         print("DRILL FAILED — the database was rebuilt but does not match "
-              "the backup. The backup files are untouched; git holds the "
-              "truth.", file=sys.stderr)
+              "the backup. The backup files are untouched; recover the "
+              "prior backup from wherever this knowledge base keeps its "
+              "history (its revision control, or its backups).",
+              file=sys.stderr)
         _file_restore(base_dir, code="drill-failed", status="failed",
                       database=target, from_dir=from_dir, loaded=summary,
                       problems=problems)
@@ -652,8 +654,9 @@ def cmd_rederive(base_dir, apply=False):
     except FileNotFoundError as exc:
         print("Attempted to load the schema from the graph's committed "
               f"backup (graph/export). Failed due to: {exc}. The "
-              "committed backup is the knowledge base — restore it from "
-              "git, or give birth to a new one with python -m graph init.",
+              "committed backup is the knowledge base — recover it from "
+              "wherever this knowledge base keeps its history, or give "
+              "birth to a new one with python -m graph init.",
               file=sys.stderr)
         return 1
     from .kernel_migrate import kernel_skew
@@ -1797,8 +1800,9 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         text = ("Attempted to load the schema from the committed "
                 f"backup ({proposal_mod.export_dir(base_dir, branch).relative_to(base_dir)}). "
                 f"Failed due to: {exc}. The committed backup is the "
-                "knowledge base — restore it from git, or give birth to "
-                "a new one with python -m graph init.")
+                "knowledge base — recover it from wherever this knowledge "
+                "base keeps its history, or give birth to a new one "
+                "with python -m graph init.")
         print(text, file=sys.stderr)
         return bail("backup-unreadable", text)
     from .kernel_migrate import kernel_skew
@@ -2785,8 +2789,9 @@ def cmd_comprehend(base_dir, artifacts, recall, dispose):
         for origin, reading in readings:
             comprehension.load_reading(driver, reading)
             if origin in (artifacts or []):
-                # graph/comprehension/ is git-tracked (like graph/export/)
-                # — ordinary git recovery is the first line of
+                # graph/comprehension/ is kept with the record (like
+                # graph/export/) — ordinary file recovery from the
+                # knowledge base's custody is the first line of
                 # deleted-archive defense
                 archive_dir = (base_dir / "graph" / "comprehension"
                                / f"{Path(origin).stem}-{reading.short}")
@@ -3003,8 +3008,9 @@ def cmd_generate(base_dir, procedure_name):
     except (FileNotFoundError, ValueError, OSError) as exc:
         print("Attempted to load the schema from the graph's committed "
               f"backup (graph/export). Failed due to: {exc}. The "
-              "committed backup is the knowledge base — restore it from "
-              "git, or give birth to a new one with python -m graph init.",
+              "committed backup is the knowledge base — recover it from "
+              "wherever this knowledge base keeps its history, or give "
+              "birth to a new one with python -m graph init.",
               file=sys.stderr)
         return 1
     ontology = ontology_mod.ontology_from_graph(graph, base_dir)
@@ -3044,8 +3050,9 @@ def canon_term_index(base_dir):
         return None, (
             "Attempted to load the schema from the graph's committed "
             f"backup (graph/export). Failed due to: {exc}. The "
-            "committed backup is the knowledge base — restore it from "
-            "git, or give birth to a new one with python -m graph init.")
+            "committed backup is the knowledge base — recover it from "
+            "wherever this knowledge base keeps its history, or give "
+            "birth to a new one with python -m graph init.")
     # The term index's concepts/surface_forms/prose_files come from the
     # graph now (the schema-delta ceremony): reconstruct the schema from the committed backup.
     ontology = ontology_from_graph(graph, base_dir)
