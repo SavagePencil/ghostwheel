@@ -3860,27 +3860,41 @@ def cmd_branch(base_dir, branch, invite=None, uninvite=None,
         # creates them — idempotent, deferring plainly when unreachable
         from . import connections as connections_mod
         config = load_mod.read_config(base_dir)
+        copy = connections_mod.branch_copy_name(config, branch)
         drops = [f"DROP DATABASE `{branch}` IF EXISTS",
-                 f"DROP DATABASE `{branch}-scratch` IF EXISTS"]
+                 f"DROP DATABASE `{copy}` IF EXISTS"]
+        if copy != f"{branch}-scratch":
+            # the bare default too — IF EXISTS is free, and it sweeps
+            # up any copy an earlier convention (or bug) minted
+            drops.append(f"DROP DATABASE `{branch}-scratch` IF EXISTS")
         reader, writer = connections_mod.named_users(config)
         if reader and writer:
             # the grants leave before the databases drop, so a future
             # database under the same name inherits nothing
             drops = connections_mod.pocket_revocations(
-                branch, reader, writer) + drops
+                branch, reader, writer, copy=copy) + drops
+        # each statement stands alone: a failed revoke (a grant that
+        # never existed, an era-named copy) must never abort a drop
+        failed = []
         try:
             runner = connections_mod._system_runner(config)
             try:
                 for statement in drops:
-                    runner.run(statement)
+                    try:
+                        runner.run(statement)
+                    except Exception as exc:
+                        failed.append(f"{statement} — {exc}")
             finally:
                 close = getattr(runner, "close", None)
                 if close:
                     close()
         except Exception as exc:
-            print(f"Note: the line's databases were not dropped ({exc}) "
-                  "— run these by hand when the DBMS is up:\n  "
-                  + "\n  ".join(drops))
+            failed = [f"{s} — unreachable: {exc}" for s in drops]
+        if failed:
+            print("Note: some statements did not land — run by hand "
+                  "what still applies, and check SHOW DATABASES for "
+                  "this line's working copies under other names:\n  "
+                  + "\n  ".join(failed))
         print(f"Branch '{branch}' retired by {record['retired_by']}'s "
               f"word at {record['retired_at']}: "
               f"{len(record['rounds_taken_up'])} round"
