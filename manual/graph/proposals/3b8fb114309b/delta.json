@@ -1,0 +1,19 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [],
+ "nodes_changed": [
+  [
+   "[Section]",
+   "Verification is the location row's own fact",
+   {
+    "body": [
+     "## Verification is the location row's own fact\n\nWhat the engine actually read is stamped where the reading happened:\non the location row. At apply, every file location of every artifact\nthe round touched is read and stamped — `verified_fingerprint`,\n`verified_at_sequence`, `size` — and a file location that cannot be\nread refuses the round, collated, before anything is written. The\nreceipts sweep reads the same rows later, so \"is the file still what\ncanon verified?\" is a query, never a memory.\n\nA non-text artifact (an image, a PDF, audio) enters at its **floor\nreceipt**: `python -m graph receipt <file>` prints the fingerprint,\nsize, and the medium the bytes declare, and the comprehension room\nrefuses to read it for structure plainly, receipt in hand — what the\nengine cannot comprehend it still identifies, and silence never reads\nas held.\n\nArtifact-hood follows the taxonomy: a citizen whose kind descends from\n[Artifact] is an artifact to every rule here — the gate, the stamp,\nand the sweep all fold the kinds. Citations resolve among artifact\nkinds first, and a citation the machinery can no longer resolve is an\nERROR by name, never a silently dropped connection.",
+     "## Verification is the location row's own fact\n\nWhat the engine actually read is stamped where the reading happened:\non the location row. At apply, every file location of every artifact\nthe round touched is read and stamped — `verified_fingerprint`,\n`verified_at_sequence`, `size` — and a file location that cannot be\nread refuses the round, collated, before anything is written. The\nreceipts sweep reads the same rows later, so \"is the file still what\ncanon verified?\" is a query, never a memory.\n\nA non-text artifact (an image, a PDF, audio) enters at its **floor\nreceipt**: `python -m graph receipt <file>` prints the fingerprint,\nsize, and the medium the bytes declare, and the comprehension room\nrefuses to read it for structure plainly, receipt in hand — what the\nengine cannot comprehend it still identifies, and silence never reads\nas held.\n\nArtifact-hood follows the taxonomy: a citizen whose kind descends from\n[Artifact] is an artifact to every rule here — the gate, the stamp,\nand the sweep all fold the kinds. Citations resolve among artifact\nkinds first, and a citation the machinery can no longer resolve is an\nERROR by name, never a silently dropped connection.\n\n**Verification is scheme-routed.** The file kind rides the knowledge base's own home, exactly as it always has. The depot scheme (`git-lfs` — a custody row holding the blessed bytes) rides the same road with the DEPOT HOME as its base: by convention the knowledge base's own home (the depot lives beside `graph/` in the same repository), with `GHOSTWHEEL_DEPOT_BASE` in the environment overriding for an unusual layout, and the path-confinement guard holding against whichever base resolves. First touch RECORDS the fingerprint — the stamp's ordinary behavior — and the receipts sweep VERIFIES forever after: a drifted file reads as stale, a finding and a decay signal, never a refusal; an unreadable file at apply refuses collated. A custody row's `pinned_commit` is provenance and never load-bearing: the engine reads the working tree and never invokes revision control. A source URL stays unverifiable by design — no fetch inside a gate.\n"
+    ]
+   }
+  ]
+ ],
+ "nodes_removed": []
+}
