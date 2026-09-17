@@ -215,6 +215,7 @@
 {"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Merge: lines reconciled"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
+{"from": {"label": "[Section]", "name": "Migration — citizens change worlds"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Names on a shared machine"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Parked, by name"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
 {"from": {"label": "[Section]", "name": "Pocket Universes: a private line of one knowledge base"}, "properties": {}, "to": {"label": "Archetype", "name": "[Section]"}, "type": "INSTANCE_OF"}
@@ -345,6 +346,7 @@
 {"from": {"label": "[Section]", "name": "Language"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Front Door Tenets"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Lenses: the visibility system"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Lenses: the visibility system"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Merge: lines reconciled"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}
+{"from": {"label": "[Section]", "name": "Migration — citizens change worlds"}, "properties": {}, "to": {"label": "[Design Record]", "name": "Agentic ETL — the Persistent-Graph Era"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Names on a shared machine"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Parked, by name"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The artifact model — identity, location, meaning"}, "type": "PART_OF"}
 {"from": {"label": "[Section]", "name": "Pocket Universes: a private line of one knowledge base"}, "properties": {}, "to": {"label": "[Design Record]", "name": "The worlds layer — many knowledge bases, one engine"}, "type": "PART_OF"}

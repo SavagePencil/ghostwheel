@@ -57,6 +57,11 @@ MERGE_FILE = "merge.json"
 # under a kind — filed beside the stitch, embedded in the proposal so the
 # approval hash covers them, performed at canonize --apply.
 MOVES_FILE = "moves.json"
+# A migration's content-addressed record (citizens changing worlds):
+# written by emigrate/immigrate into the round, archived with it; its
+# id rides the proposal so the approval hash covers it, and apply
+# writes the migrated annotation.
+MIGRATION_FILE = "migration.json"
 ATTRIBUTION_FILE = "attribution.json"
 
 
@@ -103,6 +108,11 @@ def serialize_delta(delta):
         # embedded so the approval hash covers what the copy already
         # performed and what apply must perform on canon first
         doc["merge_moves"] = delta.merge_moves
+    if delta.migration:
+        # A migration round's record summary (its content id foremost) —
+        # embedded so the approval hash covers which record the round
+        # serves; apply refuses a record that no longer matches
+        doc["migration"] = delta.migration
     if delta.attribution:
         # Recorded attribution (the provenance-recording rung): present
         # only when the round declares links, so every earlier round's
@@ -169,6 +179,7 @@ def parse_delta(text):
     delta.attribution = [dict(d) for d in doc.get("attribution", [])]
     delta.moves = dict(doc.get("moves") or {})
     delta.merge_moves = list(doc.get("merge_moves") or [])
+    delta.migration = dict(doc.get("migration") or {})
     return delta
 
 
@@ -682,6 +693,36 @@ def write_merged_annotation(base_dir, branch, record):
             record, ensure_ascii=False, sort_keys=True) + "\n")
 
 
+# The migrated annotation: a line's log records the migrations it took
+# part in — the record's id, the counterpart knowledge base, and the
+# direction — so the two lines' histories point at each other forever.
+MIGRATED_PREFIX = "# migrated "
+
+
+def write_migrated_annotation(base_dir, branch, record):
+    path = applied_log_path(base_dir, branch)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    prefix = "" if path.exists() else LOG_HEADER
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write(prefix + MIGRATED_PREFIX + json.dumps(
+            record, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def read_migrated_annotations(base_dir, branch=None):
+    """Every migration record on a line's log, in order."""
+    path = applied_log_path(base_dir, branch)
+    if not path.exists():
+        return []
+    records = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith(MIGRATED_PREFIX):
+            try:
+                records.append(json.loads(line[len(MIGRATED_PREFIX):]))
+            except ValueError:
+                continue
+    return records
+
+
 def read_merged_annotations(base_dir, branch=None):
     """Every merged-from record on a line's log, in order."""
     path = applied_log_path(base_dir, branch)
@@ -856,7 +897,7 @@ def archive_round(base_dir, delta_id, branch=None):
     # delta as if declared there
     for name in (BASE_FILE, DELTA_FILE, APPROVAL_FILE, APPLIED_FILE,
                  INVERSE_FILE, STITCH_FILE, ATTRIBUTION_FILE, REDERIVE_FILE,
-                 MERGE_FILE, MOVES_FILE):
+                 MERGE_FILE, MOVES_FILE, MIGRATION_FILE):
         path = src / name
         if path.exists():
             (dst / name).write_text(path.read_text(encoding="utf-8"),
