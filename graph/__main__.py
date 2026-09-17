@@ -1423,6 +1423,38 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
                 merge_move_problems.extend(probs)
     changes = delta_mod.diff(diff_base, scratch)
     changes.merge_moves = merge_moves
+    # a staged migration's record: judged against the round, its id
+    # riding the proposal so approval covers which record this round
+    # serves; its ceremony lines flow with the advisories below
+    migration_callouts = []
+    migration_refusals = []
+    migration_current = proposal_mod.current_dir(base_dir, branch) / \
+        proposal_mod.MIGRATION_FILE
+    if migration_current.exists():
+        from . import migration as migration_mod
+        try:
+            migration_record = proposal_mod.read_json(migration_current)
+        except ValueError:
+            migration_record = None
+        if migration_record is None:
+            migration_refusals = [report_mod.Verdict(
+                code="migration-record-drift",
+                message=("Attempted to read this round's migration "
+                         "record. Failed due to: migration.json is not "
+                         "readable JSON. Re-stage the migration."),
+                remedy="Re-stage the migration.")]
+        else:
+            rows = migration_mod.migration_verdicts(
+                changes, diff_base, migration_record)
+            migration_refusals = [
+                v for v in rows if v.severity != report_mod.ADVISORY]
+            migration_callouts = [
+                v for v in rows if v.severity == report_mod.ADVISORY]
+            changes.migration = {
+                "id": migration_record.get("id"),
+                "source": migration_record.get("source"),
+                "destination": migration_record.get("destination"),
+                "citizens": len(migration_record.get("citizens") or [])}
     stitch_problem = None
     try:
         changes.stitch = proposal_mod.read_stitch(base_dir, branch)
@@ -1500,6 +1532,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
         violations.append(stitch_problem)
     if attribution_problem:
         violations.append(attribution_problem)
+    violations += migration_refusals
     violations += delta_mod.stitch_verdicts(changes, scratch)
     violations += delta_mod.attribution_verdicts(changes, diff_base)
     violations += delta_mod.body_sync_verdicts(scratch, base_dir)
@@ -1530,6 +1563,7 @@ def cmd_delta(base_dir, database, sync_bodies=False, branch=None):
     # parent unanswered — the question is asked aloud, never presumed
     depiction_callouts += delta_mod.membership_advisories(changes,
                                                           diff_base)
+    depiction_callouts += migration_callouts
     # the receipt staleness guard: a round that authors a quote its
     # source does not contain refuses; one that touches a citizen whose
     # existing quote went stale hears about it (advisory — honesty,
@@ -1983,6 +2017,29 @@ def cmd_canonize(base_dir, database, apply, branch=None):
 
     # --- apply the PINNED artifact to the ground layer, then re-derive -
     pinned_delta = proposal_mod.parse_delta(pinned_text)
+    if pinned_delta.migration:
+        # the approval covered a migration record by id: the file on
+        # disk must still BE that record — a swapped or edited record
+        # refuses as drift, nothing written
+        from . import migration as migration_mod
+        migration_ok = False
+        record_path = current / proposal_mod.MIGRATION_FILE
+        if record_path.exists():
+            try:
+                record_now = proposal_mod.read_json(record_path)
+                migration_ok = (
+                    record_now.get("id") == pinned_delta.migration.get("id")
+                    and migration_mod.record_id(record_now)
+                    == record_now.get("id"))
+            except ValueError:
+                migration_ok = False
+        if not migration_ok:
+            text = ("the approved round rode migration record "
+                    f"{str(pinned_delta.migration.get('id'))[:12]}, and "
+                    "migration.json no longer matches it; nothing was "
+                    "written. Re-stage the migration and approve again.")
+            print("--apply refused — " + text, file=sys.stderr)
+            return bail("migration-record-drift", text, [])
     ground = strip_derived(base)
     if pinned_delta.merge_moves:
         # a merge round's changeset was diffed against the base WITH
@@ -2173,6 +2230,21 @@ def cmd_canonize(base_dir, database, apply, branch=None):
         if moved_rows:
             print(f"  attribution ledger: {moved_rows} row"
                   f"{'s' if moved_rows != 1 else ''} follow the moves.")
+    # a migration rode this round: the log records it, and the two
+    # lines' histories point at each other by the record's id
+    migration_path = current / proposal_mod.MIGRATION_FILE
+    if migration_path.exists():
+        try:
+            migration_record = proposal_mod.read_json(migration_path)
+        except ValueError:
+            migration_record = {}
+        proposal_mod.write_migrated_annotation(base_dir, branch, {
+            "id": migration_record.get("id"),
+            "source": migration_record.get("source"),
+            "destination": migration_record.get("destination"),
+            "citizens": len(migration_record.get("citizens") or []),
+            "sequence": proposal_mod.read_applied_log(base_dir,
+                                                      branch)[-1][0]})
     # a prepared merge landed with this round: the line's log records
     # the rounds taken up, so a second merge skips them and succession's
     # divergence advisory does not re-list them
@@ -3581,6 +3653,181 @@ def cmd_merge(base_dir, source, target, database=None):
     return 0
 
 
+def _migration_copy(base_dir, database, branch, verb):
+    """The shared door for both migration verbs: the line's fresh
+    working copy, read and identity-checked — what lands is exactly
+    the ceremony plus nothing. Returns (copy, base_graph, config,
+    database, problem)."""
+    from . import delta as delta_mod
+    from . import load as load_mod
+    from . import merge as merge_mod
+    from . import pockets as retire_mod
+    from . import proposal as proposal_mod
+
+    if branch is not None:
+        retired = retire_mod.retired_problem(base_dir, branch, verb)
+        if retired:
+            return None, None, None, None, retired
+    try:
+        base = canon_base(base_dir, branch)
+    except FileNotFoundError as exc:
+        return None, None, None, None, (
+            f"Attempted to read this line's committed backup. Failed "
+            f"due to: {exc}.")
+    config = load_mod.read_config(base_dir)
+    database = _authoring_database(database, branch, config)
+    config["NEO4J_DATABASE"] = database
+    try:
+        copy = delta_mod.read_graph(config)
+    except Exception as exc:
+        return None, None, None, None, (
+            f"Attempted to read the working copy ('{database}'). Failed "
+            f"due to: {exc}. Cut it first (python -m graph restore).")
+    if not merge_mod.serialize_equal(copy, base):
+        return None, None, None, None, (
+            f"Attempted to stage a migration in '{database}'. Failed "
+            "due to: the copy already differs from its base — a "
+            "migration wants a fresh copy, so what lands is exactly the "
+            "ceremony. Re-cut the copy, then stage again.")
+    return copy, base, config, database, None
+
+
+def _migration_land(base_dir, branch, config, database, staged, record):
+    from . import delta as delta_mod
+    from . import load as load_mod
+    from . import merge as merge_mod
+    from . import proposal as proposal_mod
+    try:
+        load_mod.load(staged, config)
+        readback = delta_mod.read_graph(config)
+    except Exception as exc:
+        print(f"Attempted to land the staged migration in '{database}'. "
+              f"Failed due to: {exc}. The copy may be half-written — "
+              "re-cut it and stage again.", file=sys.stderr)
+        return 1
+    if not merge_mod.serialize_equal(readback, staged):
+        differences = merge_mod.first_differences(readback, staged)
+        print(f"Attempted to land the staged migration in '{database}'. "
+              "Failed due to: the copy read back differently than what "
+              "was written. The first differences:\n  "
+              + "\n  ".join(differences), file=sys.stderr)
+        return 1
+    current = proposal_mod.current_dir(base_dir, branch)
+    current.mkdir(parents=True, exist_ok=True)
+    proposal_mod.write_json(current / proposal_mod.MIGRATION_FILE, record)
+    return 0
+
+
+def cmd_emigrate(base_dir, roots=None, label=None, destination=None,
+                 database=None, branch=None):
+    """Stage the SOURCE side of a migration: build the record for the
+    roots and their closure, remove the movers from the working copy,
+    rewrite every staying reference as a citation toward the
+    destination, and file the record with the round. Then delta,
+    approve, canonize --apply — the ordinary ritual."""
+    from . import migration as migration_mod
+
+    copy, base, config, database, problem = _migration_copy(
+        base_dir, database, branch, "emigrate")
+    if problem or copy is None or base is None:
+        print(problem, file=sys.stderr)
+        return 1
+    root_keys = []
+    for spec in roots or []:
+        root_label, _, root_name = spec.partition(":")
+        if not root_label or not root_name:
+            print(f"Attempted to read root '{spec}'. Failed due to: a "
+                  "root is Label:Name.", file=sys.stderr)
+            return 1
+        root_keys.append((root_label, root_name))
+    if label:
+        root_keys.extend(sorted(
+            (node_label, str(name))
+            for (node_label, name) in copy.nodes if node_label == label))
+    if not root_keys:
+        print("Attempted to emigrate nothing. Failed due to: no roots — "
+              "name --root Label:Name (repeatable) or --label LABEL.",
+              file=sys.stderr)
+        return 1
+    source = refs_mod.kb_name(base, base_dir)
+    record, problems = migration_mod.build_record(
+        copy, root_keys, source=source, destination=destination)
+    if not problems and record is not None:
+        problems = migration_mod.emigrate_stage(copy, record)
+    if problems or record is None:
+        print("emigrate refused — every problem, collated:",
+              file=sys.stderr)
+        for problem_row in problems:
+            print(f"  ⚠ {problem_row}", file=sys.stderr)
+        return 1
+    code = _migration_land(base_dir, branch, config, database, copy,
+                           record)
+    if code:
+        return code
+    print(f"EMIGRATION staged in '{database}': "
+          f"{len(record['citizens'])} citizens leave for "
+          f"'{destination}' ({len(record['inbound'])} staying "
+          f"references rewritten as citations); record "
+          f"{record['id'][:12]} rides the round. Next: python -m graph "
+          "delta, approve, canonize --apply. The ordering law: the "
+          "destination lands its arrivals and this line re-pins it "
+          "BEFORE this round can pass the citation gate.")
+    return 0
+
+
+def cmd_immigrate(base_dir, record_file, database=None, branch=None):
+    """Stage the DESTINATION side of a migration from its record: the
+    arrivals land verbatim, every moved reference is rewritten as a
+    citation back toward the source, and the record files with the
+    round. Then the ordinary ritual."""
+    from . import migration as migration_mod
+    from . import proposal as proposal_mod
+
+    try:
+        record = proposal_mod.read_json(Path(record_file))
+    except (OSError, ValueError) as exc:
+        print(f"Attempted to read the migration record at {record_file}. "
+              f"Failed due to: {exc}.", file=sys.stderr)
+        return 1
+    if record.get("id") != migration_mod.record_id(record):
+        print(f"Attempted to stage from the record at {record_file}. "
+              "Failed due to: it no longer matches its own content id — "
+              "it changed after it was cut. Get the record as the "
+              "source's round filed it.", file=sys.stderr)
+        return 1
+    copy, base, config, database, problem = _migration_copy(
+        base_dir, database, branch, "immigrate")
+    if problem or copy is None or base is None:
+        print(problem, file=sys.stderr)
+        return 1
+    here = refs_mod.kb_name(base, base_dir)
+    if record.get("destination") != here:
+        print(f"Attempted to immigrate here ('{here}'). Failed due to: "
+              f"the record is addressed to "
+              f"'{record.get('destination')}' — a migration lands only "
+              "in the world it names.", file=sys.stderr)
+        return 1
+    problems = migration_mod.immigrate_stage(copy, record)
+    if problems:
+        print("immigrate refused — every problem, collated:",
+              file=sys.stderr)
+        for problem_row in problems:
+            print(f"  ⚠ {problem_row}", file=sys.stderr)
+        return 1
+    code = _migration_land(base_dir, branch, config, database, copy,
+                           record)
+    if code:
+        return code
+    print(f"IMMIGRATION staged in '{database}': "
+          f"{len(record['citizens'])} citizens arrive from "
+          f"'{record['source']}' ({len(record['outbound'])} moved "
+          f"references rewritten as citations); record "
+          f"{record['id'][:12]} rides the round. Next: python -m graph "
+          "delta, approve, canonize --apply — then the source re-pins "
+          "this world and lands its departure.")
+    return 0
+
+
 def cmd_branch(base_dir, branch, invite=None, uninvite=None,
                retire=False, by=None):
     """A pocket's declaration, shown or changed. With --invite/--uninvite
@@ -3836,6 +4083,37 @@ def main(argv=None):
              "against the Sealed Exam citizen in canon's backup (the "
              "content is hashed, never read)")
     verify_seal.add_argument("exam", help="path to the produced exam file")
+    emigrate_parser = sub.add_parser(
+        "emigrate",
+        help="emigrate — stage the SOURCE side of a migration: the named "
+             "citizens and their closure leave the working copy, staying "
+             "references become citations toward the destination, and the "
+             "content-addressed record rides the round.")
+    emigrate_parser.add_argument("--root", action="append", dest="roots",
+                                 metavar="LABEL:NAME",
+                                 help="a citizen the migration is rooted "
+                                      "at (repeatable)")
+    emigrate_parser.add_argument("--label", help="every citizen of this "
+                                                 "label joins the roots")
+    emigrate_parser.add_argument("--to", dest="destination", required=True,
+                                 help="the destination knowledge base "
+                                      "(a [Knowledge Base Dependency] "
+                                      "pin's name here)")
+    emigrate_parser.add_argument("--database", help="the working copy "
+                                                    "(defaults to the "
+                                                    "line's own)")
+    emigrate_parser.add_argument("--branch", help="stage in this pocket")
+    immigrate_parser = sub.add_parser(
+        "immigrate",
+        help="immigrate — stage the DESTINATION side of a migration from "
+             "its record: arrivals land verbatim, moved references become "
+             "citations back toward the source, the record rides the "
+             "round.")
+    immigrate_parser.add_argument("record", help="path to the migration "
+                                                 "record (migration.json "
+                                                 "from the source's round)")
+    immigrate_parser.add_argument("--database", help="the working copy")
+    immigrate_parser.add_argument("--branch", help="stage in this pocket")
     merge_parser = sub.add_parser(
         "merge",
         help="merge — one line takes up another's rounds while both "
@@ -4172,6 +4450,13 @@ def main(argv=None):
         return cmd_branch(base_dir, args.name, invite=args.invite,
                           uninvite=args.uninvite, retire=args.retire,
                           by=args.by)
+    if args.command == "emigrate":
+        return cmd_emigrate(base_dir, roots=args.roots, label=args.label,
+                            destination=args.destination,
+                            database=args.database, branch=args.branch)
+    if args.command == "immigrate":
+        return cmd_immigrate(base_dir, args.record,
+                             database=args.database, branch=args.branch)
     if args.command == "merge":
         return cmd_merge(base_dir, args.source, args.target,
                          database=args.database)

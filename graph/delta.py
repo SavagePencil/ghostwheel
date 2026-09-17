@@ -193,6 +193,7 @@ class Delta:
     attribution: list = field(default_factory=list)    # claim→citizen link rows (recorded provenance)
     moves: dict = field(default_factory=dict)          # declared renames / re-homings (moves.json)
     merge_moves: list = field(default_factory=list)    # a merge round's replayed moves, per source round in order
+    migration: dict = field(default_factory=dict)      # a migration round's record summary (id, direction, counterpart)
 
     @property
     def empty(self):
@@ -204,7 +205,7 @@ class Delta:
                     or self.nodes_changed or self.edges_added
                     or self.edges_removed or self.edges_changed
                     or self.stitch or self.attribution or self.moves
-                    or self.merge_moves)
+                    or self.merge_moves or self.migration)
 
 
 def read_graph(config):

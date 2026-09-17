@@ -87,6 +87,12 @@ REF_KEYS = {
     "roster-gap": "missing-entry",
     # the taxonomy declaration
     "taxonomy-declared": "kind-of-declared",
+    # the migration ceremony (citizens change worlds)
+    "migration-record-drift": "record-changed",
+    "migration-arrival-mismatch": "arrived-changed",
+    "migration-closure-broken": "family-split",
+    "emigration-declared": "leaving",
+    "immigration-declared": "arriving",
     "taxonomy-endpoint-missing": "missing-citizen",
     # recorded attribution (the provenance-recording rung)
     "attribution-file-unreadable": "unreadable-file",

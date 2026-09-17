@@ -1,0 +1,18 @@
+{
+ "edges_added": [],
+ "edges_changed": [],
+ "edges_removed": [],
+ "nodes_added": [],
+ "nodes_changed": [],
+ "nodes_removed": [
+  [
+   "[Section]",
+   "Migration — citizens change worlds",
+   {
+    "body": "## Migration — citizens change worlds\n\nTwo verbs, one record, ordinary rounds. `emigrate` builds a\n**migration record** — every leaving citizen and connection,\nproperties verbatim, content-addressed by its own hash — and stages\nthe source's round: the movers leave whole, and every STAYING\ncitizen's reference to a mover is rewritten as a [Citizen Bookmark]\ntoward the destination. `immigrate` reads the same record and stages\nthe destination's round: the arrivals land byte-identical (the gate\nverifies every one against the record and refuses collated on any\ndrift), and every MOVED citizen's reference to a stayer is rewritten\nas a bookmark back toward the source. Each round then rides its own\nline's ordinary ritual — delta, the owner's gate, canonize, the\npocket's merge — and the record rides BOTH proposals under the\napproval hash: a swapped record refuses as drift. Both lines' event\nlogs gain a migrated annotation naming the record, so the two\nhistories point at each other forever.\n\n**The ordering law: arrive, re-pin, then leave.** The rows must never\ncease to exist anywhere. The destination lands its arrivals first;\nthe source re-pins the destination; only then can the source's\ndeparture land — because its rewritten references are bookmarks, and\nthe citation stack's own gate refuses a bookmark whose citizen does\nnot exist at the pinned edition. No sequencing machinery exists\nbeyond that: the law is the resolution gate doing its ordinary job.\nThe benign double-existence window in the middle is the record's\nbusiness to name, and each side's inverse is the recovery road.\nCross-knowledge-base atomicity is honestly NOT promised — that is\nthe world-grain pocket's future work, not this ceremony's claim.\n\n**Selection is a root set plus its closure** by the kernel's own\nedge semantics: the roots, their location rows behind LOCATED_AT,\nand their hand-authored interpretation rows ABOUT them — itemized by\nname at the gate, a family never splits. **Derived rows never\nride**: the machine layer stays home and re-derives at the\ndestination, where the moved citizens' depictions — now citations of\nthe source's citizens — derive their reference interpretations under\nthe foreign names.",
+    "rank": 11,
+    "record": "Agentic ETL — the Persistent-Graph Era"
+   }
+  ]
+ ]
+}
