@@ -141,6 +141,80 @@ def rotate_passwords(base_dir):
     return fresh
 
 
+def pocket_statements(branch, reader, writer):
+    """The pocket's grant plan: the line's own roles extend over the
+    pocket's databases in the main pair's exact shape — the pocket
+    canon reads like canon, the pocket scratch writes like scratch.
+    The plan creates what it grants on (idempotent, the shape the main
+    plan uses), so cut order never matters."""
+    reader_role, writer_role = role_name(reader), role_name(writer)
+    scratch = f"{branch}-scratch"
+    return [
+        f"CREATE DATABASE `{branch}` IF NOT EXISTS",
+        f"CREATE DATABASE `{scratch}` IF NOT EXISTS",
+        f"GRANT ACCESS ON DATABASE `{branch}` TO `{reader_role}`",
+        f"GRANT MATCH {{*}} ON GRAPH `{branch}` TO `{reader_role}`",
+        f"GRANT ACCESS ON DATABASE `{scratch}` TO `{writer_role}`",
+        f"GRANT MATCH {{*}} ON GRAPH `{scratch}` TO `{writer_role}`",
+        f"GRANT WRITE ON GRAPH `{scratch}` TO `{writer_role}`",
+        f"GRANT NAME MANAGEMENT ON DATABASE `{scratch}` "
+        f"TO `{writer_role}`",
+    ]
+
+
+def pocket_revocations(branch, reader, writer):
+    """Retirement's mirror: the grants leave before the databases drop,
+    so a future database under the same name inherits nothing."""
+    reader_role, writer_role = role_name(reader), role_name(writer)
+    scratch = f"{branch}-scratch"
+    return [
+        f"REVOKE ACCESS ON DATABASE `{branch}` FROM `{reader_role}`",
+        f"REVOKE MATCH {{*}} ON GRAPH `{branch}` FROM `{reader_role}`",
+        f"REVOKE ACCESS ON DATABASE `{scratch}` FROM `{writer_role}`",
+        f"REVOKE MATCH {{*}} ON GRAPH `{scratch}` FROM `{writer_role}`",
+        f"REVOKE WRITE ON GRAPH `{scratch}` FROM `{writer_role}`",
+        f"REVOKE NAME MANAGEMENT ON DATABASE `{scratch}` "
+        f"FROM `{writer_role}`",
+    ]
+
+
+def named_users(config):
+    """(reader, writer) from settings, or (None, None) when the
+    knowledge base names no users — then no boundary exists to extend
+    and the pocket machinery stays silent."""
+    reader = (config.get(READER_USERNAME_KEY) or "").strip()
+    writer = (config.get(WRITER_USERNAME_KEY) or "").strip()
+    if not reader or not writer:
+        return None, None
+    return reader, writer
+
+
+def extend_over_pocket(config, branch):
+    """Best-effort at the cut: the boundary follows the pocket. A plain
+    note when the DBMS is unreachable — never a failed cut."""
+    reader, writer = named_users(config)
+    if not reader or not writer:
+        return
+    plan = pocket_statements(branch, reader, writer)
+    try:
+        runner = _system_runner(config)
+        try:
+            for statement in plan:
+                runner.run(statement)
+        finally:
+            close = getattr(runner, "close", None)
+            if close:
+                close()
+    except Exception as exc:
+        print(f"Note: the pocket's grants were not extended ({exc}) — "
+              f"hand-authoring in '{branch}-scratch' will refuse the "
+              "writer until they are. Re-run the cut when the DBMS is "
+              "reachable, or grant by hand.")
+        return
+    print(f"Boundary follows the pocket: '{reader}' reads '{branch}', "
+          f"'{writer}' writes '{branch}-scratch'.")
+
+
 def statements(canon_db, scratch_db, creds, reset=False):
     """The idempotent user/role/grant plan, in order. CREATE ... IF NOT
     EXISTS never touches an existing password; reset adds the explicit
