@@ -141,14 +141,22 @@ def rotate_passwords(base_dir):
     return fresh
 
 
-def pocket_statements(branch, reader, writer):
+def branch_copy_name(config, branch):
+    """The working-copy database a branch's rounds read, by the SAME
+    rule the authoring path uses: the KB's own scratch setting (or the
+    bare default) suffixed onto the branch — never an assumed name."""
+    named = (config.get("NEO4J_SCRATCH_DATABASE") or "").strip()
+    return f"{branch}-{named or 'scratch'}"
+
+
+def pocket_statements(branch, reader, writer, copy=None):
     """The pocket's grant plan: the line's own roles extend over the
     pocket's databases in the main pair's exact shape — the pocket
     canon reads like canon, the pocket scratch writes like scratch.
     The plan creates what it grants on (idempotent, the shape the main
     plan uses), so cut order never matters."""
     reader_role, writer_role = role_name(reader), role_name(writer)
-    scratch = f"{branch}-scratch"
+    scratch = copy or f"{branch}-scratch"
     return [
         f"CREATE DATABASE `{branch}` IF NOT EXISTS",
         f"CREATE DATABASE `{scratch}` IF NOT EXISTS",
@@ -162,11 +170,11 @@ def pocket_statements(branch, reader, writer):
     ]
 
 
-def pocket_revocations(branch, reader, writer):
+def pocket_revocations(branch, reader, writer, copy=None):
     """Retirement's mirror: the grants leave before the databases drop,
     so a future database under the same name inherits nothing."""
     reader_role, writer_role = role_name(reader), role_name(writer)
-    scratch = f"{branch}-scratch"
+    scratch = copy or f"{branch}-scratch"
     return [
         f"REVOKE ACCESS ON DATABASE `{branch}` FROM `{reader_role}`",
         f"REVOKE MATCH {{*}} ON GRAPH `{branch}` FROM `{reader_role}`",
@@ -195,7 +203,8 @@ def extend_over_pocket(config, branch):
     reader, writer = named_users(config)
     if not reader or not writer:
         return
-    plan = pocket_statements(branch, reader, writer)
+    copy = branch_copy_name(config, branch)
+    plan = pocket_statements(branch, reader, writer, copy=copy)
     try:
         runner = _system_runner(config)
         try:
@@ -212,7 +221,7 @@ def extend_over_pocket(config, branch):
               "reachable, or grant by hand.")
         return
     print(f"Boundary follows the pocket: '{reader}' reads '{branch}', "
-          f"'{writer}' writes '{branch}-scratch'.")
+          f"'{writer}' writes '{copy}'.")
 
 
 def statements(canon_db, scratch_db, creds, reset=False):
