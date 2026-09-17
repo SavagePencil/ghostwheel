@@ -121,6 +121,32 @@ def file_path(base_dir, address):
     return Path(base_dir) / relative
 
 
+# Verification follows the SCHEME, not the label: the file kind rides
+# the KB home; the depot scheme rides the same road with the depot home
+# as its base — by convention the KB's own home (the depot lives beside
+# graph/ in the same repo), the environment overriding for an unusual
+# layout. A scheme neither road knows is unverifiable by design — the
+# engine never fetches inside a gate.
+DEPOT_SCHEME = "git-lfs"
+DEPOT_BASE_KEY = "GHOSTWHEEL_DEPOT_BASE"
+
+
+def depot_home(base_dir):
+    import os
+    value = (os.environ.get(DEPOT_BASE_KEY) or "").strip()
+    return Path(value).expanduser() if value else Path(base_dir)
+
+
+def location_base(label, props, base_dir):
+    """The base a location's bytes resolve against, or None when the
+    kind is unverifiable by design."""
+    if (props or {}).get("scheme") == DEPOT_SCHEME:
+        return depot_home(base_dir)
+    if label == KERNEL_FILE_LOCATION_LABEL:
+        return Path(base_dir)
+    return None
+
+
 def touched_artifacts(delta, scratch):
     """The artifacts the round touches, as (label, name) keys — an
     artifact is [Artifact] or any kind of it: added or changed rows, the
@@ -638,12 +664,15 @@ def verification_stamp(graph, base_dir, sequence, artifacts):
         label, name = key
         rows = [e for e in _edges(graph, LOCATED_AT)
                 if (e.from_label, e.from_name) == key
-                and e.to_label == KERNEL_FILE_LOCATION_LABEL
-                and (e.to_label, e.to_name) in graph.nodes]
+                and (e.to_label, e.to_name) in graph.nodes
+                and location_base(e.to_label,
+                                  graph.nodes[(e.to_label, e.to_name)],
+                                  base_dir) is not None]
         read = []
         for edge in rows:
             row = graph.nodes[(edge.to_label, edge.to_name)]
-            path = file_path(base_dir, row.get("address"))
+            path = file_path(location_base(edge.to_label, row, base_dir),
+                             row.get("address"))
             if path is None:
                 problems.append(f"'{name}': location '{edge.to_name}' "
                                 "reaches outside the knowledge base")
@@ -696,10 +725,11 @@ def location_rows(graph, base_dir):
             (label, name)), "scheme": props.get("scheme"),
                "address": props.get("address"),
                "primary": props.get("primary") is True}
-        if label != KERNEL_FILE_LOCATION_LABEL:
+        base = location_base(label, props, base_dir)
+        if base is None:
             row.update(code="location-unverifiable", status="unverifiable")
         else:
-            path = file_path(base_dir, props.get("address"))
+            path = file_path(base, props.get("address"))
             try:
                 data = path.read_bytes() if path is not None else None
             except OSError:
