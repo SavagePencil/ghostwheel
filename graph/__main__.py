@@ -453,6 +453,11 @@ def _restore_branch(base_dir, branch, base, database, by=None,
                         extra=pockets_mod.stamp_facts(pocket) if pocket
                         else None)
     pin_round(base_dir, seed, target, branch)
+    # the boundary follows the pocket: the line's own roles extend over
+    # the pocket's databases (best-effort; a KB naming no users has no
+    # boundary to extend)
+    from . import connections as connections_mod
+    connections_mod.extend_over_pocket(config, branch)
     # the fork annotation: where canon's log stood at this cut — the
     # fork point succession's divergence advisory enumerates from
     from datetime import datetime, timezone
@@ -3857,6 +3862,12 @@ def cmd_branch(base_dir, branch, invite=None, uninvite=None,
         config = load_mod.read_config(base_dir)
         drops = [f"DROP DATABASE `{branch}` IF EXISTS",
                  f"DROP DATABASE `{branch}-scratch` IF EXISTS"]
+        reader, writer = connections_mod.named_users(config)
+        if reader and writer:
+            # the grants leave before the databases drop, so a future
+            # database under the same name inherits nothing
+            drops = connections_mod.pocket_revocations(
+                branch, reader, writer) + drops
         try:
             runner = connections_mod._system_runner(config)
             try:
