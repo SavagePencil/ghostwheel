@@ -105,6 +105,51 @@ def test_edges_partition_by_who_moves():
     assert record["inbound"] == []  # no stayer references a mover here
 
 
+def test_mixed_subject_governance_keeps_its_seat():
+    # The hanging committee's minute rules on the plate (leaving) AND
+    # the easel (staying): the minute stays with the gates that
+    # ratified it, and its reference to the plate becomes a citation.
+    canon = _source_world()
+    canon.ensure_node("Prop", "the easel", doc="stays in the hall")
+    canon.ensure_node(INTERP, "the hanging minute",
+                      intent="the committee's ruling")
+    canon.edges.append(make_edge("ABOUT", INTERP, "the hanging minute",
+                                 ART, "the plate"))
+    canon.edges.append(make_edge("ABOUT", INTERP, "the hanging minute",
+                                 "Prop", "the easel"))
+    record = _record(canon)
+    names = {name for _label, name, _props in record["citizens"]}
+    assert "the hanging minute" not in names
+    assert names == {"the plate", "the plate (file)", "the vale study"}
+    inbound = {(e[0], e[2], e[4]) for e in record["inbound"]}
+    assert ("ABOUT", "the hanging minute", "the plate") in inbound
+    # and at departure the minute's reference points at the bookmark
+    problems = emigrate_stage(canon, record)
+    assert problems == []
+    assert (INTERP, "the hanging minute") in canon.nodes
+    cited = [e for e in canon.edges
+             if e.type == "ABOUT" and e.from_name == "the hanging minute"
+             and e.to_label == KERNEL_BOOKMARK_LABEL]
+    assert cited, "the minute's mover reference must become a citation"
+
+
+def test_an_author_whose_other_subject_joins_the_closure_travels():
+    # Wholly-about is judged against the closure, not the roots: the
+    # framing note is ABOUT the plate and ABOUT the plate's file — the
+    # file joins through LOCATED_AT, so every subject moves and the
+    # note travels whole.
+    canon = _source_world()
+    canon.ensure_node(INTERP, "the framing note",
+                      intent="how the plate sits in its frame")
+    canon.edges.append(make_edge("ABOUT", INTERP, "the framing note",
+                                 ART, "the plate"))
+    canon.edges.append(make_edge("ABOUT", INTERP, "the framing note",
+                                 LOC, "the plate (file)"))
+    record = _record(canon)
+    names = {name for _label, name, _props in record["citizens"]}
+    assert "the framing note" in names
+
+
 # -- staging: the two sides -------------------------------------------------
 
 

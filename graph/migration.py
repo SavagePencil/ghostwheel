@@ -61,7 +61,8 @@ def build_record(graph, roots, source, destination):
     """(record, problems): the migration record for `roots` and their
     closure — the rows that belong to the movers and nothing else:
     their location rows behind LOCATED_AT, and their hand-authored
-    interpretation rows ABOUT them. Derived rows never join. Edges
+    interpretation rows wholly ABOUT them (an author with a staying
+    subject keeps its seat). Derived rows never join. Edges
     partition by who moves: internal (both sides move), outbound (a
     mover references a stayer), inbound (a stayer references a mover).
     Properties ride verbatim."""
@@ -86,7 +87,18 @@ def build_record(graph, roots, source, destination):
     if problems:
         return None, problems
     # closure to fixpoint: locations behind LOCATED_AT, hand-authored
-    # interpretations ABOUT a mover
+    # interpretations wholly ABOUT movers. An author whose ABOUT targets
+    # include a stayer keeps its seat — governance ratified at this
+    # world's gates stays with those gates, and its references to the
+    # departed become citations like any staying reference. The subset
+    # check re-evaluates as the closure grows, so an author whose other
+    # subject joins (say, through LOCATED_AT) still travels whole.
+    about_targets = {}
+    for edge in graph.edges:
+        if edge.type == "ABOUT" and not is_derived_edge(edge):
+            about_targets.setdefault(
+                _key(edge.from_label, edge.from_name), set()).add(
+                _key(edge.to_label, edge.to_name))
     grew = True
     while grew:
         grew = False
@@ -103,6 +115,8 @@ def build_record(graph, roots, source, destination):
                     and from_key not in movers:
                 if (graph.nodes.get(from_key) or {}).get(DERIVED_MARKER):
                     continue  # the machine layer stays home
+                if not about_targets.get(from_key, set()) <= movers:
+                    continue  # mixed subject: the author stays home
                 movers.add(from_key)
                 grew = True
     citizens = [[label, name, dict(graph.nodes.get((label, name)) or {})]
