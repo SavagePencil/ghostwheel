@@ -93,3 +93,44 @@ def test_file_registered_procedures_never_enter_the_native_path(tmp_path):
     extractor.link_native_procedures()
     assert not [e for e in extractor.graph.edges
                 if e.type in ("KNOWN_AT", "SPECIFIED_IN")]
+
+
+def test_a_row_under_a_kind_of_procedure_derives_like_a_procedure(tmp_path):
+    # The membership fold makes a row of a kind an instance of every
+    # concept the kind is a kind of — the native linkage honors the
+    # same taxonomy, however deep.
+    extractor = _extractor(tmp_path)
+    for kind, parent in (("Inspection Rite", KERNEL_PROCEDURE_LABEL),
+                         ("Hive Rite", "Inspection Rite")):
+        extractor.graph.ensure_node(ARCHETYPE_LABEL, kind, doc=kind)
+        extractor.graph.edges.append(make_edge(
+            "SUBTYPE_OF", ARCHETYPE_LABEL, kind, ARCHETYPE_LABEL, parent))
+    extractor.graph.ensure_node("Hive Rite", "The Spring Opening",
+                                known_at="Attested")
+    extractor.graph.ensure_node("[Conduct Section]", "Smoker discipline",
+                                body="## Smoker discipline\n")
+    extractor.graph.edges.append(make_edge(
+        "PART_OF", "[Conduct Section]", "Smoker discipline",
+        "Hive Rite", "The Spring Opening"))
+    extractor.link_native_procedures()
+    assert any(e.type == "KNOWN_AT"
+               and (e.from_label, e.from_name)
+               == ("Hive Rite", "The Spring Opening")
+               and (e.to_label, e.to_name) == (ARCHETYPE_LABEL, "Attested")
+               for e in extractor.graph.edges)
+    assert any(e.type == "SPECIFIED_IN"
+               and (e.from_label, e.from_name)
+               == ("Hive Rite", "The Spring Opening")
+               and (e.to_label, e.to_name)
+               == ("[Conduct Section]", "Smoker discipline")
+               for e in extractor.graph.edges)
+
+
+def test_a_stray_known_at_outside_the_procedure_family_stays_inert(tmp_path):
+    extractor = _extractor(tmp_path)
+    extractor.graph.ensure_node(ARCHETYPE_LABEL, "Tide Table", doc="charts")
+    extractor.graph.ensure_node("Tide Table", "Neap Cycle",
+                                known_at="Attested")
+    extractor.link_native_procedures()
+    assert not [e for e in extractor.graph.edges if e.type == "KNOWN_AT"]
+    assert not [f for f in extractor.findings if f.severity == WARNING]
