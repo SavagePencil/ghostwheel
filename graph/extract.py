@@ -373,15 +373,28 @@ class Extractor:
 
     def link_native_procedures(self):
         """The graph-native half of the procedure linkage: a Procedure
-        citizen with no registered source file declares its completeness
-        as a ground prop (known_at, naming a Completeness value) and
-        carries its body as prose citizens PART_OF it. Derivation turns
-        the declaration into the kernel edges — KNOWN_AT to the named
-        level, SPECIFIED_IN to each contained prose citizen (the
-        citation for a self-specified procedure). File-registered
-        procedures never enter here."""
+        citizen — or one under a kind that is a SUBTYPE_OF-descendant of
+        [Procedure], however deep — with no registered source file
+        declares its completeness as a ground prop (known_at, naming a
+        Completeness value) and carries its body as prose citizens
+        PART_OF it. Derivation turns the declaration into the kernel
+        edges — KNOWN_AT to the named level, SPECIFIED_IN to each
+        contained prose citizen (the citation for a self-specified
+        procedure). File-registered procedures never enter here."""
         filed = {str(spec["procedure"]).strip()
                  for _, spec, _ in self.pending_procedures}
+        procedure_labels = {KERNEL_PROCEDURE_LABEL}
+        grew = True
+        while grew:
+            grew = False
+            for edge in self.graph.edges:
+                if edge.type == "SUBTYPE_OF" \
+                        and edge.from_label == ARCHETYPE_LABEL \
+                        and edge.to_label == ARCHETYPE_LABEL \
+                        and edge.to_name in procedure_labels \
+                        and edge.from_name not in procedure_labels:
+                    procedure_labels.add(edge.from_name)
+                    grew = True
         levels = {e.from_name for e in self.graph.edges
                   if e.type == "INSTANCE_OF"
                   and e.from_label == ARCHETYPE_LABEL
@@ -395,7 +408,7 @@ class Extractor:
         for (label, name), props in sorted(
                 self.graph.nodes.items(),
                 key=lambda item: (item[0][0], str(item[0][1]))):
-            if label != KERNEL_PROCEDURE_LABEL or name in filed:
+            if label not in procedure_labels or name in filed:
                 continue
             level = str(props.get("known_at", "")).strip()
             if level:
