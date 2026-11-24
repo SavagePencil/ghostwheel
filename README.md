@@ -1,5 +1,7 @@
 # Ghostwheel
 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 **Ghostwheel** is a project-agnostic, Neo4j-backed knowledge-graph engine. You
 point it at a knowledge base — a rulebook, a manual, a storybook, a catalog —
 and it holds that knowledge as a queryable graph of **citizens** (facts,
@@ -424,4 +426,6 @@ otherwise.
 
 ## License
 
-[Add your license here]
+Ghostwheel is licensed under the Apache License, Version 2.0 — see
+[LICENSE](LICENSE). Contributions are accepted under the same terms; see
+[CONTRIBUTING.md](CONTRIBUTING.md).
