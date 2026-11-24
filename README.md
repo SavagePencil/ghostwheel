@@ -54,6 +54,16 @@ appear in the plate — each generated from the approved facts and only the
 approved facts, so nothing invented sneaks in; each steered by you, and
 regenerated as the story moves.
 
+It can learn your tools, too. A knowledge base doesn't have to hold a story —
+one can hold how Photoshop works, objectively, straight from the manual; and
+beside it, how *you* like to use Photoshop: your brushes, your layer
+discipline, the way you flatten and export. Generation can then speak both at
+once — the illustrator's brief arrives in the studio's own terms, its steps
+written for the tools you already use. And nothing it makes is
+fire-and-forget: every generated thing is left as an artifact you can open,
+examine, question, and work over together, carrying the record of what it was
+made from.
+
 Even the parts of a story that usually live only in the author's head get
 seats of their own. Themes — *patience beats haste*, say — live in the book
 as first-class things, tied to the scenes and choices that carry them. Ask
@@ -444,7 +454,14 @@ effects — can live on the graph as an approved **program**: a
 `(:Procedure)-[:FIRST_STEP]->(:Step)` chain. The storybook's "The Wolf at the
 Door" is one — huff, puff, blow the house down; the house falls and the wolf
 enters, or it stands and he tries the chimney — and so is the guild manual's
-"Light the Lamp at Dusk". Programs exist for **comprehension,
+"Light the Lamp at Dusk". So is an external tool's operation: how an image
+editor exports a plate can enter a tool knowledge base at whatever grade its
+source honesty permits, objectively from the tool's own manual — while how
+*this* studio prefers it done lives beside it in the Judgment stratum, a
+subjective citizen like any Opinion. Generation can then write steps in the
+tools a consumer already uses, and leave its artifacts on the graph —
+located, fingerprinted, open to examination and collaboration like anything
+else in canon. Programs exist for **comprehension,
 not execution**: a consumer can ask "how does this work?" and get structure back,
 and `python -m graph generate "<name>"` renders a program into prose (an
 experiment measured against the authored text, never a replacement). Every
