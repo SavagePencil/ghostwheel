@@ -2,24 +2,126 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-**Ghostwheel** is a project-agnostic, Neo4j-backed knowledge-graph engine. You
-point it at a knowledge base — a rulebook, a manual, a storybook, a catalog —
-and it holds that knowledge as a queryable graph of **citizens** (facts,
-definitions, procedures, rulings, quotes), grows it through reviewed changes,
-and serves it back with citations. Nothing enters the graph without provenance;
-nothing changes it without an owner's approval; every applied change is recorded
-in a chained, reversible log.
+**Ghostwheel** keeps the truth of a growing creation — a story, a game, a
+manual, a catalog — consistent, remembered, and under its maker's control, so
+the thing you finish is the thing you meant.
 
-Ghostwheel is deliberately domain-neutral. Its worked examples throughout this
-repository use a small storybook knowledge base — **Gems**, **Chapters**,
-**Beasts**, and **Grades** — precisely because the engine cares nothing for any
-particular subject matter. A child's storybook and a legal code are the same
-shape to Ghostwheel.
+## The idea, plainly
+
+You have something to say — about patience, maybe, and building things that
+last — and you've chosen *The Three Little Pigs* as the way to say it. So you
+set out to make your own telling: your pigs, your wolf, your ending; maybe a
+picture book, maybe a game. The source material already disagrees with itself
+— in the old telling the wolf **eats** the first two pigs; in the modern one
+they **escape** to their brother's brick house — and your drafts will
+disagree soon enough, as drafts do. Every one of those choices shapes your
+message. The work stays *yours* only if something keeps track of what the
+story holds true right now, which choices were made on purpose, and why.
+
+Ghostwheel is the tool that keeps track. Hand it your material and it
+remembers every fact in the story — each pig, each house, who built what, who
+got eaten — and beside every fact, the exact sentence it came from and the
+day you chose it. Ask *"why does my book say the pigs escaped?"* and the
+answer arrives with the quote, the telling it was taken from, and your
+recorded ruling — *the wolf eating them was too dark for the message.*
+
+Nothing changes behind your back. When new material arrives — a newly found
+telling, an editor's notes, work from a helper (human or AI) — the proposed
+changes are laid out beside what the book already says: here is the new
+claim, here is the old one it contradicts, here is everything that would
+ripple. You say yes or no. Only then does the book change, and every change
+can be undone.
+
+It learns to speak your language, not the other way around. You never fill
+out a form of someone else's categories: the words your tale uses — Pigs,
+Houses, Straw, the Big Bad Wolf — become the book's own working vocabulary,
+asked about in plain questions ("is a Straw House its own kind of thing, or a
+House made of straw?") and free to change later when you see your world more
+clearly, with every page that used the old word following along.
+
+And once it holds your truth, it works with you. Ask it anything — *which
+pig survived in my telling? what does the wolf want?* — and it answers from
+the facts you approved, citations attached, never from a guess. Hand it a
+half-formed thought — *what if the wolf comes back, reformed?* — and it
+proposes: here is what that touches, here is what it contradicts, here is
+where your story already leans that way. The ideas are offered; you still
+rule.
+
+It can *make* things from that truth, too. A synopsis for the back cover, a
+chapter retold for younger readers, a table of the three houses and what
+each withstood, a brief for the illustrator naming exactly which characters
+appear in the plate — each generated from the approved facts and only the
+approved facts, so nothing invented sneaks in; each steered by you, and
+regenerated as the story moves.
+
+It can learn your tools, too. A knowledge base doesn't have to hold a story —
+one can hold how Photoshop works, objectively, straight from the manual; and
+beside it, how *you* like to use Photoshop: your brushes, your layer
+discipline, the way you flatten and export. Generation can then speak both at
+once — the illustrator's brief arrives in the studio's own terms, its steps
+written for the tools you already use. And nothing it makes is
+fire-and-forget: every generated thing is left as an artifact you can open,
+examine, question, and work over together, carrying the record of what it was
+made from.
+
+Even the parts of a story that usually live only in the author's head get
+seats of their own. Themes — *patience beats haste*, say — live in the book
+as first-class things, tied to the scenes and choices that carry them. Ask
+what carries your theme and get a real answer; generate a retelling and the
+theme rides along; propose a change and see what it touches — including
+which themes it serves or undercuts. The soul of the work is kept with the
+same care as its facts, so the storytelling stays whole.
+
+Your collaborators get rooms of their own. An illustrator keeps the paintings
+in a collection of their own, where each picture knows which characters it
+shows and which version of the story it was painted for — when the story
+moves on, the studio hears about it. A co-author drafts a whole alternate
+ending in a private copy; you keep the parts you love, and the ending that
+loses is archived, never lost.
+
+And different readers can be handed different books. The young-readers
+edition simply never shows the wolf's supper — not crossed out, just not
+there, with no loose threads where it would have been.
+
+None of this is special to storybooks. A game's rules, a lighthouse-keeping
+guild's manual, a legal code — any body of truth that must stay consistent
+while many hands grow it — works the same way. The rest of this README is
+the machinery underneath, told through the same storybook.
 
 ## What it is
 
+**Ghostwheel** is a project-agnostic knowledge-graph engine over a
+property-graph database (Neo4j today). You point it at a knowledge base — a
+rulebook, a manual, a storybook, a catalog — and it holds that knowledge as a
+queryable graph of **citizens** (facts, definitions, procedures, rulings,
+quotes), grows it through reviewed changes, and serves it back with citations.
+Nothing enters the graph without provenance; nothing changes it without an
+owner's approval; every applied change is recorded in a chained, reversible log.
+
+**The worked example, in engine terms.** The Three Little Pigs threads this
+README as two knowledge bases: **story** holds the tale; **art-assets** holds
+the paintings, pins story at an edition, and cites its Wolf through
+bookmarks — when the story moves ahead, the art hears about it at its next
+round. The picture book itself is a **world**, which is a role, not a type:
+an ordinary knowledge base whose own subject is the knowledge bases it
+gathers and how they relate. Nothing is melted together; the members stay
+sovereign. The schema, likewise, is grown rather than designed: the intake
+interview births the keeper's vocabulary as citizens in the keeper's own
+words, and the ontology moves by gated ceremony as understanding deepens
+(aliases, label births, declared renames that ripple with their inverses
+recorded — see "the ontology moves to fit the user," below). A second voice
+recurs alongside: an operations manual — a lighthouse-keeping guild's — where
+"Light the Lamp at Dusk" is an approved program and an inspector's ruling is
+a cited citizen like any other. (This repository's test fixtures use a third
+tiny storybook — **Gems**, **Chapters**, **Beasts**, **Grades** — same
+shapes, smaller cast.)
+
+Ghostwheel is a working engine with live consumers: they pin exact release
+tags, every change rides a reviewed pull request, and the committed export
+makes each graph change reviewable as an ordinary diff.
+
 At its heart Ghostwheel keeps a single body of agreed-true knowledge — **canon**
-— as a Neo4j graph, and surrounds it with machinery that keeps that graph
+— as a property graph, and surrounds it with machinery that keeps that graph
 honest:
 
 - **Canon is the graph.** The live Neo4j database is primary. A deterministic,
@@ -31,6 +133,11 @@ honest:
   — its categories, labels, catalogs, relationships — are themselves citizens on
   the graph (the **Archetype** stratum), authored truth read back by the engine.
   They are not a config file the graph is generated from; they are part of canon.
+  (The storybook's House catalog and its Material ladder — straw < sticks <
+  bricks, an Ordered facet — are authored citizens like everything else.) Born
+  at intake from the keeper's own words, they move by gated ceremony as the
+  keeper's understanding moves — see "the ontology moves to fit the user,"
+  below.
 - **Two ontology layers.** The engine ships a project-agnostic **kernel**
   (`graph/metaontology.yaml`): the four roots — **Concept**, **Facet**,
   **Provenance**, **Judgment** — plus a common facet library (Ordered, Exclusive,
@@ -61,7 +168,11 @@ honest:
   names its objective contents; an `[Interpretation]` says what it stands for
   to this world, per intent; a `[Resolver]` binds a location kind to the
   procedure that opens it; `superseded_at` and `SUPERSEDES` retire it as an
-  intake ruler — information for the census, never a defect.
+  intake ruler — information for the census, never a defect. (The storybook's
+  cover painting is an `[Artifact]`: its file row fingerprinted and verified at
+  apply, `DEPICTS` naming the Wolf and the brick house it shows — and when the
+  art lives in its own **art-assets** knowledge base, `DEPICTS` cites the
+  story's Wolf through a `[Citizen Bookmark]` into the pinned dependency.)
 - **Changes flow through rounds and a diff gate.** Canon never changes by direct
   edit. An author works in a **scratch** database cloned from canon; the itemized
   changeset — the **delta** — is linted, reviewed, and approved by the owner at a
@@ -72,6 +183,14 @@ honest:
   the in-memory graph value itself, so traversals never yield a hidden element and
   derived layers recompute coherently under a lens. See
   `python -m graph docs lenses`.
+- **The database is a backend.** The engine's durable contract is the
+  deterministic committed export plus the chained event log; the live database
+  is rebuilt from that backup by `restore`, and many verbs read the backup with
+  no database at all. The driver-and-Cypher seam is deliberately narrow (8 of
+  the engine's 35 modules touch it); Neo4j is the backend today — its
+  multi-database isolation and roles are both used — and a future
+  property-graph backend (FalkorDB, say) is a contained port behind the same
+  contract, not a rewrite.
 
 New here, or wondering what a "floor", "round", or "lens" is? The glossary — a
 lay tier and the working vocabulary beneath it — lives in
@@ -100,7 +219,7 @@ python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 ```
 
-### 2. Stand up Neo4j
+### 2. Stand up the database (Neo4j today)
 
 The default backend is **Neo4j Desktop 2** — its Explore/Bloom visual tools only
 work against a Desktop-managed instance:
@@ -209,8 +328,10 @@ moments — the **plan gate** and the **diff gate**:
    before diffing or exporting.
 2. **Author ground facts.** An author (a person or an agent holding
    scratch-only write credentials) creates the nodes and edges the source
-   asserts — a Gem, a Beast, the edge that says this Beast guards that Gem — each
-   carrying its **receipt** (the verbatim quote and source pointer). Authors never
+   asserts — the second pig, his house of sticks, the `BUILT_FROM` edge between
+   them — each
+   carrying its **receipt** (the verbatim quote and the telling it came from).
+   Authors never
    write the *derived* layers (classification edges, projections, the term index);
    the machine recomputes those, so a hand-written copy can never silently rot.
 3. **Delta.** `delta` diffs scratch against the base and emits the itemized
@@ -226,8 +347,10 @@ moments — the **plan gate** and the **diff gate**:
    renames are refused under the migration charter.
 4. **Diff gate.** The owner reviews the delta: an implications narrative in plain
    prose, each claim beside its evidence, the derived consequences summarized, and
-   a walkable view of just the new and changed elements. `approve` records the
-   ruling against the proposal's hash.
+   a walkable view of just the new and changed elements. This is where the two
+   tellings meet: the new telling's *the pigs escape* lands beside the standing
+   *the wolf eats them*, and the keeper rules which this storybook holds true.
+   `approve` records the ruling against the proposal's hash.
 5. **Canonize.** `canonize --apply` refuses if there is no approval, if the base
    moved since scratch was cut, or if scratch drifted from what was approved —
    naming the divergence item by item. On success it verifies everything before
@@ -265,10 +388,20 @@ pins the branch's chain tip and export identity). An adopted branch is
 provenance, not a working line — further rounds on it refuse by name — and
 walk-back is a second ceremony on the archived line.
 
-A *branch* is one line within one KB. It is not a *world*: a world is a future
-composition layer — a KB whose citizens mount other KBs — and a *Pocket
-Universe* correlates branches across several KBs at one collated gate (see the
-governing taxonomy in issue #6). This slice builds the branch, the atom.
+In the storybook: a co-author cuts a pocket to draft the *wolf reforms*
+alternate ending — real rounds on their own line, hard-isolated from canon —
+and the keeper later merges the rounds worth keeping. The ending that loses
+remains an archived line, never a lost file.
+
+A *branch* is one line within one KB. It is not a *world*: a world is a role,
+not a type — an ordinary KB whose own subject is the knowledge bases it
+gathers (their pins, and how they relate); the step-into composition layer
+above the pins is designed, not shipped (the governing taxonomy is issue #6).
+In the storybook's terms: **story** is one KB and **art-assets** another,
+art-assets pinning story at an edition and citing its citizens through
+bookmarks; the picture book is the world over both; and a *Pocket Universe*
+would be the alternate ending drafted across story *and* art, landing at one
+collated gate. This slice builds the branch, the atom.
 
 ## Schema as ground: the two ontology layers
 
@@ -288,6 +421,25 @@ Ghostwheel's schema has two layers with different ownership and change ceremony:
   own labels, catalogs, and relationships, living on the graph as ground
   citizens. This is the owner's daily surface.
 
+**The ontology moves to fit the user.** New domain vocabulary goes in the
+project layer, always — and the project layer is grown in dialogue, not
+designed up front. At intake, material that doesn't fit the schema becomes a
+question only the keeper can answer — *is "Straw House" its own kind, or a
+House with a Material?* — and the ruling becomes schema, in the keeper's
+words. From there the ontology keeps pace with the keeper's understanding
+through ordinary owner-gated **schema ceremonies**: an **alias** absorbs a
+new telling's surface spelling ("the Big Bad Wolf" reads as the Wolf —
+additions only); a new **label is born** with nothing yet underneath it; a
+**taxonomy link** is declared as categories firm up; and when a name itself
+must move, a **declared move** (rename, or re-homing citizens under a kind of
+what they were) rides a round — every citizen, edge, spec, and attribution
+ledger follows, the inverse recorded, the gate itemizing the consequence
+before the keeper rules. A change that would silently move data underneath a
+label is refused by name: it rides the migration charter instead. The kernel
+holds still precisely so your layer can move — a facet is promoted into it
+only by earning the many-projects test — and every surface the keeper sees
+speaks the keeper's language, learned live from canon, never machinery words.
+
 The full boundary rules — references flow one way, new vocabulary is born in the
 project layer, facets are promoted to the kernel only by earning the
 many-projects test — are in
@@ -299,7 +451,17 @@ for all work.
 
 Knowledge with process structure — a step-by-step resolution, a cascade of
 effects — can live on the graph as an approved **program**: a
-`(:Procedure)-[:FIRST_STEP]->(:Step)` chain. Programs exist for **comprehension,
+`(:Procedure)-[:FIRST_STEP]->(:Step)` chain. The storybook's "The Wolf at the
+Door" is one — huff, puff, blow the house down; the house falls and the wolf
+enters, or it stands and he tries the chimney — and so is the guild manual's
+"Light the Lamp at Dusk". So is an external tool's operation: how an image
+editor exports a plate can enter a tool knowledge base at whatever grade its
+source honesty permits, objectively from the tool's own manual — while how
+*this* studio prefers it done lives beside it in the Judgment stratum, a
+subjective citizen like any Opinion. Generation can then write steps in the
+tools a consumer already uses, and leave its artifacts on the graph —
+located, fingerprinted, open to examination and collaboration like anything
+else in canon. Programs exist for **comprehension,
 not execution**: a consumer can ask "how does this work?" and get structure back,
 and `python -m graph generate "<name>"` renders a program into prose (an
 experiment measured against the authored text, never a replacement). Every
@@ -316,7 +478,10 @@ are size-1 groups that nest) are granted or denied access to those classes; a
 **lens** is the fold of a subject's groups compiled into what they may see. A
 lens is enforced on the in-memory graph value itself, so a traversal never yields
 a hidden element, edges never dangle, and derived layers recompute coherently
-under the lens. Lenses materialize in exactly one place — a lens-scoped export
+under the lens. In the storybook, the old telling's ending joins a class the
+**young-readers** lens never folds in: a traversal from that seat simply never
+yields the wolf's supper, and no edge dangles where it would have been. Lenses
+materialize in exactly one place — a lens-scoped export
 (the shipped runtime graph). The full design, including the branch-isolation
 walkthrough, is in `python -m graph docs lenses`.
 
@@ -334,8 +499,10 @@ walkthrough, is in `python -m graph docs lenses`.
 
 Ghostwheel ships agent-facing **skills** (`.claude/skills/`) that drive the
 graph-native workflows end to end. An intake is one conversation: hand the agent
-a source and say "intake this." The agent recons it, brings you the plan
-(implications first, then the questions only you can answer), authors ground
+a source — the modern telling, say — and say "intake this." The agent recons it, brings you the plan
+(implications first, then the questions only you can answer — many of them
+ontology questions: where new material doesn't fit the schema, the interview
+grows the schema rather than forcing the material), authors ground
 facts in scratch with receipts, self-reviews the linted delta, brings you the
 changeset, and on your approval canonizes it. You appear exactly twice — the plan
 gate and the diff gate. The architecture is in
@@ -420,9 +587,8 @@ make test       # full test suite (includes the golden-snapshot test)
 ```
 
 The pre-commit gate blocks a commit unless the full test suite (including
-the packaged-docs mirror test) is green; it also runs the local trace
-check when that local-only tool is present, and skips it with a notice
-otherwise.
+the packaged-docs mirror test) is green; it also runs any optional local
+lints when present, and skips them with a notice otherwise.
 
 ## License
 
