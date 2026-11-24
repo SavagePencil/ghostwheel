@@ -8,6 +8,7 @@
 name = "ghostwheel"
 version = "0.101.0"
 description = "Ghostwheel: a project-agnostic knowledge-graph engine — two-layer ontology, deterministic export/restore, reviewed delta rounds with a diff gate, a chained event log, and visibility lenses."
+license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
 # simplemma is PINNED EXACT: the lemma dictionary is part of the
 # attribution ruler, and census floors ride its behavior — an
